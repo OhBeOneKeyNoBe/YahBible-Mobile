@@ -414,7 +414,7 @@ async function srcItemHtml(id){ const got=window.YBPacks && await YBPacks.have('
   return '<button class="srcline'+(got?'':' dl')+'" data-src="'+esc(id)+'"><span class="si">'+(got?'📖':'⬇')+'</span>'+esc(SRC_LABEL[id]||id)+'</button>'; }
 async function buildSources(){ const d=$('#leftdrawer');
   d.innerHTML='<div class="drawhdr"><span class="dt holo-gold">Holy Bible</span><button class="drawx" id="ldx">✕</button></div>'+
-    '<div class="lmlogos"><span class="lmyhwh">יהוה</span> The Logos</div>'+
+    '<button class="lmlogos" id="lmlogos"><span class="lmyhwh">יהוה</span> The Logos</button>'+
     '<div class="srcgroup">'+
       '<button class="srcline" data-grp="torah"><span class="si">•</span>The Torah</button>'+
       '<button class="srcline" data-grp="ot"><span class="si">•</span>Old Testament</button>'+
@@ -432,6 +432,7 @@ async function buildSources(){ const d=$('#leftdrawer');
     '<button class="srcline" id="lsettings" style="border-color:rgba(233,200,119,.4);margin-top:4px"><span class="si">⚙️</span>Settings &amp; Downloads</button>';
   $('#ldx',d).onclick=closeDrawers;
   $('#lsettings',d).onclick=()=>{closeDrawers();openSettings();};
+  const ll=$('#lmlogos',d); if(ll) ll.onclick=()=>openLogos();
   $('#dlall',d).onclick=()=>downloadEverything();
   d.querySelectorAll('.srcline[data-grp]').forEach(b=>b.onclick=()=>{closeDrawers();openBookGroup(b.dataset.grp);});
   d.querySelectorAll('.srcline[data-src]').forEach(b=>b.onclick=()=>openSource(b.dataset.src,b));
@@ -439,6 +440,27 @@ async function buildSources(){ const d=$('#leftdrawer');
   d.querySelectorAll('.srcacc .accbtn').forEach(a=>a.onclick=()=>a.parentElement.classList.toggle('open'));
   // mark installed sources with the book icon
   d.querySelectorAll('.srcline[data-src]').forEach(async b=>{ if(window.YBPacks && await YBPacks.have('src:'+b.dataset.src).catch(()=>false)){ b.classList.remove('dl'); const si=b.querySelector('.si'); if(si)si.textContent='📖'; } });
+}
+/* The Logos — the revelation of the Name (YHWH), 1:1 with desktop */
+function openLogos(){ closeDrawers(); clearInterval(_qTimer);
+  setView('<div class="screen study logospage"><button class="backbtn" id="lgback">◀ back</button>'+
+    '<div class="logoshead"><div class="logosyhwh holo-gold">יהוה</div>'+
+    '<div class="logossub">The Name · The Word · The Logos · The Truth — Yahweh Tsidkenu’s revelation of the Word</div></div>'+
+    '<div class="cmdsec"><div class="cmdeye">The Name is Breath</div><h3>The Name is Breath</h3>'+
+      '<p><span class="heb">יהוה</span> (YHWH) is the ineffable, unpronounceable Name. It is the sound of <b>breathing</b>: breathed aloud — without the tongue or lips perverting the breath — it sounds like <i>YHWH</i>; with the mouth closed it sounds like the <b>ocean</b>.</p>'+
+      '<p>This is the holy Word, the holy Name, and “The Truth” that Christ spoke of. Anytime Christ, the New Testament, or the Old Testament speak of <b>the Word</b>, <b>the Logos</b>, <b>the Knowledge</b>, or <b>the Truth</b>, they mean <span class="heb">יהוה</span> specifically.</p>'+
+      '<div class="cscr">“I have declared thy name, and will declare it… I have kept them in thy word.”<span class="cscrref">'+linkifyScripture("John 17:26")+' · thy word = thy Logos, thy Name</span></div>'+
+      '<p>The vowel points placed under the letters are a <b>modern pronunciation guide</b> laid upon the unpronounceable Name — not its true sound.</p></div>'+
+    '<div class="cmdsec cmddefine"><div class="cmdeye">Its opposite</div><h3>The Illusion of “Jehovah”</h3>'+
+      '<p><b>Yah / Jah</b> means <i>father</i>. <b>Hovah</b> (<span class="heb">הוה</span>) means <i>destruction, chaos</i> — a real Hebrew word. So “Yah-Hovah” is heard by a Hebrew as a <b>curse upon the father</b> — father-destruction, father-chaos.</p>'+
+      '<p>To curse a thing is not to bless it; it cannot be the name of the one true God. Remove the <b>Yod</b> and <span class="heb">הוה</span> is literally <i>hovah</i> — destruction. The Yod in front means the Name is <b>not a spoken word</b>: the Yod is silent. Without the Yod — without God — there is only destruction.</p>'+
+      '<p>The belief that “Jehovah” or “Yahovah” is God’s proper name is <b>worldly illogic</b>, not the heavenly logic of God.</p>'+
+      '<p>Everywhere the English says <b>“Lord,” “the Lord,”</b> or <b>“LORD,”</b> the Hebrew is usually <span class="heb">יהוה</span> (or Adonai <span class="heb">אֲדֹנָי</span>) — never Jehovah.</p></div>'+
+    '<div class="cmdsec cmdkeep"><div class="cmdeye">How to read it</div><h3>Gnostic Symbolic Branching</h3>'+
+      '<p>To read the Name as the Word, the Logos, the Knowledge, and the Truth — and to follow that thread wherever Scripture speaks of them — is <b>Gnostic Symbolic Branching</b>: reading by the true words, teachings, and sayings of Yeshua the Christ. This is how the Bible is to be understood, according to Yahweh Tsidkenu. <b>Question everything claimed; seek the highest truth.</b></p></div>'+
+    '<button class="cmdback" id="lgback2">◀ back</button></div>');
+  $('#view').querySelectorAll('#lgback,#lgback2').forEach(b=>b.onclick=()=>nav('home'));
+  wireScref($('#view'));
 }
 function openBookGroup(kind){ let list;
   if(kind==='torah') list=KJV.books.slice(0,5);
@@ -480,8 +502,6 @@ function rightNavHtml(){ const pulse=newsUnseen()?' pulse':'';
   return '<div class="rmnav">'+
     '<button class="rmitem" data-go="settings"><span class="rmi">⚙️</span>Settings &amp; Downloads</button>'+
     '<button class="rmitem'+pulse+'" data-go="news"><span class="rmi rmat">א&#8202;ת</span>News &amp; Updates'+(newsUnseen()?'<span class="newsdot"></span>':'')+'</button>'+
-    '<button class="rmitem" data-go="repentance"><span class="rmi rmdove">🕊</span>Repentance</button>'+
-    '<button class="rmitem" data-go="commandments"><span class="rmi">📜</span>The Ten Commandments</button>'+
     '</div>'; }
 function wireRightNav(scope){ scope.querySelectorAll('.rmitem[data-go]').forEach(b=>b.onclick=()=>{ closeDrawers();
   const g=b.dataset.go; if(g==='settings')openSettings(); else nav(g); }); }
@@ -597,6 +617,11 @@ async function openSettings(){ clearInterval(_qTimer);
     '<div class="cmdsec"><div class="cmdeye">Add to the app</div><h3>Expanded, downloadable packs</h3>'+
     '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+
     rows.join('')+'</div>'+
+    (function(){ const a=appSettings(); return '<div class="cmdsec"><div class="cmdeye">Appearance</div><h3>Look &amp; feel</h3>'+
+      '<div class="setctl"><label>Accent hue</label><input type="range" id="s_hue" min="0" max="360" value="'+a.hue+'"></div>'+
+      '<div class="setctl"><label>Background visibility</label><input type="range" id="s_fish" min="0" max="70" value="'+a.fishvis+'"></div>'+
+      '<div class="setctl"><label>Reading text size</label><input type="range" id="s_reader" min="14" max="24" value="'+a.reader+'"></div>'+
+      '<div class="setrow"><button id="s_hrand" class="favchip'+(+a.huerand>0?' on':'')+'">🎨 Auto-shift hue</button></div></div>'; })()+
     (function(){ const p=camPrefs(); const colnames=['Red','Orange','Yellow','Green','Blue','Indigo','Violet','Pink','White','🌈 Holographic'];
       return '<div class="cmdsec"><div class="cmdeye">Studio</div><h3>Camera &amp; studio</h3>'+
       '<p class="setnote">The camera button (🎥) opens/closes the cameras. Set how they look here — it applies live.</p>'+
@@ -630,6 +655,10 @@ async function openSettings(){ clearInterval(_qTimer);
     setAccount({name:n,email:e}); openSettings(); };
   const gg=$('#doguest'); if(gg) gg.onclick=()=>{ setAccount({name:'Guest',guest:true}); openSettings(); };
   const so=$('#signout'); if(so) so.onclick=()=>{ setAccount(null); toast('Signed out'); openSettings(); };
+  const sh=$('#s_hue'); if(sh) sh.oninput=()=>setAppSetting('hue',+sh.value);
+  const sf=$('#s_fish'); if(sf) sf.oninput=()=>setAppSetting('fishvis',+sf.value);
+  const sr=$('#s_reader'); if(sr) sr.oninput=()=>setAppSetting('reader',+sr.value);
+  const shr=$('#s_hrand'); if(shr) shr.onclick=()=>{ const a=appSettings(); setAppSetting('huerand', a.huerand>0?0:15); shr.classList.toggle('on'); };
   const cc=$('#cam_color'); if(cc) cc.onclick=()=>{ const p=camPrefs(); p.color=(p.color+1)%CAMCOLORS.length; setCamPrefs(p); openSettings(); };
   const cfm=$('#cam_form'); if(cfm) cfm.onclick=()=>{ const p=camPrefs(); const o=['round','land','port']; p.form=o[(o.indexOf(p.form)+1)%3]; setCamPrefs(p); openSettings(); };
   const cm=$('#cam_mirror'); if(cm) cm.onclick=()=>{ const p=camPrefs(); p.mirror=!p.mirror; setCamPrefs(p); cm.classList.toggle('on'); };
@@ -759,6 +788,16 @@ function cycleCamForm(id){ const cam=$('#'+id); const forms=['round','land','por
 function initCamDrag(){ initCamWin($('#cam')); initCamWin($('#cam2')); }
 /* camera prefs live in Settings (not on the video). They persist + apply to both windows. */
 function camPrefs(){ try{ return Object.assign({color:6,form:'round',mirror:false,green:false}, JSON.parse(localStorage.getItem('yb_cam_prefs')||'{}')); }catch(e){ return {color:6,form:'round',mirror:false,green:false}; } }
+/* app appearance settings (parity with desktop: accent hue, background/fish visibility, reader size, hue randomize) */
+function appSettings(){ try{ return Object.assign({hue:270,fishvis:22,reader:17,huerand:0}, JSON.parse(localStorage.getItem('yb_app_settings')||'{}')); }catch(e){ return {hue:270,fishvis:22,reader:17,huerand:0}; } }
+let _hueTimer=null;
+function applyAppSettings(){ const s=appSettings(); const r=document.documentElement;
+  r.style.setProperty('--hue', s.hue);
+  const fb=$('#fishbg img'); if(fb) fb.style.opacity=(s.fishvis/100);
+  r.style.setProperty('--reader', s.reader+'px');
+  clearInterval(_hueTimer);
+  if(+s.huerand>0){ _hueTimer=setInterval(()=>{ const cur=appSettings(); cur.hue=(cur.hue+37)%360; try{localStorage.setItem('yb_app_settings',JSON.stringify(cur));}catch(e){} document.documentElement.style.setProperty('--hue',cur.hue); }, +s.huerand*1000); } }
+function setAppSetting(k,v){ const s=appSettings(); s[k]=v; try{localStorage.setItem('yb_app_settings',JSON.stringify(s));}catch(e){} applyAppSettings(); }
 function setCamPrefs(p){ try{ localStorage.setItem('yb_cam_prefs',JSON.stringify(p)); }catch(e){} applyCamPrefs(); }
 function applyCamPrefs(){ const p=camPrefs(); ['cam','cam2'].forEach(id=>{ const c=$('#'+id); if(!c)return;
   const col=CAMCOLORS[p.color%CAMCOLORS.length]; c.classList.toggle('holoborder',col==='holo'); if(col!=='holo')c.style.borderColor=col;
@@ -779,6 +818,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const cf=$('#camfab'); if(cf) cf.onclick=toggleCam;
   const dx=$('#deskexit'); if(dx) dx.onclick=exitDesktop;
   window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} const s=$('#scrim'); if(s&&!s.hidden){closeDrawers();return;} const df=$('#deskframe'); if(df&&!df.hidden){exitDesktop();return;} nav('home'); };
+  applyAppSettings();                         // accent hue, background visibility, reader size
   nav('home');
   setTimeout(()=>checkUpdates(true),1500);   // quiet update check on launch
   autoLoadDesktop();                          // become the FULL 1:1 app when the desktop is reachable

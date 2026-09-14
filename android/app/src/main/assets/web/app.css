@@ -445,3 +445,16 @@ h1,h2,h3{margin:0}
 .weberr a{color:var(--sky)}
 .tab .tabimg{width:22px;height:22px;object-fit:contain;display:block}
 .tab.on .tabimg{filter:drop-shadow(0 0 6px rgba(233,200,119,.6))}
+/* The Logos page */
+.logoshead{text-align:center;margin:10px 0 6px}
+.logosyhwh{font:700 clamp(48px,16vw,74px) "Noto Serif Hebrew",serif;line-height:1}
+.logossub{font:italic 13px/1.5 var(--fital);color:var(--gold2);margin-top:6px}
+.logospage .heb{font-family:"Noto Serif Hebrew",serif;color:var(--gold);font-size:1.15em}
+.lmlogos{display:flex;align-items:center;gap:8px;width:100%;text-align:left;cursor:pointer;background:transparent;border:none;
+  font:700 15px Inter;color:var(--ink);margin:2px 0 12px;padding:6px 0 10px;border-bottom:1px solid var(--line)}
+.lmlogos:active{opacity:.7}
+.lmyhwh{font:700 20px "Noto Serif Hebrew",serif;color:var(--gold)}
+/* settings range controls */
+.setctl{display:flex;align-items:center;gap:10px;margin:8px 0}
+.setctl label{flex:none;width:130px;font:600 13px Inter;color:var(--ink2)}
+.setctl input[type=range]{flex:1;accent-color:var(--gold)}
