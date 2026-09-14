@@ -373,7 +373,15 @@ function nav(tab){ _tab=tab; try{ window.__tab=tab; }catch(e){}
   else if(tab==='bible') openBible();
   else if(tab==='commandments') showCommandments();
   else if(tab==='repentance'||tab==='repent') openRepentance();
+  else if(tab==='realizeus') showRealizeUS();
   else if(tab==='news') openNews(); }
+/* embed RealizeUS in the app view (News lives in the right menu now) */
+function showRealizeUS(){ clearInterval(_qTimer);
+  setView('<div class="screen webscreen"><iframe class="webembed" src="https://realizeus.org" '+
+    'sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>'+
+    '<div class="weberr" id="weberr">If RealizeUS doesn’t appear, it may block embedding — '+
+    '<a href="https://realizeus.org" target="_blank" rel="noopener">open it in your browser →</a></div></div>');
+}
 
 /* ================= DRAWERS (left = sources, right = verse study) — mirrors desktop ================= */
 const DESK_KEY='yb_desktop_url';
