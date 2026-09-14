@@ -6,3 +6,5 @@ android/build/
 *.keystore
 shots/
 .DS_Store
+packs/versions/
+packs/wordstudy/
