@@ -243,9 +243,10 @@ function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bi
   const body=verses.map((tx,i)=>'<p class="rv'+(verse===i+1?' hl':'')+'" id="rv'+(i+1)+'"><span class="rvn">'+(i+1)+'</span>'+esc(tx)+'<span class="ilslot" id="il'+(i+1)+'"></span></p>').join('');
   const prev=ch>1, next=ch<b.ch.length;
   setView('<div class="screen reader"><div class="rdbar"><button class="backbtn" id="rdbooks">📚 '+esc(b.a)+'</button>'+
-    '<div class="rdttl">'+esc(b.n)+' '+ch+'</div>'+
+    '<div class="rdttlwrap"><span class="rdttl">'+esc(b.n)+' '+ch+'</span>'+
+      '<span class="ileye" id="ilbtn" title="Show the Hebrew/Greek under each verse">&#128065;</span>'+
+      '<span class="treeeye" id="verbtn" title="Compare versions under each verse"><svg viewBox="0 0 24 24"><path d="M12 2 L16 10 L14 10 L18 16 L13 16 L13 21 L11 21 L11 16 L6 16 L10 10 L8 10 Z"/></svg></span></div>'+
     '<div class="rdnav"><button id="rdprev"'+(prev?'':' disabled')+'>‹</button><button id="rdnext"'+(next?'':' disabled')+'>›</button></div></div>'+
-    '<div class="rdtools"><button class="rdtool" id="ilbtn">א Hebrew / Greek</button><button class="rdtool" id="verbtn">🌐 Versions</button></div>'+
     '<div class="rdbody">'+body+'</div>'+
     '<div class="rdfoot">'+(prev?'<button class="rdmore" id="rdprev2">‹ '+esc(b.n)+' '+(ch-1)+'</button>':'<span></span>')+
       (next?'<button class="rdmore" id="rdnext2">'+esc(b.n)+' '+(ch+1)+' ›</button>':'<span></span>')+'</div></div>');
@@ -256,7 +257,7 @@ function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bi
   // tap a verse -> select it and open the study drawer (like selecting a verse on desktop)
   $('#view').querySelectorAll('.rv').forEach((p,i)=>p.onclick=()=>selectVerse(bi,ch,i+1));
   $('#ilbtn').onclick=()=>toggleChapterInterlinear(b,ch);
-  $('#verbtn').onclick=()=>{ selectVerse(bi,ch,verse||1); };
+  $('#verbtn').onclick=()=>toggleChapterVersions(b,ch);
   _rd={bi:bi,ch:ch};
   if(verse){ const el=$('#rv'+verse); if(el) setTimeout(()=>el.scrollIntoView({block:'center'}),60); }
 }
@@ -286,6 +287,26 @@ async function toggleChapterInterlinear(b,ch){
   }catch(e){ _ilOn=false; if(btn){btn.classList.remove('on');btn.textContent='א Hebrew / Greek';} toast('could not load originals'); }
 }
 function showStrongDefToast(sid,glyph,S){ const def=(S&&S[sid])||''; toast(glyph+' · '+sid+(def?' — '+def.split('—').pop().trim().slice(0,60):'')); }
+/* chapter-level version comparison: stack the user's favourite versions under each verse (tree, desktop-style) */
+let _verOn=false;
+function favVersions(){ try{ return JSON.parse(localStorage.getItem('yb_fav_versions')||'null')||['akjv','asv','BSB','basicenglish']; }catch(e){ return ['akjv','asv','BSB','basicenglish']; } }
+async function toggleChapterVersions(b,ch){
+  const btn=$('#verbtn');
+  if(_verOn){ _verOn=false; document.querySelectorAll('.ilslot').forEach(s=>s.innerHTML=''); if(btn)btn.classList.remove('on'); return; }
+  if(!(window.YBPacks && await YBPacks.have('ver:'+b.a).catch(()=>false))){
+    toast('Download the versions pack to compare here'); connectPrompt(); return; }
+  _verOn=true; if(btn)btn.classList.add('on');
+  try{
+    const data=await YBPacks.ensureBookVersions(b.a); const favs=favVersions();
+    const lc={}; Object.keys(data||{}).forEach(k=>lc[k.toLowerCase()]=k);
+    const verses=b.ch[ch-1]||[];
+    for(let i=1;i<=verses.length;i++){ const slot=$('#il'+i); if(!slot) continue;
+      slot.innerHTML='<span class="verstack">'+favs.map(vc=>{ const key=data[vc]?vc:lc[vc.toLowerCase()]; if(!key) return '';
+        const t=(((data[key]||{})[String(ch)]||{})[String(i)])||''; if(!t) return '';
+        return '<span class="vsrow"><span class="vscode">'+esc(vc)+'</span><span class="vstx">'+esc(t)+'</span></span>'; }).filter(Boolean).join('')+'</span>';
+    }
+  }catch(e){ _verOn=false; if(btn)btn.classList.remove('on'); toast('could not load versions'); }
+}
 let _sel=null;   // {bi,ch,v}
 function selectVerse(bi,ch,v){ _sel={bi:bi,ch:ch,v:v};
   document.querySelectorAll('.rv.hl').forEach(x=>x.classList.remove('hl'));
@@ -489,6 +510,9 @@ async function openSettings(){ clearInterval(_qTimer);
     '<div class="cmdsec"><div class="cmdeye">Add to the app</div><h3>Expanded, downloadable packs</h3>'+
     '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+
     rows.join('')+'</div>'+
+    '<div class="cmdsec"><div class="cmdeye">Reading</div><h3>Favourite versions</h3>'+
+    '<p class="setnote">Pick the translations to stack under each verse when you tap the tree 🌳 in a chapter.</p>'+
+    '<div class="favver" id="favver">'+[['akjv','KJV'],['asv','ASV'],['BSB','BSB'],['basicenglish','BBE'],['ERV','ERV'],['GNV','Geneva'],['ylt','YLT'],['web','WEB'],['darby','Darby'],['aleppo','Aleppo (Heb)']].map(v=>'<button class="favchip'+(favVersions().indexOf(v[0])>=0?' on':'')+'" data-v="'+v[0]+'">'+v[1]+'</button>').join('')+'</div></div>'+
     '<div class="cmdsec"><div class="cmdeye">Beyond the packs</div><h3>Sync with your desktop</h3>'+
     '<p class="setnote">For the deep lexicon and anything not in a pack, connect to your YahBible desktop over the internet.</p>'+
     '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://your-pc:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Save</button></div></div>'+
@@ -502,6 +526,8 @@ async function openSettings(){ clearInterval(_qTimer);
     if(!n&&!e){ toast('Enter a name or email'); return; } setAccount({name:n,email:e}); toast('Signed in'); openSettings(); };
   const gg=$('#doguest'); if(gg) gg.onclick=()=>{ setAccount({name:'Guest',guest:true}); openSettings(); };
   const so=$('#signout'); if(so) so.onclick=()=>{ setAccount(null); toast('Signed out'); openSettings(); };
+  $('#view').querySelectorAll('#favver .favchip').forEach(ch=>ch.onclick=()=>{ let f=favVersions(); const v=ch.dataset.v;
+    const i=f.indexOf(v); if(i>=0)f.splice(i,1); else f.push(v); try{localStorage.setItem('yb_fav_versions',JSON.stringify(f));}catch(e){} ch.classList.toggle('on'); });
   wirePackRows();
 }
 function getAccount(){ try{ return JSON.parse(localStorage.getItem('yb_account')||'null'); }catch(e){ return null; } }
@@ -549,18 +575,37 @@ function applyContentUpdate(){ toast('Fetching the latest study content…');
     .then(()=>{ try{localStorage.removeItem('yb_update_avail');}catch(e){} toast('Updated — restart the app to see the latest'); });
 }
 
-/* ---------- self-cam overlay (TikTok streaming) ---------- */
-let _camStream=null;
-async function toggleCam(){ const cam=$('#cam'), btn=$('#cambtn');
+/* ---------- self-cam overlay (TikTok streaming) — front / back / both ---------- */
+let _camStream=null,_camStream2=null;
+function toggleCam(){ const cam=$('#cam');
   if(cam.classList.contains('on')){ stopCam(); return; }
+  // popup: Front / Back / Both
+  document.querySelectorAll('#cammenu').forEach(x=>x.remove());
+  const m=document.createElement('div'); m.id='cammenu';
+  m.innerHTML='<button data-f="user">🤳 Front camera</button><button data-f="environment">📷 Back camera</button><button data-f="both">🎬 Both</button>';
+  document.body.appendChild(m);
+  const r=$('#cambtn').getBoundingClientRect(); m.style.top=(r.bottom+6)+'px'; m.style.right=(window.innerWidth-r.right)+'px';
+  m.querySelectorAll('button').forEach(bt=>bt.onclick=()=>{ m.remove(); startCam(bt.dataset.f); });
+  setTimeout(()=>{ const off=e=>{ if(!m.contains(e.target)&&e.target!==$('#cambtn')){ m.remove(); document.removeEventListener('click',off);} }; document.addEventListener('click',off); },0);
+}
+async function startCam(mode){ const cam=$('#cam'), btn=$('#cambtn');
   try{
-    _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
-    $('#camvid').srcObject=_camStream; cam.classList.add('on'); btn.classList.add('on');
-  }catch(e){ toast('Camera unavailable — allow camera to use the self-cam'); }
+    if(mode==='both'){
+      _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
+      $('#camvid').srcObject=_camStream;
+      try{ _camStream2=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+        let v2=$('#camvid2'); if(!v2){ v2=document.createElement('video'); v2.id='camvid2'; v2.autoplay=true; v2.playsInline=true; v2.muted=true; $('#cam').appendChild(v2);} v2.srcObject=_camStream2; cam.classList.add('both');
+      }catch(e){ toast('This device shows one camera at a time'); }
+    }else{
+      _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mode},audio:false});
+      $('#camvid').srcObject=_camStream; cam.classList.remove('both');
+    }
+    cam.classList.add('on'); btn.classList.add('on');
+  }catch(e){ toast('Camera unavailable — allow camera access'); }
 }
 function stopCam(){ const cam=$('#cam'), btn=$('#cambtn');
-  if(_camStream){ _camStream.getTracks().forEach(t=>t.stop()); _camStream=null; }
-  cam.classList.remove('on'); btn.classList.remove('on'); }
+  [_camStream,_camStream2].forEach(s=>{ if(s) s.getTracks().forEach(t=>t.stop()); });
+  _camStream=_camStream2=null; cam.classList.remove('on','both'); btn.classList.remove('on'); }
 function initCamDrag(){ const cam=$('#cam'); let sx,sy,ox,oy,drag=false;
   const start=e=>{ const p=e.touches?e.touches[0]:e; drag=true; sx=p.clientX; sy=p.clientY;
     const r=cam.getBoundingClientRect(); ox=r.left; oy=r.top; cam.style.bottom='auto'; cam.style.right='auto'; };
