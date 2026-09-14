@@ -240,11 +240,12 @@ function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bi
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab==='bible'));
   ch=Math.max(1,Math.min(b.ch.length,ch||1)); _rd={bi:bi,ch:ch};
   const verses=b.ch[ch-1]||[];
-  const body=verses.map((tx,i)=>'<p class="rv'+(verse===i+1?' hl':'')+'" id="rv'+(i+1)+'"><span class="rvn">'+(i+1)+'</span>'+esc(tx)+'</p>').join('');
+  const body=verses.map((tx,i)=>'<p class="rv'+(verse===i+1?' hl':'')+'" id="rv'+(i+1)+'"><span class="rvn">'+(i+1)+'</span>'+esc(tx)+'<span class="ilslot" id="il'+(i+1)+'"></span></p>').join('');
   const prev=ch>1, next=ch<b.ch.length;
   setView('<div class="screen reader"><div class="rdbar"><button class="backbtn" id="rdbooks">📚 '+esc(b.a)+'</button>'+
     '<div class="rdttl">'+esc(b.n)+' '+ch+'</div>'+
     '<div class="rdnav"><button id="rdprev"'+(prev?'':' disabled')+'>‹</button><button id="rdnext"'+(next?'':' disabled')+'>›</button></div></div>'+
+    '<div class="rdtools"><button class="rdtool" id="ilbtn">א Hebrew / Greek</button><button class="rdtool" id="verbtn">🌐 Versions</button></div>'+
     '<div class="rdbody">'+body+'</div>'+
     '<div class="rdfoot">'+(prev?'<button class="rdmore" id="rdprev2">‹ '+esc(b.n)+' '+(ch-1)+'</button>':'<span></span>')+
       (next?'<button class="rdmore" id="rdnext2">'+esc(b.n)+' '+(ch+1)+' ›</button>':'<span></span>')+'</div></div>');
@@ -254,9 +255,37 @@ function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bi
   ['#rdnext','#rdnext2'].forEach(s=>{const e=$(s);if(e&&next)e.onclick=()=>go(1);});
   // tap a verse -> select it and open the study drawer (like selecting a verse on desktop)
   $('#view').querySelectorAll('.rv').forEach((p,i)=>p.onclick=()=>selectVerse(bi,ch,i+1));
+  $('#ilbtn').onclick=()=>toggleChapterInterlinear(b,ch);
+  $('#verbtn').onclick=()=>{ selectVerse(bi,ch,verse||1); };
   _rd={bi:bi,ch:ch};
   if(verse){ const el=$('#rv'+verse); if(el) setTimeout(()=>el.scrollIntoView({block:'center'}),60); }
 }
+/* chapter-level interlinear: show the Hebrew/Greek + Strong's + English under each verse (desktop-style) */
+let _ilOn=false;
+async function toggleChapterInterlinear(b,ch){
+  const btn=$('#ilbtn');
+  if(_ilOn){ _ilOn=false; document.querySelectorAll('.ilslot').forEach(s=>s.innerHTML=''); if(btn)btn.classList.remove('on'); return; }
+  if(!(window.YBPacks && await YBPacks.have('ws:'+b.a).catch(()=>false))){
+    toast('Download the word‑study pack to see the original here'); connectPrompt(); return; }
+  _ilOn=true; if(btn){btn.classList.add('on'); btn.textContent='… loading';}
+  try{
+    const ws=await YBPacks.ensureBookWords(b.a); const S=await YBPacks.ensureStrongs().catch(()=>({}));
+    const verses=b.ch[ch-1]||[];
+    for(let i=1;i<=verses.length;i++){
+      const toks=(((ws||{})[String(ch)]||{})[String(i)])||[];
+      const slot=$('#il'+i); if(!slot) continue;
+      slot.innerHTML = toks.length? '<span class="illine">'+toks.map(t=>{
+        const def=(S&&S[t.s])||''; const dshort=def.split('—').pop().trim().slice(0,40);
+        return '<span class="iltok" data-s="'+esc(t.s||'')+'"><span class="ilo">'+esc(t.o||'')+'</span>'+
+          '<span class="ile">'+esc(t.e||'')+'</span><span class="ils">'+esc(t.s||'')+'</span>'+
+          (dshort?'<span class="ild">'+esc(dshort)+'</span>':'')+'</span>';
+      }).join('')+'</span>' : '';
+    }
+    document.querySelectorAll('.iltok').forEach(x=>x.onclick=e=>{e.stopPropagation();_sel={bi:KJV.books.indexOf(b),ch:ch,v:1};showStrongDefToast(x.dataset.s,x.querySelector('.ilo').textContent,S);});
+    if(btn)btn.textContent='א Hebrew / Greek';
+  }catch(e){ _ilOn=false; if(btn){btn.classList.remove('on');btn.textContent='א Hebrew / Greek';} toast('could not load originals'); }
+}
+function showStrongDefToast(sid,glyph,S){ const def=(S&&S[sid])||''; toast(glyph+' · '+sid+(def?' — '+def.split('—').pop().trim().slice(0,60):'')); }
 let _sel=null;   // {bi,ch,v}
 function selectVerse(bi,ch,v){ _sel={bi:bi,ch:ch,v:v};
   document.querySelectorAll('.rv.hl').forEach(x=>x.classList.remove('hl'));
@@ -316,17 +345,41 @@ function buildSources(){ const d=$('#leftdrawer');
   const ot=KJV.books.filter(b=>b.t==='OT'), nt=KJV.books.filter(b=>b.t==='NT');
   const grp=(lbl,list)=>'<div class="srcgroup"><div class="srclbl">'+esc(lbl)+'</div>'+
     list.map(b=>{const i=KJV.books.indexOf(b);return '<button class="srcitem" data-bi="'+i+'"><span class="si">📖</span>'+esc(b.n)+'</button>';}).join('')+'</div>';
-  const locked=SRC_LOCKED.map(g=>'<div class="srcgroup"><div class="srclbl">'+esc(g.t)+'</div>'+
-    g.items.map(it=>'<button class="srcitem locked" data-locked="1"><span class="si">'+it[0]+'</span>'+esc(it[1])+'</button>').join('')+'</div>').join('');
   d.innerHTML='<div class="drawhdr"><span class="dt">Holy Bible &middot; Sources</span><button class="drawx" id="ldx">✕</button></div>'+
-    '<button class="srcitem" id="lsettings" style="border-color:rgba(233,200,119,.4)"><span class="si">⚙️</span>Updates &amp; Downloads</button>'+
-    '<div class="connectcard"><div class="cct">📦 Add more, offline</div><p>Download the 120+ versions and the Hebrew/Greek word‑study packs, or sync with your desktop.</p><button class="connectbtn" id="lconnect">Open Downloads</button></div>'+
-    grp('Old Testament',ot)+grp('New Testament',nt)+locked;
+    '<button class="srcitem" id="lsettings" style="border-color:rgba(233,200,119,.4)"><span class="si">⚙️</span>Settings &amp; Downloads</button>'+
+    grp('Old Testament',ot)+grp('New Testament',nt)+
+    '<div class="srcgroup"><div class="srclbl">More sacred books</div><div id="srcextra"><div class="srcnote">loading sources…</div></div></div>';
   $('#ldx',d).onclick=closeDrawers;
   d.querySelectorAll('.srcitem[data-bi]').forEach(b=>b.onclick=()=>{closeDrawers();openBook(+b.dataset.bi);});
-  d.querySelectorAll('.srcitem.locked').forEach(b=>b.onclick=()=>connectPrompt());
   $('#lsettings',d).onclick=()=>{closeDrawers();openSettings();};
-  $('#lconnect',d).onclick=()=>connectPrompt();
+  // populate the extra sources (downloadable, then openable)
+  if(window.YBPacks){ YBPacks.sourcesIndex().then(async(list)=>{ const box=$('#srcextra'); if(!box) return;
+    if(!list.length){ box.innerHTML='<div class="srcnote">Connect to the internet once to list the extra sources.</div>'; return; }
+    const rows=await Promise.all(list.map(async s=>{ const got=await YBPacks.have('src:'+s.id).catch(()=>false);
+      return '<button class="srcitem'+(got?'':' dl')+'" data-src="'+esc(s.id)+'"><span class="si">'+(got?'📖':'⬇')+'</span>'+esc(s.name)+
+        '<span class="srcsz">'+(got?'':fmtMB(s.size||0))+'</span></button>'; }));
+    box.innerHTML=rows.join('');
+    box.querySelectorAll('.srcitem[data-src]').forEach(b=>b.onclick=()=>openSource(b.dataset.src, b));
+  }).catch(()=>{ const box=$('#srcextra'); if(box) box.innerHTML='<div class="srcnote">could not list sources</div>'; }); }
+}
+let _srcCache={};
+async function openSource(id, btn){
+  if(btn){ btn.disabled=true; const si=btn.querySelector('.si'); if(si&&si.textContent==='⬇') si.textContent='…'; }
+  let data=_srcCache[id];
+  try{ if(!data){ data=await YBPacks.ensureSource(id); _srcCache[id]=data; } }
+  catch(e){ toast('Download needs internet'); if(btn)btn.disabled=false; return; }
+  closeDrawers();
+  const books=Object.keys(data||{});
+  setView('<div class="screen"><button class="backbtn" id="srcback">◀ sources</button>'+
+    '<div class="listhdr">'+esc(id.replace(/_/g,' '))+'</div>'+
+    books.map((bk,i)=>'<button class="cmdrow" data-b="'+i+'"><span class="ct">'+esc(bk)+'</span></button>').join('')+'</div>');
+  $('#srcback').onclick=()=>{nav('bible');};
+  $('#view').querySelectorAll('.cmdrow').forEach(r=>r.onclick=()=>openSourceBook(id,books[+r.dataset.b]));
+}
+function openSourceBook(id,book){ const data=_srcCache[id]||{}; const units=data[book]||[];
+  setView('<div class="screen reader"><div class="rdbar"><button class="backbtn" id="sbk">◀ '+esc(id.replace(/_/g,' '))+'</button><div class="rdttl">'+esc(book)+'</div><div></div></div>'+
+    '<div class="rdbody">'+units.map(u=>'<p class="rv"><span class="rvn">'+esc(u[0]||'')+'</span>'+esc(u[1]||'')+'</p>').join('')+'</div></div>');
+  $('#sbk').onclick=()=>openSource(id);
 }
 /* RIGHT drawer — verse study: the selected verse, its words, versions & original language */
 async function buildStudy(){ const d=$('#rightdrawer');
@@ -416,8 +469,22 @@ async function openSettings(){ clearInterval(_qTimer);
     {id:'wordstudy',name:'Offline word study',size:0,desc:"Hebrew/Greek originals, Strong's & interlinear for the scriptures."}];
   const upd=(function(){try{return localStorage.getItem('yb_update_avail');}catch(e){return null;}})();
   const rows=await Promise.all(packs.map(renderPackRow));
+  const acct=getAccount();
+  const acctCard = acct
+    ? '<div class="cmdsec"><div class="cmdeye">Account</div><h3>Signed in</h3>'+
+      '<div class="acctrow"><div class="acctav">'+esc((acct.name||acct.email||'Y')[0].toUpperCase())+'</div>'+
+      '<div><div class="acctname">'+esc(acct.name||acct.email)+'</div><div class="acctsub">'+esc(acct.email||'on this device')+'</div></div>'+
+      '<button id="signout" class="miniupd" style="margin-left:auto">Sign out</button></div></div>'
+    : '<div class="cmdsec cmdlogin"><div class="cmdeye">Account</div><h3>Sign in or create an account</h3>'+
+      '<p class="setnote">Your account (the Zion’iel Network) keeps your notes, bookmarks &amp; reading progress across your phone and desktop.</p>'+
+      '<input id="lg_name" class="setinput" placeholder="Name or username" style="margin-bottom:8px">'+
+      '<input id="lg_email" class="setinput" placeholder="Email (optional)" style="margin-bottom:8px">'+
+      '<input id="lg_pw" class="setinput" type="password" placeholder="Password" style="margin-bottom:10px">'+
+      '<div class="setrow"><button id="dosignin" class="connectbtn" style="width:auto;padding:10px 16px">Sign in</button>'+
+      '<button id="doguest" class="miniupd">Continue as guest</button></div></div>';
   setView('<div class="screen study"><button class="backbtn" data-back="bible">◀ back</button>'+
-    '<div class="cmdno">App</div><h2 class="cmdttl">Updates &amp; Downloads</h2>'+
+    '<div class="cmdno">App</div><h2 class="cmdttl">Settings</h2>'+
+    acctCard+
     (upd&&upd>APP_CONTENT_VER?'<div class="updbanner">✨ New study content available (v'+esc(upd)+'). <button id="applyupd" class="miniupd">Update now</button></div>':'')+
     '<div class="cmdsec"><div class="cmdeye">Add to the app</div><h3>Expanded, downloadable packs</h3>'+
     '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+
@@ -431,8 +498,14 @@ async function openSettings(){ clearInterval(_qTimer);
   const cu=$('#chkupd'); if(cu) cu.onclick=()=>checkUpdates(false).then(()=>openSettings());
   const au=$('#applyupd'); if(au) au.onclick=()=>applyContentUpdate();
   const sd=$('#savedesk'); if(sd) sd.onclick=()=>{ try{localStorage.setItem(DESK_KEY,$('#deskurl').value.trim());}catch(e){} toast('Desktop address saved'); };
+  const si=$('#dosignin'); if(si) si.onclick=()=>{ const n=$('#lg_name').value.trim(), e=$('#lg_email').value.trim();
+    if(!n&&!e){ toast('Enter a name or email'); return; } setAccount({name:n,email:e}); toast('Signed in'); openSettings(); };
+  const gg=$('#doguest'); if(gg) gg.onclick=()=>{ setAccount({name:'Guest',guest:true}); openSettings(); };
+  const so=$('#signout'); if(so) so.onclick=()=>{ setAccount(null); toast('Signed out'); openSettings(); };
   wirePackRows();
 }
+function getAccount(){ try{ return JSON.parse(localStorage.getItem('yb_account')||'null'); }catch(e){ return null; } }
+function setAccount(a){ try{ if(a) localStorage.setItem('yb_account',JSON.stringify(a)); else localStorage.removeItem('yb_account'); }catch(e){} }
 async function renderPackRow(p){
   const key= p.id==='versions'?'ver:':'ws:';
   const ks=await YBPacks.storedKeys().catch(()=>[]);
@@ -512,6 +585,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#rightmenubtn').onclick=()=>openDrawer('right');
   $('#scrim').onclick=closeDrawers;
   $('#tavbtn').onclick=askTaviel;
+  $('#settingsbtn').onclick=openSettings;
   initCamDrag();
   window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} const s=$('#scrim'); if(s&&!s.hidden){closeDrawers();return;} nav('home'); };
   nav('home');

@@ -74,6 +74,8 @@ h1,h2,h3{margin:0}
 .srcitem .si{font-size:16px;flex:none}
 .srcitem.locked{opacity:.6}
 .srcitem.locked .si{filter:grayscale(1)}
+.srcitem.dl{opacity:.85}
+.srcsz{margin-left:auto;font:700 10px Inter;color:var(--sky)}
 .srcnote{font:12.5px/1.5 var(--fital);font-style:italic;color:var(--dim);padding:8px 4px}
 .connectcard{margin:8px 0 14px;padding:12px 13px;border-radius:12px;border:1px solid rgba(108,182,255,.4);background:rgba(89,150,255,.07)}
 .connectcard .cct{font:700 13px Inter;color:var(--sky)}
@@ -121,7 +123,13 @@ h1,h2,h3{margin:0}
 .packbtn.done{border-color:var(--grn);color:var(--grn)}
 .packbtn:disabled{opacity:.6}
 .setrow{display:flex;gap:8px;align-items:center}
-.setinput{flex:1;background:rgba(20,14,30,.6);border:1px solid var(--line);border-radius:9px;padding:9px 11px;color:var(--ink);font:14px Inter}
+.setinput{width:100%;flex:1;background:rgba(20,14,30,.6);border:1px solid var(--line);border-radius:9px;padding:11px 12px;color:var(--ink);font:15px Inter}
+.cmdlogin .setrow{gap:10px}
+.acctrow{display:flex;align-items:center;gap:12px}
+.acctav{width:44px;height:44px;border-radius:50%;background:linear-gradient(140deg,#c07ad9,#8a7be8);color:#fff;font:800 20px "Cormorant Garamond",serif;display:flex;align-items:center;justify-content:center;flex:none}
+.acctname{font:700 16px Inter;color:var(--ink)} .acctsub{font:12.5px var(--fital);color:var(--dim)}
+.topbtn.hasupd::after{content:"";position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--gold);border:1px solid var(--bg)}
+.topbtn{position:relative}
 
 /* main scroll view */
 #view{position:relative;z-index:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -347,4 +355,16 @@ h1,h2,h3{margin:0}
 .rv.hl{background:rgba(233,200,119,.13);box-shadow:inset 3px 0 0 var(--gold)}
 .rdfoot{display:flex;justify-content:space-between;gap:8px;margin-top:14px}
 .rdmore{padding:10px 14px;border-radius:11px;border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--gold);font:600 13px Inter;cursor:pointer}
+/* chapter tools + inline interlinear */
+.rdtools{display:flex;gap:8px;margin:-4px 0 10px}
+.rdtool{padding:6px 12px;border-radius:16px;border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--ink2);font:600 12.5px Inter;cursor:pointer}
+.rdtool.on{border-color:var(--gold);color:var(--gold)}
+.ilslot{display:block}
+.illine{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px;padding:7px 0;border-top:1px dashed var(--line)}
+.iltok{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:52px;padding:4px 6px;border:1px solid var(--line);border-radius:8px;background:rgba(34,26,48,.5);cursor:pointer}
+.iltok:active{border-color:var(--gold2)}
+.ilo{font:19px "Noto Serif Hebrew",serif;color:var(--ink)}
+.ile{font:600 11px Inter;color:var(--ink2)}
+.ils{font:700 9px Inter;color:var(--sky)}
+.ild{font:10px var(--fital);color:var(--dim);text-align:center;max-width:80px;line-height:1.2}
 @media (prefers-reduced-motion:reduce){#fishbg img,.lordsprayer.pulse{animation:none}}

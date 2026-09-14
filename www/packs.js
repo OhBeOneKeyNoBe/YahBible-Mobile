@@ -91,6 +91,18 @@
     _mem[key]=undefined; return await loadJSON(key);
   }
 
+  // ---- extra sources pack: "sources/<id>.json.gz" -> {book:[[ref,text],...]} ----
+  async function ensureSource(id, onProg){
+    const key='src:'+id;
+    if(await have(key)) return await loadJSON(key);
+    await downloadFile('sources/'+id+'.json.gz', key, onProg);
+    _mem[key]=undefined; return await loadJSON(key);
+  }
+  async function sourcesIndex(){
+    try{ const r=await fetch(base()+'sources/_index.json?ts='+Date.now(),{cache:'no-store'}); if(r.ok) return (await r.json()).sources||[]; }catch(e){}
+    return [];
+  }
   window.YBPacks={ getManifest, fetchProgress, downloadFile, loadJSON, have, storedKeys,
-    idbGet, idbPut, idbDel, removePrefix, ensureBookVersions, ensureBookWords, ensureStrongs, base };
+    idbGet, idbPut, idbDel, removePrefix, ensureBookVersions, ensureBookWords, ensureStrongs,
+    ensureSource, sourcesIndex, base };
 })();
