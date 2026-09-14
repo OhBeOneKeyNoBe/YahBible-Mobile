@@ -542,6 +542,14 @@ async function openSettings(){ clearInterval(_qTimer);
     '<div class="cmdsec"><div class="cmdeye">Add to the app</div><h3>Expanded, downloadable packs</h3>'+
     '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+
     rows.join('')+'</div>'+
+    (function(){ const p=camPrefs(); const colnames=['Red','Orange','Yellow','Green','Blue','Indigo','Violet','Pink','White','🌈 Holographic'];
+      return '<div class="cmdsec"><div class="cmdeye">Studio</div><h3>Camera &amp; studio</h3>'+
+      '<p class="setnote">The camera button (🎥) opens/closes the cameras. Set how they look here — it applies live.</p>'+
+      '<div class="setrow" style="flex-wrap:wrap;gap:8px">'+
+      '<button id="cam_color" class="favchip">Border: '+colnames[p.color%10]+'</button>'+
+      '<button id="cam_form" class="favchip">Shape: '+({round:'Round',land:'Landscape',port:'Portrait'}[p.form])+'</button>'+
+      '<button id="cam_mirror" class="favchip'+(p.mirror?' on':'')+'">🪞 Mirror</button>'+
+      '<button id="cam_green" class="favchip'+(p.green?' on':'')+'">🟩 Green-screen</button></div></div>'; })()+
     '<div class="cmdsec"><div class="cmdeye">Reading</div><h3>Favourite versions</h3>'+
     '<p class="setnote">Pick the translations to stack under each verse when you tap the tree 🌳 in a chapter.</p>'+
     '<div class="favver" id="favver">'+[['akjv','KJV'],['asv','ASV'],['BSB','BSB'],['basicenglish','BBE'],['ERV','ERV'],['GNV','Geneva'],['ylt','YLT'],['web','WEB'],['darby','Darby'],['aleppo','Aleppo (Heb)']].map(v=>'<button class="favchip'+(favVersions().indexOf(v[0])>=0?' on':'')+'" data-v="'+v[0]+'">'+v[1]+'</button>').join('')+'</div></div>'+
@@ -567,6 +575,10 @@ async function openSettings(){ clearInterval(_qTimer);
     setAccount({name:n,email:e}); openSettings(); };
   const gg=$('#doguest'); if(gg) gg.onclick=()=>{ setAccount({name:'Guest',guest:true}); openSettings(); };
   const so=$('#signout'); if(so) so.onclick=()=>{ setAccount(null); toast('Signed out'); openSettings(); };
+  const cc=$('#cam_color'); if(cc) cc.onclick=()=>{ const p=camPrefs(); p.color=(p.color+1)%CAMCOLORS.length; setCamPrefs(p); openSettings(); };
+  const cfm=$('#cam_form'); if(cfm) cfm.onclick=()=>{ const p=camPrefs(); const o=['round','land','port']; p.form=o[(o.indexOf(p.form)+1)%3]; setCamPrefs(p); openSettings(); };
+  const cm=$('#cam_mirror'); if(cm) cm.onclick=()=>{ const p=camPrefs(); p.mirror=!p.mirror; setCamPrefs(p); cm.classList.toggle('on'); };
+  const cg=$('#cam_green'); if(cg) cg.onclick=()=>{ const p=camPrefs(); p.green=!p.green; setCamPrefs(p); cg.classList.toggle('on'); };
   $('#view').querySelectorAll('#favver .favchip').forEach(ch=>ch.onclick=()=>{ let f=favVersions(); const v=ch.dataset.v;
     const i=f.indexOf(v); if(i>=0)f.splice(i,1); else f.push(v); try{localStorage.setItem('yb_fav_versions',JSON.stringify(f));}catch(e){} ch.classList.toggle('on'); });
   wirePackRows();
@@ -651,7 +663,7 @@ async function startCam(mode){ const btn=$('#cambtn');
       $('#camvid2').srcObject=_camStream2; $('#cam2').classList.add('on');
       $('#cam2').style.left='auto'; $('#cam2').style.right='16px';   // start the back cam on the other side
     }
-    btn.classList.add('on');
+    btn.classList.add('on'); applyCamPrefs();
   }catch(e){ toast('Camera unavailable — allow camera access'); }
 }
 function stopCamWin(id){ const s=id==='cam'?_camStream:_camStream2; if(s)s.getTracks().forEach(t=>t.stop());
@@ -689,12 +701,14 @@ function cycleCamColor(id){ const cam=$('#'+id); _camColorIdx[id]=(_camColorIdx[
   cam.classList.toggle('holoborder', c==='holo'); if(c!=='holo') cam.style.borderColor=c; }
 function cycleCamForm(id){ const cam=$('#'+id); const forms=['round','land','port']; const cur=forms.find(f=>cam.classList.contains('cf-'+f))||'round';
   const nxt=forms[(forms.indexOf(cur)+1)%forms.length]; forms.forEach(f=>cam.classList.remove('cf-'+f)); cam.classList.add('cf-'+nxt); }
-function initCamDrag(){ initCamWin($('#cam')); initCamWin($('#cam2'));
-  document.querySelectorAll('.camclose').forEach(b=>b.onclick=e=>{e.stopPropagation();stopCamWin(b.dataset.cam);});
-  document.querySelectorAll('.camcolor').forEach(b=>b.onclick=e=>{e.stopPropagation();cycleCamColor(b.dataset.cam);});
-  document.querySelectorAll('.camform').forEach(b=>b.onclick=e=>{e.stopPropagation();cycleCamForm(b.dataset.cam);});
-  document.querySelectorAll('.cammirror').forEach(b=>b.onclick=e=>{e.stopPropagation();$('#'+b.dataset.cam).classList.toggle('mirror');});
-  document.querySelectorAll('.camgreen').forEach(b=>b.onclick=e=>{e.stopPropagation();$('#'+b.dataset.cam).classList.toggle('green');}); }
+function initCamDrag(){ initCamWin($('#cam')); initCamWin($('#cam2')); }
+/* camera prefs live in Settings (not on the video). They persist + apply to both windows. */
+function camPrefs(){ try{ return Object.assign({color:6,form:'round',mirror:false,green:false}, JSON.parse(localStorage.getItem('yb_cam_prefs')||'{}')); }catch(e){ return {color:6,form:'round',mirror:false,green:false}; } }
+function setCamPrefs(p){ try{ localStorage.setItem('yb_cam_prefs',JSON.stringify(p)); }catch(e){} applyCamPrefs(); }
+function applyCamPrefs(){ const p=camPrefs(); ['cam','cam2'].forEach(id=>{ const c=$('#'+id); if(!c)return;
+  const col=CAMCOLORS[p.color%CAMCOLORS.length]; c.classList.toggle('holoborder',col==='holo'); if(col!=='holo')c.style.borderColor=col;
+  ['round','land','port'].forEach(f=>c.classList.toggle('cf-'+f, f===p.form));
+  c.classList.toggle('mirror',!!p.mirror); c.classList.toggle('green',!!p.green); }); }
 
 /* ---------- boot ---------- */
 window.addEventListener('DOMContentLoaded',()=>{
