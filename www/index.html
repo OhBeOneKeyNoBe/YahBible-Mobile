@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#130f1b">
+<title>YahBible</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,600&family=EB+Garamond:ital@0;1&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="fishbg"><img src="assets/holy-fish.png" alt=""></div>
+
+  <header id="topbar">
+    <div class="wordmark"><span class="heb">א</span><span class="yb">YahBible</span><span class="heb">ת</span></div>
+    <button class="topbtn" id="cambtn" title="Self-cam for streaming" aria-label="Self-cam">🎥</button>
+  </header>
+
+  <main id="view"></main>
+
+  <nav id="tabbar">
+    <button class="tab" data-tab="home"><span class="ti">🏠</span>Home</button>
+    <button class="tab" data-tab="commandments"><span class="ti">📜</span>Study</button>
+    <button class="tab" data-tab="repent"><span class="ti">🕊</span>Repent</button>
+    <button class="tab" data-tab="news"><span class="ti">✨</span>News</button>
+  </nav>
+
+  <!-- draggable self-cam overlay (circle / green-screen) for TikTok screen-share -->
+  <div id="cam">
+    <video id="camvid" autoplay playsinline muted></video>
+    <div id="camctl">
+      <button id="camshape" title="Circle / green-screen">◐</button>
+      <button id="camclose" title="Stop camera">✕</button>
+    </div>
+  </div>
+
+  <script src="data/commandments.js"></script>
+  <script src="data/repentance.js"></script>
+  <script src="data/news.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
