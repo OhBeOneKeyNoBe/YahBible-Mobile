@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- ichthys — the sign of the fish, in gold, within the icon safe zone -->
+    <group android:translateX="0" android:translateY="2">
+        <path android:fillColor="#E9C877"
+            android:pathData="M40,54 C52,38 74,38 88,54 C74,70 52,70 40,54 Z
+                              M40,54 L24,42 L24,66 Z" />
+        <path android:fillColor="#1B1526"
+            android:pathData="M78,54 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0" />
+    </group>
+</vector>
