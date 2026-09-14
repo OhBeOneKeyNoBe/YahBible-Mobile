@@ -43,6 +43,16 @@ original Hebrew or Greek. When paired with your desktop, the full engine comes l
 <img src="docs/screenshots/09-sources.png" width="290" alt="Sources menu">
 <img src="docs/screenshots/10-verse-study.png" width="290" alt="Verse study panel">
 
+### Grows with you — updates & downloadable packs
+The app **updates itself** over the internet, and you can **download expanded packs** that then work
+fully offline: **all 120+ Bible versions** (compare any verse across every translation) and an
+**offline word-study** pack (the Hebrew/Greek originals, Strong's & interlinear for the scriptures).
+A couple of gigabytes at most — about the size of one mobile game. For the deep lexicon and anything
+beyond the packs, sync with your desktop over the internet.
+
+<img src="docs/screenshots/11-downloads.png" width="290" alt="Updates & Downloads">
+<img src="docs/screenshots/12-compare-versions.png" width="290" alt="Compare 120+ versions offline">
+
 ### The Ten Commandments — studied as questions
 Each commandment opens as a study of clear questions — *“What is Adultery?”*, *“How do you keep this
 commandment?”*, and *“How is it broken?”* — answered plainly, with the scripture behind each answer.

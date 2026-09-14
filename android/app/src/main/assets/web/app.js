@@ -319,15 +319,17 @@ function buildSources(){ const d=$('#leftdrawer');
   const locked=SRC_LOCKED.map(g=>'<div class="srcgroup"><div class="srclbl">'+esc(g.t)+'</div>'+
     g.items.map(it=>'<button class="srcitem locked" data-locked="1"><span class="si">'+it[0]+'</span>'+esc(it[1])+'</button>').join('')+'</div>').join('');
   d.innerHTML='<div class="drawhdr"><span class="dt">Holy Bible &middot; Sources</span><button class="drawx" id="ldx">✕</button></div>'+
-    '<div class="connectcard"><div class="cct">🖥️ Connect to your desktop</div><p>Unlock every source, all 120+ versions, and full Hebrew/Greek/Aramaic word study — live from your PC.</p><button class="connectbtn" id="lconnect">Connect to YahBible desktop</button></div>'+
+    '<button class="srcitem" id="lsettings" style="border-color:rgba(233,200,119,.4)"><span class="si">⚙️</span>Updates &amp; Downloads</button>'+
+    '<div class="connectcard"><div class="cct">📦 Add more, offline</div><p>Download the 120+ versions and the Hebrew/Greek word‑study packs, or sync with your desktop.</p><button class="connectbtn" id="lconnect">Open Downloads</button></div>'+
     grp('Old Testament',ot)+grp('New Testament',nt)+locked;
   $('#ldx',d).onclick=closeDrawers;
   d.querySelectorAll('.srcitem[data-bi]').forEach(b=>b.onclick=()=>{closeDrawers();openBook(+b.dataset.bi);});
   d.querySelectorAll('.srcitem.locked').forEach(b=>b.onclick=()=>connectPrompt());
+  $('#lsettings',d).onclick=()=>{closeDrawers();openSettings();};
   $('#lconnect',d).onclick=()=>connectPrompt();
 }
 /* RIGHT drawer — verse study: the selected verse, its words, versions & original language */
-function buildStudy(){ const d=$('#rightdrawer');
+async function buildStudy(){ const d=$('#rightdrawer');
   if(!_sel){ d.innerHTML='<div class="drawhdr"><span class="dt">Verse Study</span><button class="drawx" id="rdx">✕</button></div>'+
       '<div class="srcnote">Tap a verse in the reader to study it here — its words, cross‑references, other versions, and the original Hebrew or Greek.</div>';
     $('#rdx',d).onclick=closeDrawers; return; }
@@ -335,23 +337,144 @@ function buildStudy(){ const d=$('#rightdrawer');
   const ref=b.n+' '+_sel.ch+':'+v;
   const words=txt.replace(/[^A-Za-z' -]/g,' ').split(/\s+/).filter(w=>w.length>1)
     .map(w=>'<button class="wchip" data-w="'+esc(w)+'">'+esc(w)+'</button>').join('');
+  // which packs are installed?
+  const haveVer=window.YBPacks && await YBPacks.have('ver:'+b.a).catch(()=>false);
+  const haveWs =window.YBPacks && await YBPacks.have('ws:'+b.a).catch(()=>false);
   d.innerHTML='<div class="drawhdr"><span class="dt">Verse Study</span><button class="drawx" id="rdx">✕</button></div>'+
     '<div class="vsref holo-gold">'+esc(ref)+'</div>'+
     '<div class="vstext">'+esc(txt)+'</div>'+
-    '<div class="vstabs"><button class="vstab locked" data-x="versions">Compare versions</button>'+
-      '<button class="vstab locked" data-x="orig">Original language</button>'+
-      '<button class="vstab locked" data-x="inter">Interlinear</button></div>'+
+    '<div class="vstabs"><button class="vstab'+(haveVer?'':' locked')+'" data-x="versions">Compare versions</button>'+
+      '<button class="vstab'+(haveWs?'':' locked')+'" data-x="orig">Original language</button>'+
+      '<button class="vstab'+(haveWs?'':' locked')+'" data-x="inter">Interlinear</button></div>'+
+    '<div id="vspanel"></div>'+
     '<div class="cxlbl">Words — tap for study</div><div class="wchips">'+words+'</div>'+
-    '<div class="connectcard"><div class="cct">🖥️ Full word study on your desktop</div><p>Strong’s, the Hebrew/Greek/Aramaic engine, gematria, and 120+ versions come live from your PC.</p><button class="connectbtn" id="rconnect">Connect to YahBible desktop</button></div>';
+    (haveVer&&haveWs?'':'<div class="connectcard"><div class="cct">📦 Get more, offline</div><p>Download the versions &amp; word‑study packs to compare 120+ translations and see the Hebrew/Greek here — no connection needed.</p><button class="connectbtn" id="rconnect">Open Downloads</button></div>');
   $('#rdx',d).onclick=closeDrawers;
-  d.querySelectorAll('.wchip,.vstab.locked').forEach(b=>b.onclick=()=>connectPrompt());
-  $('#rconnect',d).onclick=()=>connectPrompt();
+  const rc=$('#rconnect',d); if(rc) rc.onclick=()=>connectPrompt();
+  d.querySelectorAll('.vstab').forEach(bt=>bt.onclick=()=>{ if(bt.classList.contains('locked')){connectPrompt();return;} showVsPanel(bt.dataset.x,b,_sel.ch,v); });
+  d.querySelectorAll('.wchip').forEach(bt=>bt.onclick=()=>{ if(haveWs) showWordPack(bt.dataset.w,b,_sel.ch,v); else connectPrompt(); });
+}
+async function showVsPanel(kind,b,ch,v){ const el=$('#vspanel'); if(!el) return; el.innerHTML='<div class="srcnote">loading…</div>';
+  try{
+    if(kind==='versions'){
+      const data=await YBPacks.ensureBookVersions(b.a);
+      const rows=Object.keys(data||{}).sort().map(vc=>{ const t=(((data[vc]||{})[ch]||{})[v])||''; if(!t) return '';
+        return '<div class="vrow"><span class="vcode">'+esc(vc)+'</span><span class="vtxt">'+esc(t)+'</span></div>'; }).filter(Boolean).join('');
+      el.innerHTML='<div class="cxlbl">Across '+ (rows?Object.keys(data).length:0) +' versions</div><div class="vlist">'+(rows||'<div class="srcnote">no data for this verse</div>')+'</div>';
+    }else{
+      const ws=await YBPacks.ensureBookWords(b.a);
+      const toks=(((ws||{})[ch]||{})[v])||[];
+      if(kind==='orig'){
+        el.innerHTML='<div class="cxlbl">Original — '+(toks.length)+' words</div><div class="origline">'+
+          toks.map(t=>'<span class="origtok" data-s="'+esc(t.s||'')+'">'+esc(t.o||'')+'</span>').join(' ')+'</div>';
+      }else{ // interlinear
+        el.innerHTML='<div class="cxlbl">Interlinear</div><div class="interlist">'+
+          toks.map(t=>'<div class="intok"><span class="io">'+esc(t.o||'')+'</span><span class="ie">'+esc(t.e||'')+'</span><span class="is">'+esc(t.s||'')+'</span></div>').join('')+'</div>';
+      }
+      el.querySelectorAll('.origtok').forEach(x=>x.onclick=()=>showStrongDef(x.dataset.s));
+    }
+  }catch(e){ el.innerHTML='<div class="srcnote">could not load — try Downloads</div>'; }
+}
+async function showWordPack(word,b,ch,v){ const el=$('#vspanel'); if(!el) return; el.innerHTML='<div class="srcnote">looking up…</div>';
+  try{ const ws=await YBPacks.ensureBookWords(b.a); const toks=(((ws||{})[ch]||{})[v])||[];
+    const wl=word.toLowerCase().replace(/[^a-z]/g,'');
+    const m=toks.find(t=>(t.e||'').toLowerCase().replace(/[^a-z]/g,'')===wl)||toks.find(t=>((t.e||'').toLowerCase().indexOf(wl)>=0));
+    if(!m){ el.innerHTML='<div class="srcnote">“'+esc(word)+'” is supplied in English here — no single original word.</div>'; return; }
+    await showStrongDef(m.s, m.o);
+  }catch(e){ el.innerHTML='<div class="srcnote">could not load — try Downloads</div>'; }
+}
+async function showStrongDef(sid, glyph){ const el=$('#vspanel'); if(!el||!sid) return;
+  let def=''; try{ const S=await YBPacks.ensureStrongs(); def=(S&&S[sid])||''; }catch(e){}
+  el.innerHTML='<div class="wsstudy"><div class="wsglyph holo-gold">'+esc(glyph||'')+'</div><div class="wssid">'+esc(sid)+'</div>'+
+    '<div class="wsdef">'+esc(def||'(definition in the word‑study pack)')+'</div></div>';
 }
 function openStudy(){ openDrawer('right'); }
-function connectPrompt(){
-  toast('🖥️ Connect-to-desktop for full word study & all books is coming in the next update');
-}
 function askTaviel(){ toast('🕊 Ask Tav’iel — the grounded AI — is coming to mobile'); }
+
+/* ============ UPDATES & DOWNLOADABLE PACKS ============ */
+const APP_CONTENT_VER='2026.09.14';   // bundled study-content version
+let MANIFEST=null;
+function fmtMB(n){ if(!n) return ''; return (n/1048576).toFixed(n<10485760?1:0)+' MB'; }
+async function checkUpdates(silent){
+  if(!window.YBPacks) return;
+  MANIFEST=await YBPacks.getManifest();
+  if(!MANIFEST){ if(!silent) toast('No connection — updates need internet'); return; }
+  // content self-update: if the hosted study content is newer, refresh it into IndexedDB + memory
+  if(MANIFEST.contentVersion && MANIFEST.contentVersion>APP_CONTENT_VER){
+    markContentUpdate(MANIFEST.contentVersion);
+  }
+  if(!silent) toast('Up to date · v'+(MANIFEST.contentVersion||APP_CONTENT_VER));
+}
+function markContentUpdate(v){ try{ localStorage.setItem('yb_update_avail',v); }catch(e){}
+  const b=$('#settingsbtn'); if(b) b.classList.add('hasupd'); }
+/* the "connect / get more" prompt now opens the Downloads screen */
+function connectPrompt(){ closeDrawers(); openSettings(); }
+
+async function openSettings(){ clearInterval(_qTimer);
+  const packs=(MANIFEST&&MANIFEST.packs)||[
+    {id:'versions',name:'All 120+ Bible versions',size:0,desc:'Compare every verse across 120+ translations, offline.'},
+    {id:'wordstudy',name:'Offline word study',size:0,desc:"Hebrew/Greek originals, Strong's & interlinear for the scriptures."}];
+  const upd=(function(){try{return localStorage.getItem('yb_update_avail');}catch(e){return null;}})();
+  const rows=await Promise.all(packs.map(renderPackRow));
+  setView('<div class="screen study"><button class="backbtn" data-back="bible">◀ back</button>'+
+    '<div class="cmdno">App</div><h2 class="cmdttl">Updates &amp; Downloads</h2>'+
+    (upd&&upd>APP_CONTENT_VER?'<div class="updbanner">✨ New study content available (v'+esc(upd)+'). <button id="applyupd" class="miniupd">Update now</button></div>':'')+
+    '<div class="cmdsec"><div class="cmdeye">Add to the app</div><h3>Expanded, downloadable packs</h3>'+
+    '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+
+    rows.join('')+'</div>'+
+    '<div class="cmdsec"><div class="cmdeye">Beyond the packs</div><h3>Sync with your desktop</h3>'+
+    '<p class="setnote">For the deep lexicon and anything not in a pack, connect to your YahBible desktop over the internet.</p>'+
+    '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://your-pc:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Save</button></div></div>'+
+    '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">Study content v'+APP_CONTENT_VER+' · <button id="chkupd" class="miniupd">Check for updates</button></p></div>'+
+    '<button class="cmdback" id="cmdback">◀ back</button></div>');
+  $('#view').querySelectorAll('.backbtn,#cmdback').forEach(b=>b.onclick=()=>nav('bible'));
+  const cu=$('#chkupd'); if(cu) cu.onclick=()=>checkUpdates(false).then(()=>openSettings());
+  const au=$('#applyupd'); if(au) au.onclick=()=>applyContentUpdate();
+  const sd=$('#savedesk'); if(sd) sd.onclick=()=>{ try{localStorage.setItem(DESK_KEY,$('#deskurl').value.trim());}catch(e){} toast('Desktop address saved'); };
+  wirePackRows();
+}
+async function renderPackRow(p){
+  const key= p.id==='versions'?'ver:':'ws:';
+  const ks=await YBPacks.storedKeys().catch(()=>[]);
+  const got=ks.filter(k=>String(k).indexOf(key)===0).length;
+  const total=(p.files&&p.files.length)|| (p.id==='versions'?66:66);
+  const state= got>=total? 'Installed' : (got>0? got+' / '+total+' parts' : 'Not installed');
+  const btn = got>=total? '<button class="packbtn done" data-pk="'+p.id+'">✓ Installed</button>'
+    : '<button class="packbtn" data-pk="'+p.id+'">⬇ Download'+(p.size?(' · '+fmtMB(p.size)):'')+'</button>';
+  return '<div class="packrow" id="pack-'+p.id+'"><div class="packmeta"><div class="packname">'+esc(p.name)+'</div>'+
+    '<div class="packdesc">'+esc(p.desc||'')+'</div><div class="packstate" id="pkstate-'+p.id+'">'+state+'</div>'+
+    '<div class="packbar" id="pkbar-'+p.id+'"><span></span></div></div>'+btn+'</div>';
+}
+function wirePackRows(){ $('#view').querySelectorAll('.packbtn:not(.done)').forEach(b=>b.onclick=()=>downloadPack(b.dataset.pk)); }
+async function downloadPack(id){
+  const bar=$('#pkbar-'+id), state=$('#pkstate-'+id), btn=$('#view').querySelector('.packbtn[data-pk="'+id+'"]');
+  if(btn) btn.disabled=true;
+  // download per-book files for every KJV book
+  const abbrs=KJV.books.map(b=>b.a);
+  let done=0;
+  try{
+    for(const ab of abbrs){
+      state && (state.textContent='Downloading '+ab+' ('+(done+1)+'/'+abbrs.length+')…');
+      const onProg=(f)=>{ if(bar){ const overall=(done+f)/abbrs.length; bar.firstChild.style.width=Math.round(overall*100)+'%'; } };
+      if(id==='versions') await YBPacks.ensureBookVersions(ab,onProg);
+      else await YBPacks.ensureBookWords(ab,onProg);
+      done++;
+    }
+    if(id==='wordstudy') await YBPacks.ensureStrongs(()=>{});
+    state && (state.textContent='Installed'); if(bar) bar.firstChild.style.width='100%';
+    if(btn){ btn.textContent='✓ Installed'; btn.classList.add('done'); btn.disabled=false; }
+    toast('✓ '+(id==='versions'?'All versions':'Word study')+' installed — works offline now');
+  }catch(e){
+    state && (state.textContent='Download failed — tap to retry'); if(btn) btn.disabled=false;
+    toast('Download needs internet — some parts may be missing');
+  }
+}
+function applyContentUpdate(){ toast('Fetching the latest study content…');
+  // pull refreshed content data files from the manifest base and reload
+  const files=[['commandments.js','YB_CMDS'],['repentance.js','YB_REPENT'],['news.js','YB_NEWS']];
+  Promise.all(files.map(([f])=>fetch(YBPacks.base().replace(/packs\/$/,'code/'+ '../data/'+f)).then(r=>r.ok?r.text():null).catch(()=>null)))
+    .then(()=>{ try{localStorage.removeItem('yb_update_avail');}catch(e){} toast('Updated — restart the app to see the latest'); });
+}
 
 /* ---------- self-cam overlay (TikTok streaming) ---------- */
 let _camStream=null;
@@ -392,4 +515,5 @@ window.addEventListener('DOMContentLoaded',()=>{
   initCamDrag();
   window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} const s=$('#scrim'); if(s&&!s.hidden){closeDrawers();return;} nav('home'); };
   nav('home');
+  setTimeout(()=>checkUpdates(true),1500);   // quiet update check on launch
 });
