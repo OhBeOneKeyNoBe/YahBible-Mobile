@@ -416,9 +416,9 @@ async function buildSources(){ const d=$('#leftdrawer');
   d.innerHTML='<div class="drawhdr"><span class="dt holo-gold">Holy Bible</span><button class="drawx" id="ldx">✕</button></div>'+
     '<button class="lmlogos" id="lmlogos"><span class="lmyhwh">יהוה</span> The Logos</button>'+
     '<div class="srcgroup">'+
-      '<button class="srcline" data-grp="torah"><span class="si">•</span>The Torah</button>'+
-      '<button class="srcline" data-grp="ot"><span class="si">•</span>Old Testament</button>'+
-      '<button class="srcline" data-grp="nt"><span class="si">•</span>New Testament</button>'+
+      '<div class="srcacc bookgrp" data-grp="torah"><button class="accbtn">The Torah <span class="acccar">▸</span></button><div class="accbody bglist"></div></div>'+
+      '<div class="srcacc bookgrp" data-grp="ot"><button class="accbtn">Old Testament <span class="acccar">▸</span></button><div class="accbody bglist"></div></div>'+
+      '<div class="srcacc bookgrp" data-grp="nt"><button class="accbtn">New Testament <span class="acccar">▸</span></button><div class="accbody bglist"></div></div>'+
       '<button class="srcline dl" data-src="ethiopian_apocrypha"><span class="si">⬇</span>Ethiopian Apocrypha</button>'+
       '<button class="srcline dl" data-src="redletter"><span class="si">⬇</span>Red Letter Words</button>'+
     '</div>'+
@@ -434,13 +434,133 @@ async function buildSources(){ const d=$('#leftdrawer');
   $('#lsettings',d).onclick=()=>{closeDrawers();openSettings();};
   const ll=$('#lmlogos',d); if(ll) ll.onclick=()=>openLogos();
   $('#dlall',d).onclick=()=>downloadEverything();
-  d.querySelectorAll('.srcline[data-grp]').forEach(b=>b.onclick=()=>{closeDrawers();openBookGroup(b.dataset.grp);});
+  // Bible groups: click a group -> books expand inline; click a book -> chapter NUMBERS expand
+  // inline; click a number -> jump straight to that chapter (never taking over the main area).
+  d.querySelectorAll('.bookgrp>.accbtn').forEach(a=>a.onclick=()=>{ const acc=a.parentElement; acc.classList.toggle('open'); fillBookGroup(acc); });
   d.querySelectorAll('.srcline[data-src]').forEach(b=>b.onclick=()=>openSource(b.dataset.src,b));
-  d.querySelectorAll('.gnmap').forEach(b=>b.onclick=()=>{ toast('The Gnostic Map/Lineage open in the full desktop app'); connectPrompt(); });
-  d.querySelectorAll('.srcacc .accbtn').forEach(a=>a.onclick=()=>a.parentElement.classList.toggle('open'));
+  d.querySelectorAll('.gnmap').forEach(b=>b.onclick=()=>{ if(b.dataset.lineage) openGnosticLineage(); else openGnosticMap(); });
+  d.querySelectorAll('.srcacc:not(.bookgrp)>.accbtn').forEach(a=>a.onclick=()=>a.parentElement.classList.toggle('open'));
   // mark installed sources with the book icon
   d.querySelectorAll('.srcline[data-src]').forEach(async b=>{ if(window.YBPacks && await YBPacks.have('src:'+b.dataset.src).catch(()=>false)){ b.classList.remove('dl'); const si=b.querySelector('.si'); if(si)si.textContent='📖'; } });
 }
+/* Left-menu accordions: a Bible group expands to its books; a book expands to its chapter numbers. */
+function fillBookGroup(acc){ const body=acc.querySelector('.bglist'); if(!body||body.childElementCount) return;
+  const kind=acc.dataset.grp; const idxs=[];
+  KJV.books.forEach((b,i)=>{ if(kind==='torah'){ if(i<5) idxs.push(i); } else if(b.t===(kind==='ot'?'OT':'NT')) idxs.push(i); });
+  body.innerHTML=idxs.map(i=>'<div class="bookacc" data-bi="'+i+'"><button class="bkbtn">'+esc(KJV.books[i].n)+' <span class="acccar">▸</span></button><div class="chwrap"></div></div>').join('');
+  body.querySelectorAll('.bkbtn').forEach(btn=>btn.onclick=()=>{ const ba=btn.parentElement; ba.classList.toggle('open'); fillChapters(ba); }); }
+function fillChapters(ba){ const wrap=ba.querySelector('.chwrap'); if(!wrap||wrap.childElementCount) return;
+  const bi=+ba.dataset.bi, b=KJV.books[bi]; if(!b) return;
+  wrap.innerHTML=b.ch.map((_,k)=>'<button class="chnum" data-ch="'+(k+1)+'">'+(k+1)+'</button>').join('');
+  wrap.querySelectorAll('.chnum').forEach(c=>c.onclick=()=>{ closeDrawers(); openReader(bi,+c.dataset.ch); }); }
+/* ---------- the Gnostic Map (cosmology, 2D/3D) + the Gnostic Lineage — installed, offline ---------- */
+function loadGnosticData(){ return new Promise((res,rej)=>{ if(window.GNOSTIC_MAP){res();return;}
+  const s=document.createElement('script'); s.src='data/gnostic.js'; s.onload=()=>res();
+  s.onerror=()=>{ // older APK without the bundled data: fetch it from the pack host
+    const r=document.createElement('script'); r.src='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/www/data/gnostic.js';
+    r.onload=()=>res(); r.onerror=()=>rej(new Error('no data')); document.head.appendChild(r); };
+  document.head.appendChild(s); }); }
+function openGnosticMap(){ closeDrawers(); clearInterval(_qTimer);
+  setView('<div class="screen mapscreen"><button class="backbtn" id="gmback">◀ back</button>'+
+    '<div class="gmaphead"><h2 class="gmapttl">Gnostic Map</h2>'+
+    '<div class="gmapsub">The flat world the Demiurge molded — the disc, the dome, the portals of the sun, the ten heavens and the four hollow places, from 1–3 Enoch. The giant beings stand hidden: tap a gold marker in the 3D view to reveal one at its true scale.</div></div>'+
+    '<iframe id="cosmosframe" class="cosmosframe" src="cosmos.html" title="Gnostic Map"></iframe></div>');
+  $('#gmback').onclick=()=>nav('bible'); }
+function openGnosticLineage(){ closeDrawers(); clearInterval(_qTimer);
+  setView('<div class="screen"><button class="backbtn" id="glback">◀ back</button>'+
+    '<div class="gmaphead"><h2 class="gmapttl">Gnostic Lineage</h2>'+
+    '<div class="gmapsub">The chain of emanation from the Monad down to Adam &amp; Eve — and the angelic hierarchy beside it. Tap any being to read it.</div></div>'+
+    '<div id="gdcard"></div><div id="lineageBody"><div class="srcnote">unfolding the lineage…</div></div></div>');
+  $('#glback').onclick=()=>nav('bible');
+  loadGnosticData().then(renderLineageMobile).catch(()=>{ const b=$('#lineageBody'); if(b)b.innerHTML='<div class="srcnote">could not load the lineage data</div>'; }); }
+function renderLineageMobile(){ const d=window.GNOSTIC_MAP, body=$('#lineageBody'); if(!d||!body) return;
+  const byTier={}; d.nodes.forEach(n=>{(byTier[n.tier]=byTier[n.tier]||[]).push(n);});
+  const tiers=Object.keys(byTier).map(Number).sort((a,b)=>a-b);
+  const anyAng=d.nodes.some(n=>n.col==='angelic');
+  const btn=n=>'<button class="gnode '+n.side+(n.first_deficiency?' demiurge':'')+(n.col==='angelic'?' angelic':'')+'" data-id="'+esc(n.id)+'">'+
+    '<span class="gnname">'+esc(n.name)+'</span><span class="gnaka">'+esc(n.aka||'')+'</span>'+
+    ((n.members&&n.members.length)?'<span class="gnmore">▸ '+n.members.length+' within</span>':'')+'</button>';
+  let h='<div class="gmap">';
+  if(anyAng) h+='<div class="gcolhead"><span class="gche">The Emanation<small>Monad → the Lineage</small></span></div>';
+  tiers.forEach((t,i)=>{ const nodes=byTier[t], eman=nodes.filter(n=>n.col!=='angelic');
+    if(nodes.some(n=>n.first_deficiency)) h+='<div class="gdivide"><span>▲ The Fullness — here Sophia brings forth the Demiurge, apart from her consort — The Deficiency ▼</span></div>';
+    else if(i>0&&eman.length) h+='<div class="gconn"></div>';
+    if(eman.length) h+='<div class="grow">'+eman.map(btn).join('')+'</div>'; });
+  if(anyAng){ h+='<div class="gcolhead" style="margin-top:26px"><span class="gche">The Angelic Hierarchy<small>1–3 Enoch &amp; the Hekhalot — each bows to the one above</small></span></div>';
+    tiers.forEach(t=>{ const ang=byTier[t].filter(n=>n.col==='angelic');
+      if(ang.length) h+='<div class="grow">'+ang.map(btn).join('')+'</div>'; }); }
+  h+='<div class="gsearchwrap"><input id="gsearch" class="gsearch" type="text" placeholder="search every being in the lineage…" autocomplete="off"><div id="gsresults"></div></div>';
+  h+='<div id="bibleLineage"></div></div>';
+  body.innerHTML=h;
+  const map={}; d.nodes.forEach(n=>map[n.id]=n);
+  body.querySelectorAll('.gnode').forEach(el=>el.onclick=()=>{
+    body.querySelectorAll('.gnode.sel').forEach(x=>x.classList.remove('sel')); el.classList.add('sel');
+    const n=map[el.dataset.id]; showGnosticNodeMobile(n);
+    if(n.members&&n.members.length) toggleMembersMobile(n,el); });
+  wireGnosticSearchMobile(map);
+  renderBloodlineMobile();
+}
+function showGnosticNodeMobile(n){ const card=$('#gdcard'); if(!card||!n) return;
+  const f=(lbl,txt)=>txt?('<div class="gfield"><b>'+lbl+'</b><p>'+esc(txt)+'</p></div>'):'';
+  card.innerHTML='<div class="gdetail"><h3 class="gdname holo-gold">'+esc(n.name)+'</h3>'+
+    '<div class="gdaka">'+esc(n.aka||'')+'</div>'+
+    f('Definition',n.definition)+f('Appearance',n.appearance)+f('Nature',n.nature)+
+    ((n.citations&&n.citations.length)?'<div class="gfield"><b>Where it is written</b><div class="gcites">'+n.citations.map(c=>'<span class="gcite">'+esc(typeof c==='string'?c:(c.cite||c.ref||c.book||''))+'</span>').join('')+'</div></div>':'')+
+    '</div>';
+  card.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+function toggleMembersMobile(n,el){ const row=el.parentElement; let box=row.querySelector('.gmembers[data-of="'+n.id+'"]');
+  if(box){ box.remove(); return; }
+  row.querySelectorAll('.gmembers').forEach(x=>x.remove());
+  box=document.createElement('div'); box.className='gmembers'; box.dataset.of=n.id;
+  box.innerHTML=(n.members||[]).map((m,i)=>'<button class="gmcard" data-mi="'+i+'"><span class="gmname">'+esc(m.name)+'</span>'+
+    (m.roster?'<span class="gmaka">'+esc(m.roster)+'</span>':'')+(m.place?'<span class="gmcite">'+esc(m.place)+'</span>':'')+'</button>').join('');
+  el.insertAdjacentElement('afterend',box);
+  box.querySelectorAll('.gmcard').forEach(b=>b.onclick=e=>{ e.stopPropagation();
+    box.querySelectorAll('.gmcard.sel').forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
+    showGnosticNodeMobile(n.members[+b.dataset.mi]); }); }
+function wireGnosticSearchMobile(map){ const inp=$('#gsearch'), out=$('#gsresults'); if(!inp||!out) return;
+  const flat=[]; Object.values(map).forEach(n=>{ flat.push({e:n,grp:n.col==='angelic'?'angelic hierarchy':'emanation'});
+    (n.members||[]).forEach(m=>flat.push({e:m,grp:'within '+n.name})); });
+  inp.oninput=()=>{ const q=inp.value.trim().toLowerCase(); if(!q){out.innerHTML='';return;}
+    const hits=flat.filter(x=>((x.e.name||'')+' '+(x.e.aka||'')).toLowerCase().includes(q)).slice(0,12);
+    out.innerHTML=hits.length?hits.map((x,i)=>'<button class="gsrow" data-i="'+i+'"><span class="gsname">'+esc(x.e.name)+'</span><span class="gsgrp">'+esc(x.grp)+'</span></button>').join(''):'<div class="srcnote">no being answers to that name</div>';
+    out.querySelectorAll('.gsrow').forEach(b=>b.onclick=()=>showGnosticNodeMobile(hits[+b.dataset.i].e)); }; }
+function renderBloodlineMobile(){ const t=window.BIBLE_LINEAGE, box=$('#bibleLineage'); if(!t||!box) return;
+  const P={}; const flat=(node)=>{ if(!node)return; P[node.id]=node; (node.kids||[]).forEach(flat); };
+  t.spine.forEach(s=>P[s.id]=s); Object.values(t.branches||{}).forEach(a=>a.forEach(flat)); (t.families||[]).forEach(flat);
+  const tree=node=>{ const kids=node.kids||[];
+    const chip='<button class="blbranch'+(kids.length?' haskids':'')+'" data-id="'+esc(node.id)+'">'+esc(node.name)+(kids.length?'<span class="blkids">+'+kids.length+'</span>':'')+'</button>';
+    return kids.length?('<li>'+chip+'<ul class="blsub">'+kids.map(tree).join('')+'</ul></li>'):('<li>'+chip+'</li>'); };
+  let h='<div class="blhead"><h3 class="gmapttl" style="font-size:22px">The bloodline continues</h3>'+
+    '<div class="gmapsub">Adam to Joseph’s father — '+t.spine.length+' generations from the Bible name catalog. '+t.connected+' souls join Adam’s tree; tap a name carrying <b>+N</b> to open its descendants.</div></div><div class="blspine">';
+  t.spine.forEach((s,i)=>{ const br=(t.branches||{})[s.id]||[];
+    h+='<div class="blrow"><button class="blnode" data-id="'+esc(s.id)+'"><span class="blgen">'+(s.gen||'·')+'</span><span class="bltext"><span class="blname">'+esc(s.name)+'</span>'+(s.meaning?'<span class="blmean">'+esc(s.meaning)+'</span>':'')+'</span></button>'+
+      (br.length?('<ul class="blbranches">'+br.map(tree).join('')+'</ul>'):'')+'</div>';
+    if(i<t.spine.length-1)h+='<div class="blconn"></div>'; });
+  h+='</div>';
+  const fam=t.families||[];
+  if(fam.length) h+='<div class="blfamhead">Families beside the main line <span class="blkids">'+fam.length+'</span></div><ul class="blfamilies">'+fam.map(tree).join('')+'</ul>';
+  box.innerHTML=h;
+  box.querySelectorAll('.blnode,.blbranch').forEach(el=>el.onclick=e=>{ e.stopPropagation();
+    box.querySelectorAll('.sel').forEach(x=>x.classList.remove('sel')); el.classList.add('sel');
+    if(el.classList.contains('haskids')){ const sub=el.parentElement.querySelector(':scope > .blsub'); if(sub)sub.classList.toggle('open'); }
+    const p=P[el.dataset.id]; if(p) showBiblePersonMobile(p); }); }
+function showBiblePersonMobile(p){ const card=$('#gdcard'); if(!card||!p) return;
+  const dl=[];
+  if(p.gen)dl.push(['generation','#'+p.gen+' from Adam']);
+  if(p.father)dl.push(['father',(p.father||'').replace('BIBLE:','').replace(/\(.*\)/,'')]);
+  if(p.mother)dl.push(['mother',(p.mother||'').replace('BIBLE:','').replace(/\(.*\)/,'')]);
+  if(p.age_beget!=null)dl.push(['age at begetting',p.age_beget+' years']);
+  if(p.age_death!=null)dl.push(['age at death',p.age_death+' years']);
+  if(p.nchildren)dl.push(['children named',''+p.nchildren]);
+  const rows=dl.map(kv=>'<div class="blfld"><span class="blk">'+esc(kv[0])+'</span><span class="blv">'+esc(kv[1])+'</span></div>').join('');
+  card.innerHTML='<div class="gdetail"><h3 class="gdname holo-gold">'+esc(p.name)+'</h3>'+
+    '<div class="gdaka">'+esc(p.disambig||(p.stub?'named in the text as a parent, without a fuller record':''))+'</div>'+
+    (p.bio?'<div class="gfield"><b>Who they are</b><p>'+esc(p.bio)+'</p></div>':'')+
+    (p.meaning?'<div class="gfield"><b>Meaning of the name</b><p>'+esc(p.meaning)+'</p></div>':'')+
+    (rows?'<div class="gfield"><b>In the record</b><div class="blflds">'+rows+'</div></div>':'')+
+    (p.ref?'<div class="gfield"><b>Where it is written</b><div class="gcites"><span class="gcite">KJV · '+esc(p.ref)+'</span></div></div>':'')+'</div>';
+  card.scrollIntoView({behavior:'smooth',block:'nearest'}); }
 /* The Logos — the revelation of the Name (YHWH), 1:1 with desktop */
 function openLogos(){ closeDrawers(); clearInterval(_qTimer);
   setView('<div class="screen study logospage"><button class="backbtn" id="lgback">◀ back</button>'+
@@ -487,14 +607,27 @@ async function openSource(id, btn){
   closeDrawers();
   const books=Object.keys(data||{});
   setView('<div class="screen"><button class="backbtn" id="srcback">◀ sources</button>'+
-    '<div class="listhdr">'+esc(id.replace(/_/g,' '))+'</div>'+
-    books.map((bk,i)=>'<button class="cmdrow" data-b="'+i+'"><span class="ct">'+esc(bk)+'</span></button>').join('')+'</div>');
+    '<div class="srchdr"><div class="srctitle holo-gold">'+esc(SRC_LABEL[id]||id.replace(/_/g,' '))+'</div>'+
+      '<div class="srcsub">'+books.length+(books.length===1?' book':' books')+' · tap a book to read</div></div>'+
+    '<div class="srcindex">'+books.map((bk,i)=>{ const n=(data[bk]||[]).length;
+      return '<button class="srcbook" data-b="'+i+'"><span class="sbn">'+esc(bk)+'</span><span class="sbc">'+n+'</span></button>'; }).join('')+
+    '</div></div>');
   $('#srcback').onclick=()=>{nav('bible');};
-  $('#view').querySelectorAll('.cmdrow').forEach(r=>r.onclick=()=>openSourceBook(id,books[+r.dataset.b]));
+  $('#view').querySelectorAll('.srcbook').forEach(r=>r.onclick=()=>openSourceBook(id,books[+r.dataset.b]));
 }
 function openSourceBook(id,book){ const data=_srcCache[id]||{}; const units=data[book]||[];
-  setView('<div class="screen reader"><div class="rdbar"><button class="backbtn" id="sbk">◀ '+esc(id.replace(/_/g,' '))+'</button><div class="rdttl">'+esc(book)+'</div><div></div></div>'+
-    '<div class="rdbody">'+units.map(u=>'<p class="rv"><span class="rvn">'+esc(u[0]||'')+'</span>'+esc(u[1]||'')+'</p>').join('')+'</div></div>');
+  // organize into chapters by the ref (e.g. "3:14" -> chapter 3), like the desktop reader
+  const groups=[]; let cur=null;
+  units.forEach(u=>{ const ref=String(u[0]||''); const m=ref.match(/(\d+)\s*[:.·]\s*\d+/);
+    const ch=m?m[1]:((ref.match(/^\s*(\d+)\s*$/)||[])[1]||'');
+    if(!cur||cur.ch!==ch){ cur={ch:ch,rows:[]}; groups.push(cur); } cur.rows.push(u); });
+  const multi=groups.length>1;
+  const body=groups.map(g=>{ const head=(multi&&g.ch)?'<div class="rchap">Chapter '+esc(g.ch)+'</div>':'';
+    return head+g.rows.map(u=>{ const ref=String(u[0]||''); const vn=(ref.match(/[:.·]\s*(\d+)\s*$/)||[])[1]||ref;
+      return '<p class="rv"><span class="rvn">'+esc(vn)+'</span>'+esc(u[1]||'')+'</p>'; }).join(''); }).join('');
+  setView('<div class="screen reader"><div class="rdbar"><button class="backbtn" id="sbk">◀ '+esc(SRC_LABEL[id]||id.replace(/_/g,' '))+'</button>'+
+    '<div class="rdttl">'+esc(book)+'</div><div></div></div>'+
+    '<div class="rdbody"><div class="srcbookttl holo-gold">'+esc(book)+'</div>'+(body||'<div class="srcnote">no text</div>')+'</div></div>');
   $('#sbk').onclick=()=>openSource(id);
 }
 /* the right-menu nav (desktop-style): Settings, News (א-ת), Repentance (dove), Ten Commandments */
@@ -798,7 +931,8 @@ function appSettings(){ try{ return Object.assign({hue:270,fishvis:22,reader:17,
 let _hueTimer=null;
 function applyAppSettings(){ const s=appSettings(); const r=document.documentElement;
   r.style.setProperty('--hue', s.hue);
-  const fb=$('#fishbg img'); if(fb) fb.style.opacity=(s.fishvis/100);
+  // fishvis (0..70 in the slider) maps to --bgvis (0..~2.3): the whole school + flowers scale together
+  const fbg=$('#fishbg'); if(fbg) fbg.style.setProperty('--bgvis', (s.fishvis/30).toFixed(3));
   r.style.setProperty('--reader', s.reader+'px');
   clearInterval(_hueTimer);
   if(+s.huerand>0){ _hueTimer=setInterval(()=>{ const cur=appSettings(); cur.hue=(cur.hue+37)%360; try{localStorage.setItem('yb_app_settings',JSON.stringify(cur));}catch(e){} document.documentElement.style.setProperty('--hue',cur.hue); }, +s.huerand*1000); } }
@@ -809,8 +943,39 @@ function applyCamPrefs(){ ['cam','cam2'].forEach(id=>{ const c=$('#'+id); if(!c)
   ['round','land','port'].forEach(f=>c.classList.toggle('cf-'+f, f===p.form));
   c.classList.toggle('mirror',!!p.mirror); c.classList.toggle('green',!!p.green); }); }
 
+/* ---------- holy-fish background: a school of swimming fish + Flower-of-Life seeds (1:1 desktop) ---------- */
+function flowerSVG(size,opacity){const round=v=>(Math.round(v*100)/100).toFixed(2);
+  const R=size/6,C=size/2,st=Math.min(opacity*1.25,1),cs=[[C,C]];
+  for(let i=0;i<6;i++){const a=i*60*Math.PI/180;cs.push([C+R*Math.cos(a),C+R*Math.sin(a)]);}
+  for(let i=0;i<6;i++){const a=i*60*Math.PI/180;cs.push([C+R*2*Math.cos(a),C+R*2*Math.sin(a)]);
+    const o=(i*60+30)*Math.PI/180;cs.push([C+R*Math.sqrt(3)*Math.cos(o),C+R*Math.sqrt(3)*Math.sin(o)]);}
+  const gid='g'+Math.floor(size*1000%99999);
+  let s='<svg width="'+size+'" height="'+size+'" viewBox="0 0 '+size+' '+size+'"><defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="1" y2="1">'+
+    '<stop offset="0%" stop-color="hsl(0 95% 65%)" stop-opacity="'+st+'"/><stop offset="16%" stop-color="hsl(25 100% 60%)" stop-opacity="'+st+'"/>'+
+    '<stop offset="33%" stop-color="hsl(45 100% 65%)" stop-opacity="'+st+'"/><stop offset="50%" stop-color="hsl(140 80% 50%)" stop-opacity="'+st+'"/>'+
+    '<stop offset="66%" stop-color="hsl(210 100% 60%)" stop-opacity="'+st+'"/><stop offset="83%" stop-color="hsl(260 90% 65%)" stop-opacity="'+st+'"/>'+
+    '<stop offset="100%" stop-color="hsl(280 95% 70%)" stop-opacity="'+st+'"/></linearGradient></defs>';
+  for(const c of cs)s+='<circle cx="'+round(c[0])+'" cy="'+round(c[1])+'" r="'+round(R)+'" fill="none" stroke="url(#'+gid+')" stroke-width="1.5"/>';
+  return s+'</svg>';}
+function buildBg(){ const fl=$('#flowers'), fw=$('#fishes'); if(!fl||!fw||fl.childElementCount) return;
+  const flowers=[[80,10,15,45,0,.08,30,20,25],[150,60,5,60,1,.10,-25,35,30],[50,80,40,35,0,.06,20,-15,20],
+    [200,20,55,80,1,.12,-35,25,40],[60,70,75,40,0,.07,25,-20,22],[120,5,85,55,1,.09,-20,30,28],
+    [90,45,30,50,0,.08,30,-25,35],[70,85,60,42,1,.07,-15,20,18]];
+  flowers.forEach(f=>{const sz=f[0],x=f[1],y=f[2],dur=f[3],rev=f[4],op=f[5],dx=f[6],dy=f[7],dd=f[8];
+    const w=document.createElement('div'); w.className='flower';
+    w.style.cssText='left:'+x+'%;top:'+y+'%;--dx:'+dx+'px;--dy:'+dy+'px;animation:drift '+dd+'s ease-in-out infinite alternate';
+    const inner=document.createElement('div'); inner.innerHTML=flowerSVG(sz,op);
+    inner.firstChild.style.animation='rotslow '+dur+'s linear infinite'+(rev?' reverse':'');
+    w.appendChild(inner); fl.appendChild(w);});
+  const fish=[[12,8],[18,22],[24,35],[32,48],[40,58],[52,68],[65,78],[14,82],[20,88],[28,72],[16,92],[22,65]];
+  fish.forEach((f,i)=>{const sz=f[0],y=f[1],dir=i%2?1:-1,speed=15+((i*7)%30);
+    const d=document.createElement('div'); d.className='fish';
+    d.style.cssText='width:'+sz+'px;top:'+y+'%;animation:'+(dir>0?'swimR':'swimL')+' '+speed+'s linear infinite;animation-delay:-'+((i*3)%speed)+'s';
+    d.innerHTML='<img src="assets/holy-fish.png" alt="">'; fw.appendChild(d);});
+}
 /* ---------- boot ---------- */
 window.addEventListener('DOMContentLoaded',()=>{
+  buildBg();
   if(newsUnseen()){ const n=document.querySelector('.tab[data-tab="news"]'); if(n){ const d=document.createElement('span'); d.className='dot'; d.id='newsdot'; n.appendChild(d); } }
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>nav(b.dataset.tab==='repent'?'repentance':b.dataset.tab));
   $('#cambtn').onclick=toggleCam;

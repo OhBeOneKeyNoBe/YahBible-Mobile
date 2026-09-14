@@ -31,13 +31,24 @@ body{display:flex;flex-direction:column;overflow:hidden}
 button{font-family:inherit;color:inherit}
 h1,h2,h3{margin:0}
 
-/* holy-fish backdrop, centered, behind everything */
-#fishbg{position:fixed;inset:0;z-index:0;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
-#fishbg img{width:132vw;max-width:720px;opacity:.22;filter:saturate(1.3);will-change:transform;
-  animation:swim 16s ease-in-out infinite alternate, breathe 7s ease-in-out infinite}
-@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-@keyframes swim{0%{margin-left:-7vw;margin-top:-2vh}50%{margin-left:6vw;margin-top:2vh}100%{margin-left:-4vw;margin-top:1vh}}
-#fishbg::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 55% at 50% 42%,transparent,var(--bg) 82%)}
+/* holy-fish backdrop: a school of swimming fish + rotating Flower-of-Life (seeds of life),
+   1:1 with the desktop app's #hfbg. --bgvis (0..~2.3) scales overall visibility. */
+#fishbg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;--bgvis:1;
+  background:radial-gradient(120% 100% at 50% -10%,hsl(var(--hue) 45% 14%),hsl(var(--hue) 40% 7%) 70%)}
+#fishbg .hueshift{position:absolute;inset:0;opacity:calc(.22 * var(--bgvis));mix-blend-mode:screen;
+  background:linear-gradient(120deg,hsl(205 80% 40% / .5),hsl(260 70% 45% / .5),hsl(170 70% 40% / .5));
+  animation:hueshift 26s linear infinite}
+#fishbg .flower{position:absolute;opacity:calc(.85 * var(--bgvis))}
+#fishbg .fish{position:absolute;opacity:calc(.34 * var(--bgvis))}
+#fishbg .fish img,#fishbg .giant img{width:100%;height:auto;display:block}
+#fishbg .giant{position:absolute;top:50%;left:0;opacity:calc(.17 * var(--bgvis));width:min(560px,72vw);
+  animation:swimR 64s linear infinite}
+@keyframes hueshift{0%{filter:hue-rotate(0)}100%{filter:hue-rotate(360deg)}}
+@keyframes rotslow{to{transform:rotate(360deg)}}
+@keyframes drift{0%{transform:translate(0,0)}100%{transform:translate(var(--dx),var(--dy))}}
+@keyframes swimR{0%{transform:translate(-16vw,-50%) scaleX(1)}100%{transform:translate(116vw,-50%) scaleX(1)}}
+@keyframes swimL{0%{transform:translate(116vw,-50%) scaleX(-1)}100%{transform:translate(-16vw,-50%) scaleX(-1)}}
+#fishbg::after{content:"";position:absolute;inset:0;background:radial-gradient(80% 60% at 50% 42%,transparent,var(--bg) 96%)}
 
 /* top bar */
 #topbar{position:relative;z-index:5;flex:none;height:calc(52px + var(--safe-top));padding-top:var(--safe-top);
@@ -405,7 +416,7 @@ h1,h2,h3{margin:0}
 .ile{font:600 11px Inter;color:var(--ink2)}
 .ils{font:700 9px Inter;color:var(--sky)}
 .ild{font:10px var(--fital);color:var(--dim);text-align:center;max-width:80px;line-height:1.2}
-@media (prefers-reduced-motion:reduce){#fishbg img,.lordsprayer.pulse{animation:none}}
+@media (prefers-reduced-motion:reduce){#fishbg *,.lordsprayer.pulse{animation:none!important}}
 /* full 1:1 desktop app frame + floating studio controls */
 #deskframe{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:30;background:var(--bg)}
 #camfab{position:fixed;right:14px;top:calc(10px + var(--safe-top));z-index:72;width:44px;height:44px}
@@ -425,6 +436,110 @@ h1,h2,h3{margin:0}
   color:var(--gold2);font:800 10.5px Inter;letter-spacing:.14em;text-transform:uppercase;padding:8px 4px}
 .acccar{transition:transform .2s} .srcacc.open .acccar{transform:rotate(90deg)}
 .accbody{display:none;padding-left:4px} .srcacc.open .accbody{display:block}
+/* inline book -> chapter accordion inside the left menu */
+.bglist{padding-left:2px}
+.bookacc{margin:1px 0}
+.bkbtn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;cursor:pointer;
+  background:transparent;border:none;color:var(--ink);font:600 13.5px Inter;padding:7px 8px;border-radius:8px}
+.bkbtn:active{background:rgba(60,48,80,.4)}
+.bookacc.open>.bkbtn{color:var(--gold2)}
+.bookacc.open>.bkbtn .acccar{transform:rotate(90deg)}
+.chwrap{display:none;grid-template-columns:repeat(7,1fr);gap:5px;padding:4px 4px 10px}
+.bookacc.open>.chwrap{display:grid}
+.chnum{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid var(--line);
+  background:rgba(34,26,48,.5);color:var(--ink);font:700 12px Inter;cursor:pointer}
+.chnum:active{transform:scale(.9);border-color:var(--gold2);color:var(--gold)}
+/* other-sources: organized & pretty like the desktop */
+.srchdr{margin:2px 0 14px}
+.srctitle{font:800 22px "Cormorant Garamond",Georgia,serif;letter-spacing:.01em;line-height:1.15}
+.srcsub{font:600 11px Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-top:5px}
+.srcindex{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.srcbook{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;cursor:pointer;
+  padding:12px 13px;border-radius:12px;border:1px solid var(--line);
+  background:linear-gradient(160deg,rgba(46,36,64,.55),rgba(28,22,40,.5))}
+.srcbook:active{transform:scale(.98);border-color:var(--gold2)}
+.srcbook .sbn{font:600 14px Inter;color:var(--ink);line-height:1.25}
+.srcbook .sbc{flex:none;min-width:26px;text-align:center;font:700 11px Inter;color:var(--gold);
+  background:rgba(233,200,119,.13);border:1px solid rgba(233,200,119,.3);border-radius:999px;padding:2px 8px}
+.srcbookttl{font:800 26px "Cormorant Garamond",Georgia,serif;text-align:center;margin:4px 0 14px}
+.rchap{font:800 11px Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--gold2);
+  text-align:center;margin:20px 0 10px;padding-top:12px;border-top:1px solid rgba(233,200,119,.18)}
+.rchap:first-child{border-top:none;padding-top:0;margin-top:2px}
+/* Gnostic Map + Lineage — ported from the desktop, in the mobile dark theme */
+.mapscreen{padding-bottom:0}
+.gmaphead{text-align:center;margin:4px 0 14px}
+.gmapttl{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:28px;margin:0;
+  background:linear-gradient(92deg,#c0246a,#d97a1e,#c9a11a,#1f9e6e,#2e7fd0,#7a5ce0,#c0246a);background-size:280% auto;
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:holo 7s linear infinite}
+.gmapsub{color:var(--dim);font:italic 13.5px/1.5 var(--fital);max-width:420px;margin:5px auto 0}
+.cosmosframe{width:100%;height:calc(100vh - 220px);min-height:480px;border:0;border-radius:14px;background:#0b0812;display:block}
+.gmap{display:flex;flex-direction:column;align-items:center;padding-bottom:30px}
+.gcolhead{width:100%;text-align:center;margin:4px 0 8px}
+.gche{font:700 11px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.gche small{display:block;margin-top:2px;font:italic 11.5px var(--fital);text-transform:none;letter-spacing:0;color:var(--dim)}
+.gconn{width:2px;height:20px;background:linear-gradient(var(--gold2),transparent)}
+.grow{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin:2px 0;width:100%}
+.gnode{display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:12px;padding:10px 16px;cursor:pointer;
+  min-width:150px;max-width:100%;text-align:center;border:1px solid var(--line)}
+.gnode.sel{box-shadow:0 0 0 2px var(--gold)}
+.gnode.fullness{background:hsl(45 30% 15%);border-color:hsl(45 30% 30%)}
+.gnode.deficiency{background:hsl(2 30% 16%);border-color:hsl(2 35% 34%)}
+.gnode.demiurge{border-width:2px;border-color:hsl(2 70% 52%)}
+.gnode.angelic{background:hsl(214 34% 17%);border-color:hsl(210 35% 36%)}
+.gnode.angelic .gnname{color:hsl(210 60% 82%)}
+.gnode .gnname{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:18px;color:var(--ink)}
+.gnode .gnaka{font:11px Inter;color:var(--ink2)}
+.gnode .gnmore{font:10.5px Inter;font-weight:600;color:var(--gold)}
+.gdivide{width:100%;margin:16px 0;text-align:center;position:relative}
+.gdivide span{display:inline-block;background:var(--bg);padding:4px 12px;font:600 10.5px/1.5 Inter;color:var(--gold);position:relative;z-index:1;max-width:88%}
+.gdivide::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+#gdcard:empty{display:none}
+.gdetail{border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin:0 0 14px;
+  background:linear-gradient(160deg,rgba(46,36,64,.55),rgba(28,22,40,.5))}
+.gdetail .gdname{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;font-size:24px;margin:0}
+.gdetail .gdaka{font:12px Inter;color:var(--dim);margin:0 0 10px}
+.gfield{margin:0 0 11px}
+.gfield b{display:block;font:700 10px Inter;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:3px}
+.gfield p{margin:0;font:14.5px/1.6 var(--fital);color:var(--ink)}
+.gcites{display:flex;flex-wrap:wrap;gap:6px}
+.gcite{background:rgba(34,26,48,.6);border:1px solid var(--line);border-radius:20px;padding:3px 10px;font:11px Inter;color:var(--ink2)}
+.gmembers{display:grid;grid-template-columns:1fr;gap:8px;width:100%;margin:6px 0 2px}
+.gmcard{display:flex;flex-direction:column;gap:3px;text-align:left;padding:11px 13px;border:1px solid var(--line);border-radius:11px;
+  background:rgba(34,26,48,.5);cursor:pointer}
+.gmcard.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.gmcard .gmname{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:16.5px;color:var(--ink)}
+.gmcard .gmaka{font:10.5px Inter;color:var(--gold)}
+.gmcard .gmcite{font:10px Inter;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.gsearchwrap{width:100%;margin:20px 0 0}
+.gsearch{width:100%;box-sizing:border-box;padding:11px 16px;border-radius:24px;border:1px solid var(--line);background:rgba(34,26,48,.6);color:var(--ink);font:14.5px var(--fital)}
+.gsearch:focus{outline:none;border-color:var(--gold)}
+#gsresults{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.gsrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 13px;border:1px solid var(--line);border-radius:10px;background:rgba(34,26,48,.5);cursor:pointer;text-align:left}
+.gsname{font:600 14.5px "Cormorant Garamond",Georgia,serif;color:var(--ink)}
+.gsgrp{font:10.5px Inter;color:var(--dim);text-align:right}
+/* the biblical bloodline under the lineage */
+.blhead{margin:26px 0 10px;text-align:center}
+.blspine{display:flex;flex-direction:column;align-items:center;width:100%}
+.blconn{width:2px;height:14px;background:linear-gradient(var(--gold2),transparent)}
+.blrow{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
+.blnode{display:flex;align-items:center;gap:10px;padding:8px 14px;border:1px solid var(--line);border-radius:12px;
+  background:rgba(34,26,48,.55);cursor:pointer;min-width:200px;max-width:100%}
+.blnode.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.blgen{flex:none;min-width:24px;text-align:center;font:700 10.5px Inter;color:var(--gold);
+  background:rgba(233,200,119,.12);border:1px solid rgba(233,200,119,.28);border-radius:999px;padding:2px 6px}
+.bltext{display:flex;flex-direction:column;text-align:left}
+.blname{font:600 15px "Cormorant Garamond",Georgia,serif;color:var(--ink)}
+.blmean{font:italic 11px var(--fital);color:var(--dim)}
+.blbranches,.blfamilies,.blsub{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.blsub{display:none;width:100%;margin-top:5px;padding-left:10px}
+.blsub.open{display:flex}
+.blbranch{padding:4px 10px;border:1px solid var(--line);border-radius:16px;background:rgba(34,26,48,.4);color:var(--ink2);font:12px Inter;cursor:pointer}
+.blbranch.sel{border-color:var(--gold);color:var(--ink)}
+.blkids{margin-left:5px;font:700 10px Inter;color:var(--gold)}
+.blfamhead{margin:22px 0 8px;text-align:center;font:700 11px Inter;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.blflds{display:flex;flex-direction:column;gap:4px}
+.blfld{display:flex;justify-content:space-between;gap:10px;font:12.5px Inter}
+.blk{color:var(--dim)} .blv{color:var(--ink);text-align:right}
 /* right menu nav (desktop-style) */
 .rmnav{display:flex;flex-direction:column;gap:7px;margin:0 0 14px}
 .rmitem{position:relative;display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;
