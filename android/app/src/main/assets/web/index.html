@@ -12,11 +12,22 @@
   <div id="fishbg"><img src="assets/holy-fish.png" alt=""></div>
 
   <header id="topbar">
-    <div class="wordmark"><span class="heb">א</span><span class="yb">YahBible</span><span class="heb">ת</span></div>
-    <button class="topbtn" id="cambtn" title="Self-cam for streaming" aria-label="Self-cam">🎥</button>
+    <button class="topbtn menubtn" id="leftmenubtn" title="Sources" aria-label="Open sources menu" hidden>☰</button>
+    <div class="wordmark"><span class="heb">א</span><span class="yb">YahBible</span><span class="heb">ת</span>
+      <button class="tavlink" id="tavbtn" title="Ask Tav'iel">&#9834; Tav&rsquo;iel</button></div>
+    <div class="topright">
+      <button class="topbtn" id="cambtn" title="Self-cam for streaming" aria-label="Self-cam">🎥</button>
+      <button class="topbtn menubtn" id="rightmenubtn" title="Verse study" aria-label="Open verse study" hidden>☰</button>
+    </div>
   </header>
 
   <main id="view"></main>
+
+  <!-- LEFT drawer: sources (all the sacred books) — mirrors the desktop left menu -->
+  <div id="scrim" hidden></div>
+  <aside id="leftdrawer" class="drawer left" hidden aria-label="Sources"></aside>
+  <!-- RIGHT drawer: verse study (word breakdown, versions, original language) — mirrors the desktop right panel -->
+  <aside id="rightdrawer" class="drawer right" hidden aria-label="Verse study"></aside>
 
   <nav id="tabbar">
     <button class="tab" data-tab="home"><span class="ti">🏠</span>Home</button>

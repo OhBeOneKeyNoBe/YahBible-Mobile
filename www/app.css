@@ -4,9 +4,27 @@
   --ink:#ece6dc; --ink2:#c9c0d4; --dim:#9a8fa8; --line:#3a3048;
   --gold:#e9c877; --gold2:#caa24e; --sky:#6cb6ff; --grn:#5fd39a; --vio:#c07ad9;
   --hue:270;
+  /* a readable italic serif (system fonts, offline): Georgia on iOS/desktop, Noto Serif on Android */
+  --fital:'Iowan Old Style',Georgia,'Noto Serif','EB Garamond',serif;
   --safe-top:env(safe-area-inset-top,0px); --safe-bot:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* ===== readable italics: swap the delicate Garamond italic for a legible serif ===== */
+.cscr,.cmdfull,.repepigraph,.prayerbox,.scnote,.scintro,.cssub,.onioncap,.dimhint,
+.home .quote,.dimq,.ladintro,.rc,.cssub,.repline,.beliefbox,.rv{font-family:var(--fital)}
+.cscr,.cmdfull,.repepigraph,.prayerbox,.scnote,.scintro,.cssub,.home .quote,.dimq,.onioncap{font-style:italic}
+/* ===== holographic gold: any prominent gold shimmers ===== */
+@keyframes holoShimmer{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.holo,.holo-gold,.cmdttl,.rdttl,.csttl,.cmdsec h3,.wordmark .yb,.home .big .yb,
+.cscrref,.cxrl,.cxlbl,.cmdeye,.listhdr,.testlbl,.onilbl{
+  background:linear-gradient(100deg,#f6e6bd,#e9c877,#fff6d8,#caa24e,#e9c877,#f6e6bd);
+  background-size:220% 100%;-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;animation:holoShimmer 6s ease-in-out infinite}
+.repepigraph,.cmdfull,.prayerbox{ /* gold quotes: readable italic in a warm holographic gold */
+  background:linear-gradient(100deg,#f3e2b4,#e9c877,#fff2cf,#d8b25e,#e9c877);
+  background-size:200% 100%;-webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;color:transparent;animation:holoShimmer 7s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.holo,.holo-gold,.cmdttl,.rdttl,.csttl,.cmdsec h3,.repepigraph,.cmdfull,.prayerbox,.cscrref{animation:none}}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
   font-family:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
 body{display:flex;flex-direction:column;overflow:hidden}
@@ -31,6 +49,46 @@ h1,h2,h3{margin:0}
   display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer}
 .topbtn:active{transform:scale(.94)}
 .topbtn.on{border-color:var(--vio);color:#e8c4f5}
+.topright{display:flex;align-items:center;gap:8px}
+.menubtn{font-size:19px}
+#topbar .wordmark{flex:1;justify-content:center}
+.tavlink{margin-left:8px;background:transparent;border:1px solid var(--line);border-radius:16px;padding:3px 10px;
+  font:700 12px "Cormorant Garamond",Georgia,serif;color:var(--vio);cursor:pointer}
+.tavlink:active{transform:scale(.95)}
+/* slide-out drawers (left = sources, right = verse study) */
+#scrim{position:fixed;inset:0;z-index:40;background:rgba(8,5,15,.6);backdrop-filter:blur(2px);animation:fade .2s ease}
+.drawer{position:fixed;top:0;bottom:0;z-index:45;width:min(85vw,340px);background:linear-gradient(160deg,var(--bg2),var(--bg));
+  overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + var(--safe-top)) 16px calc(20px + var(--safe-bot));
+  box-shadow:0 0 40px rgba(0,0,0,.6)}
+.drawer.left{left:0;border-right:1px solid var(--line);transform:translateX(-100%);animation:slideL .26s ease forwards}
+.drawer.right{right:0;border-left:1px solid var(--line);transform:translateX(100%);animation:slideR .26s ease forwards}
+@keyframes slideL{to{transform:translateX(0)}} @keyframes slideR{to{transform:translateX(0)}}
+.drawhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.drawhdr .dt{font:800 11px Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--gold2)}
+.drawx{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--dim);font-size:15px;cursor:pointer}
+.srcgroup{margin-bottom:14px}
+.srclbl{font:800 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--gold2);margin:10px 0 6px;opacity:.9}
+.srcitem{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:10px 11px;margin-bottom:5px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(34,26,48,.4);color:var(--ink);font:600 14px Inter}
+.srcitem:active{transform:scale(.99);border-color:var(--gold2)}
+.srcitem .si{font-size:16px;flex:none}
+.srcitem.locked{opacity:.6}
+.srcitem.locked .si{filter:grayscale(1)}
+.srcnote{font:12.5px/1.5 var(--fital);font-style:italic;color:var(--dim);padding:8px 4px}
+.connectcard{margin:8px 0 14px;padding:12px 13px;border-radius:12px;border:1px solid rgba(108,182,255,.4);background:rgba(89,150,255,.07)}
+.connectcard .cct{font:700 13px Inter;color:var(--sky)}
+.connectcard p{font:12.5px/1.5 var(--fital);color:var(--dim);margin:5px 0 9px}
+.connectbtn{width:100%;padding:9px;border-radius:9px;border:1px solid var(--sky);background:transparent;color:var(--sky);font:700 13px Inter;cursor:pointer}
+/* right drawer — verse study */
+.vsref{font:700 20px "Cormorant Garamond",Georgia,serif;margin:2px 0 6px}
+.vstext{font:17px/1.6 var(--fital);color:var(--ink);margin:0 0 12px;padding-left:11px;border-left:2px solid var(--gold2)}
+.vstabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.vstab{padding:6px 11px;border-radius:16px;border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--ink2);font:600 12px Inter;cursor:pointer}
+.vstab.locked{opacity:.7}
+.wchips{display:flex;flex-wrap:wrap;gap:6px;margin:5px 0 14px}
+.wchip{padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:rgba(34,26,48,.5);color:var(--ink);font:500 13px var(--fital);cursor:pointer}
+.wchip:active{border-color:var(--gold2);transform:scale(.97)}
+.rv{cursor:pointer} .rv:active{background:rgba(233,200,119,.08)}
 
 /* main scroll view */
 #view{position:relative;z-index:2;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
