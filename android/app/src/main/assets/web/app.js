@@ -150,15 +150,17 @@ const QUOTES=[
   ['He created it not in vain, he formed it to be inhabited.','Isaiah 45:18']];
 let _qi=0, _qTimer=null;
 function showHome(){ _qi=Math.floor(Math.random()*QUOTES.length);
+  // studio: the middle buttons can be switched off in Settings for a clean streaming screen
+  const cta=appSettings().homebtns===0?'':'<div class="cta">'+
+      '<button class="homebtn" data-go="commandments"><span class="hi">📜</span><span>The Ten Commandments<span class="hs">study each as a question, in seven dimensions</span></span></button>'+
+      '<button class="homebtn" data-go="repentance"><span class="hi">🕊</span><span>Repentance<span class="hs">turn toward the Father, and turn early</span></span></button>'+
+      '<button class="homebtn" data-go="news"><span class="hi">✨</span><span>What\'s New<span class="hs">v'+esc(NEWS.version||'')+'</span></span></button>'+
+    '</div>';
   setView('<div class="screen home">'+
     '<div class="heb" style="font:700 22px \'Cormorant Garamond\',serif">א &nbsp; ת</div>'+
     '<div class="big"><span class="yb">YahBible</span></div>'+
     '<div class="quote" id="homeq"></div><div class="qref" id="homeqr"></div>'+
-    '<div class="cta">'+
-      '<button class="homebtn" data-go="commandments"><span class="hi">📜</span><span>The Ten Commandments<span class="hs">study each as a question, in seven dimensions</span></span></button>'+
-      '<button class="homebtn" data-go="repentance"><span class="hi">🕊</span><span>Repentance<span class="hs">turn toward the Father, and turn early</span></span></button>'+
-      '<button class="homebtn" data-go="news"><span class="hi">✨</span><span>What\'s New<span class="hs">v'+esc(NEWS.version||'')+'</span></span></button>'+
-    '</div></div>');
+    cta+'</div>');
   $('#view').querySelectorAll('.homebtn').forEach(b=>b.onclick=()=>nav(b.dataset.go));
   rotQuote(); clearInterval(_qTimer); _qTimer=setInterval(rotQuote,7000); }
 function rotQuote(){ const q=$('#homeq'), r=$('#homeqr'); if(!q) return; const [txt,ref]=QUOTES[_qi%QUOTES.length];
@@ -258,6 +260,7 @@ function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bi
   initSwipe($('#rdbody'),go);
   _rd={bi:bi,ch:ch}; _ilOn=false; _verOn=false;
   colorOriginals(b,ch);   // highlight which words have an original (desktop-style), if the pack is here
+  watchReadThrough(bi,ch);   // profile progress: read-through marks the chapter
   if(verse){ const el=$('#rv'+verse); if(el) setTimeout(()=>el.scrollIntoView({block:'center'}),60); }
 }
 function wordize(tx,v){ return tx.split(/(\s+)/).map(t=>/[A-Za-z]/.test(t)
@@ -633,11 +636,12 @@ function openSourceBook(id,book){ const data=_srcCache[id]||{}; const units=data
 /* the right-menu nav (desktop-style): Settings, News (א-ת), Repentance (dove), Ten Commandments */
 function rightNavHtml(){ const pulse=newsUnseen()?' pulse':'';
   return '<div class="rmnav">'+
+    '<button class="rmitem" data-go="profile"><span class="rmi">👤</span>Profile</button>'+
     '<button class="rmitem" data-go="settings"><span class="rmi">⚙️</span>Settings &amp; Downloads</button>'+
     '<button class="rmitem'+pulse+'" data-go="news"><span class="rmi rmat">א&#8202;ת</span>News &amp; Updates'+(newsUnseen()?'<span class="newsdot"></span>':'')+'</button>'+
     '</div>'; }
 function wireRightNav(scope){ scope.querySelectorAll('.rmitem[data-go]').forEach(b=>b.onclick=()=>{ closeDrawers();
-  const g=b.dataset.go; if(g==='settings')openSettings(); else nav(g); }); }
+  const g=b.dataset.go; if(g==='settings')openSettings(); else if(g==='profile')openProfile(); else nav(g); }); }
 /* RIGHT drawer — nav + verse study */
 async function buildStudy(){ const d=$('#rightdrawer');
   if(!_sel){ d.innerHTML='<div class="drawhdr"><span class="dt">Menu</span><button class="drawx" id="rdx">✕</button></div>'+
@@ -761,9 +765,19 @@ async function openSettings(){ clearInterval(_qTimer);
         '<button class="favchip cam_form" data-cam="'+id+'">Shape: '+({round:'Round',land:'Landscape',port:'Portrait'}[p.form])+'</button>'+
         '<button class="favchip cam_mirror'+(p.mirror?' on':'')+'" data-cam="'+id+'">🪞 Mirror</button>'+
         '<button class="favchip cam_green'+(p.green?' on':'')+'" data-cam="'+id+'">🟩 Green-screen</button></div></div>'; };
+      const a2=appSettings();
+      const bgRow='<div class="camblock"><div class="camblbl">🖼 Stream background</div>'+
+        '<p class="setnote">Replaces the swimming fish behind the app while you stream — the header, verse and buttons stay visible. Pick one, or upload your own from your gallery.</p>'+
+        '<div class="setrow" style="flex-wrap:wrap;gap:8px">'+
+        '<button class="bgthumb fish bg_pick'+(a2.studiobg===''?' on':'')+'" data-bg="" title="Holy fish">🐟</button>'+
+        STUDIO_BGS.map(b=>'<button class="bgthumb bg_pick'+(a2.studiobg===b[0]?' on':'')+'" data-bg="'+b[0]+'" title="'+b[1]+'" style="background-image:url(\''+b[0]+'\')"></button>').join('')+
+        '<button class="bgthumb up'+(a2.studiobg==='custom'?' on':'')+'" id="bg_upload" title="Upload your own">⬆</button>'+
+        '<input type="file" id="bg_file" accept="image/*" style="display:none"></div></div>';
+      const homeRow='<div class="setrow" style="margin-top:8px"><button class="favchip'+(a2.homebtns===0?'':' on')+'" id="s_homebtns">🏠 Home-screen buttons</button>'+
+        '<span class="setnote" style="margin:0">turn off for a clean screen while streaming</span></div>';
       return '<div class="cmdsec"><div class="cmdeye">Studio</div><h3>Camera &amp; studio</h3>'+
       '<p class="setnote">The 🎥 button opens/closes the cameras. Front and back cameras have independent settings — they apply live.</p>'+
-      block('cam','🤳 Front camera')+block('cam2','📷 Back camera')+'</div>'; })()+
+      block('cam','🤳 Front camera')+block('cam2','📷 Back camera')+bgRow+homeRow+'</div>'; })()+
     '<div class="cmdsec"><div class="cmdeye">Reading</div><h3>Favourite versions</h3>'+
     '<p class="setnote">Pick the translations to stack under each verse when you tap the tree 🌳 in a chapter.</p>'+
     '<div class="favver" id="favver">'+[['akjv','KJV'],['asv','ASV'],['BSB','BSB'],['basicenglish','BBE'],['ERV','ERV'],['GNV','Geneva'],['ylt','YLT'],['web','WEB'],['darby','Darby'],['aleppo','Aleppo (Heb)']].map(v=>'<button class="favchip'+(favVersions().indexOf(v[0])>=0?' on':'')+'" data-v="'+v[0]+'">'+v[1]+'</button>').join('')+'</div></div>'+
@@ -797,13 +811,85 @@ async function openSettings(){ clearInterval(_qTimer);
   $('#view').querySelectorAll('.cam_form').forEach(bt=>bt.onclick=()=>{ const id=bt.dataset.cam; const p=camPrefs(id); const o=['round','land','port']; p.form=o[(o.indexOf(p.form)+1)%3]; setCamPrefs(id,p); openSettings(); });
   $('#view').querySelectorAll('.cam_mirror').forEach(bt=>bt.onclick=()=>{ const id=bt.dataset.cam; const p=camPrefs(id); p.mirror=!p.mirror; setCamPrefs(id,p); bt.classList.toggle('on'); });
   $('#view').querySelectorAll('.cam_green').forEach(bt=>bt.onclick=()=>{ const id=bt.dataset.cam; const p=camPrefs(id); p.green=!p.green; setCamPrefs(id,p); bt.classList.toggle('on'); });
+  $('#view').querySelectorAll('.bg_pick').forEach(bt=>bt.onclick=()=>{ setAppSetting('studiobg',bt.dataset.bg);
+    $('#view').querySelectorAll('.bgthumb.on').forEach(x=>x.classList.remove('on')); bt.classList.add('on'); });
+  const bu=$('#bg_upload'), bf=$('#bg_file');
+  if(bu&&bf){ bu.onclick=()=>bf.click(); bf.onchange=()=>{ if(bf.files&&bf.files[0]) uploadStudioBg(bf.files[0]); }; }
+  const hb=$('#s_homebtns'); if(hb) hb.onclick=()=>{ const a=appSettings(); setAppSetting('homebtns', a.homebtns===0?1:0); hb.classList.toggle('on'); };
   $('#view').querySelectorAll('#favver .favchip').forEach(ch=>ch.onclick=()=>{ let f=favVersions(); const v=ch.dataset.v;
     const i=f.indexOf(v); if(i>=0)f.splice(i,1); else f.push(v); try{localStorage.setItem('yb_fav_versions',JSON.stringify(f));}catch(e){} ch.classList.toggle('on'); });
   wirePackRows();
 }
+/* ---------- reading progress: a chapter counts as read once opened and scrolled through ---------- */
+function readProg(){ try{ return JSON.parse(localStorage.getItem('yb_read')||'{}'); }catch(e){ return {}; } }
+function markRead(bi,ch){ const b=KJV.books[bi]; if(!b) return; const p=readProg();
+  (p[b.a]=p[b.a]||{})[ch]=1; try{ localStorage.setItem('yb_read',JSON.stringify(p)); }catch(e){} }
+let _readWatchFn=null;
+function watchReadThrough(bi,ch){ const v=$('#view'); if(!v) return;
+  if(_readWatchFn){ v.removeEventListener('scroll',_readWatchFn); _readWatchFn=null; }
+  const done=()=>{ markRead(bi,ch); if(_readWatchFn){ v.removeEventListener('scroll',_readWatchFn); _readWatchFn=null; } };
+  setTimeout(()=>{ if(!_rd||_rd.bi!==bi||_rd.ch!==ch) return;      // navigated away already
+    if(v.scrollHeight<=v.clientHeight+40){ done(); return; }        // fits on one screen = read on open
+    _readWatchFn=()=>{ if(v.scrollTop+v.clientHeight>=v.scrollHeight-60) done(); };
+    v.addEventListener('scroll',_readWatchFn,{passive:true}); },400); }
+function progressStats(){ const p=readProg(); const g={torah:[0,0],ot:[0,0],nt:[0,0],all:[0,0]};
+  KJV.books.forEach((b,i)=>{ const read=Object.keys(p[b.a]||{}).length, tot=b.ch.length;
+    const grp=i<5?'torah':(b.t==='OT'?'ot':'nt');
+    g[grp][0]+=Math.min(read,tot); g[grp][1]+=tot; g.all[0]+=Math.min(read,tot); g.all[1]+=tot; });
+  return g; }
+/* ---------- profile: picture, name, bio, progress, and the sync status ---------- */
+function profileData(){ try{ return JSON.parse(localStorage.getItem('yb_profile')||'{}'); }catch(e){ return {}; } }
+function setProfileData(p){ try{ localStorage.setItem('yb_profile',JSON.stringify(p)); }catch(e){} }
+function openProfile(){ closeDrawers(); clearInterval(_qTimer);
+  const acct=getAccount(), prof=profileData(), g=progressStats();
+  let av=''; try{ av=localStorage.getItem('yb_avatar')||''; }catch(e){}
+  const bar=(lbl,d)=>{ const pc=d[1]?Math.round(d[0]/d[1]*100):0;
+    return '<div class="pgrow"><span class="pglbl">'+lbl+'</span><div class="pgbar"><span style="width:'+pc+'%"></span></div>'+
+      '<span class="pgpc">'+pc+'%<small>'+d[0]+'/'+d[1]+'</small></span></div>'; };
+  setView('<div class="screen study"><button class="backbtn" data-back="home">◀ back</button>'+
+    '<div class="cmdno">You</div><h2 class="cmdttl">Profile</h2>'+
+    '<div class="cmdsec"><div class="profhead">'+
+      '<button class="profav" id="profav" title="Tap to change your picture">'+
+        (av?'<img src="'+av+'" alt="">':'<span>'+esc(((acct&&(acct.name||acct.email))||'Y')[0].toUpperCase())+'</span>')+'</button>'+
+      '<input type="file" id="avfile" accept="image/*" style="display:none">'+
+      '<div class="profwho"><div class="acctname">'+esc((acct&&(acct.name||acct.email))||'Guest')+'</div>'+
+        '<div class="acctsub">'+esc((acct&&acct.email)||'on this device')+'</div></div></div>'+
+      '<textarea id="profbio" class="setinput" rows="2" placeholder="A line about you…" style="margin-top:10px;resize:none">'+esc(prof.bio||'')+'</textarea></div>'+
+    '<div class="cmdsec"><div class="cmdeye">Reading progress</div><h3>How much of the Word you\'ve read</h3>'+
+      '<p class="setnote">A chapter counts once you\'ve opened it and read it through to the end.</p>'+
+      bar('The Torah',g.torah)+bar('Old Testament',g.ot)+bar('New Testament',g.nt)+bar('The whole Bible',g.all)+'</div>'+
+    '<div class="cmdsec"><div class="cmdeye">The Zion\'iel Network</div><h3>Sync</h3><div id="syncstate">'+
+      '<div class="syncrow"><span class="syncdot on"></span>This phone — your notes, progress &amp; profile live here</div>'+
+      '<div class="syncrow" id="syncdesk"><span class="syncdot"></span>Desktop — checking…</div></div>'+
+      (acct?'':'<p class="setnote">Sign in (Settings → Account) to carry your progress across devices.</p>')+'</div>'+
+    '<button class="cmdback" id="pfback">◀ back</button></div>');
+  $('#view').querySelectorAll('.backbtn,#pfback').forEach(b=>b.onclick=()=>nav('home'));
+  const bio=$('#profbio'); if(bio) bio.onchange=()=>{ const p=profileData(); p.bio=bio.value.slice(0,300); setProfileData(p); toast('✓ Saved'); };
+  const pa=$('#profav'), af=$('#avfile');
+  if(pa&&af){ pa.onclick=()=>af.click(); af.onchange=()=>{ const f=af.files&&af.files[0]; if(!f) return;
+    const rd=new FileReader(); rd.onload=()=>{ const img=new Image(); img.onload=()=>{
+      const c=document.createElement('canvas'); const M=256, sc=Math.max(M/img.width,M/img.height);
+      c.width=M; c.height=M; const w=img.width*sc,h=img.height*sc;
+      c.getContext('2d').drawImage(img,(M-w)/2,(M-h)/2,w,h);
+      const durl=c.toDataURL('image/jpeg',.85);
+      try{ localStorage.setItem('yb_avatar',durl); }catch(e){ toast('Picture too large to store'); return; }
+      openProfile(); }; img.src=rd.result; }; rd.readAsDataURL(f); }; }
+  // the desktop half of the two-way indicator
+  (async()=>{ const row=$('#syncdesk'); if(!row) return; const u=normUrl(deskUrl());
+    if(!u){ row.innerHTML='<span class="syncdot"></span>Desktop — not set up (Settings → Sync)'; return; }
+    const ok=await pingDesktop(u);
+    row.innerHTML= ok
+      ? '<span class="syncdot on"></span>Desktop at '+esc(u.replace(/^https?:\/\//,''))+' — <b>sync established</b>'
+      : '<span class="syncdot off"></span>Desktop at '+esc(u.replace(/^https?:\/\//,''))+' — not reachable right now'; })();
+}
 function normUrl(u){ u=(u||'').trim(); if(!u) return ''; if(!/^https?:\/\//.test(u)) u='http://'+u; return u.replace(/\/+$/,''); }
-async function pingDesktop(u){ u=normUrl(u); try{ const r=await fetch(u+'/api/status',{cache:'no-store'}); return r.ok; }
-  catch(e){ try{ const r2=await fetch(u+'/',{mode:'no-cors'}); return true; }catch(e2){ return false; } } }
+async function pingDesktop(u){ u=normUrl(u); let ok=false;
+  try{ const r=await fetch(u+'/api/status',{cache:'no-store'}); ok=r.ok; }
+  catch(e){ try{ await fetch(u+'/',{mode:'no-cors'}); ok=true; }catch(e2){ ok=false; } }
+  if(ok){ // tell the desktop this phone is here, so ITS sync light turns on too
+    const a=getAccount(); const nm=(a&&(a.name||a.email))||'YahBible mobile';
+    try{ fetch(u+'/api/mobile_ping?name='+encodeURIComponent(nm),{cache:'no-store'}).catch(()=>{}); }catch(e){} }
+  return ok; }
 async function desktopLogin(u,user,pw){ u=normUrl(u);
   try{ const r=await fetch(u+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pw})});
     const d=await r.json().catch(()=>({})); if(d&&d.ok!==false){ try{localStorage.setItem('yb_desk_token',d.token||d.session||'');}catch(e){} return {ok:true}; }
@@ -927,16 +1013,37 @@ function camPrefs(id){ id=id||'cam'; const all=_camAll();
   const dflt=(id==='cam')?{color:6,form:'round',mirror:false,green:false}:{color:4,form:'round',mirror:true,green:false};
   return Object.assign(dflt, all[id]||{}); }
 /* app appearance settings (parity with desktop: accent hue, background/fish visibility, reader size, hue randomize) */
-function appSettings(){ try{ return Object.assign({hue:270,fishvis:22,reader:17,huerand:0}, JSON.parse(localStorage.getItem('yb_app_settings')||'{}')); }catch(e){ return {hue:270,fishvis:22,reader:17,huerand:0}; } }
+function appSettings(){ const d={hue:270,fishvis:22,reader:17,huerand:0,studiobg:'',homebtns:1};
+  try{ return Object.assign(d, JSON.parse(localStorage.getItem('yb_app_settings')||'{}')); }catch(e){ return d; } }
 let _hueTimer=null;
 function applyAppSettings(){ const s=appSettings(); const r=document.documentElement;
   r.style.setProperty('--hue', s.hue);
   // fishvis (0..70 in the slider) maps to --bgvis (0..~2.3): the whole school + flowers scale together
   const fbg=$('#fishbg'); if(fbg) fbg.style.setProperty('--bgvis', (s.fishvis/30).toFixed(3));
+  applyStudioBg(s);
   r.style.setProperty('--reader', s.reader+'px');
   clearInterval(_hueTimer);
   if(+s.huerand>0){ _hueTimer=setInterval(()=>{ const cur=appSettings(); cur.hue=(cur.hue+37)%360; try{localStorage.setItem('yb_app_settings',JSON.stringify(cur));}catch(e){} document.documentElement.style.setProperty('--hue',cur.hue); }, +s.huerand*1000); } }
 function setAppSetting(k,v){ const s=appSettings(); s[k]=v; try{localStorage.setItem('yb_app_settings',JSON.stringify(s));}catch(e){} applyAppSettings(); }
+/* studio stream background: '' = the holy-fish school; a preset path; or 'custom' (stored in IndexedDB) */
+async function applyStudioBg(s){ const fbg=$('#fishbg'); if(!fbg) return;
+  let url='';
+  if(s.studiobg==='custom'){ try{ url=await YBPacks.idbGet('studio:bg')||''; }catch(e){ url=''; } }
+  else if(s.studiobg) url=s.studiobg;
+  if(url){ fbg.classList.add('studio'); fbg.style.backgroundImage='url("'+url+'")'; }
+  else { fbg.classList.remove('studio'); fbg.style.backgroundImage=''; } }
+const STUDIO_BGS=[['assets/studio/golden-dawn.jpg','Golden Dawn'],['assets/studio/deep-waters.jpg','Deep Waters'],
+  ['assets/studio/starry-heavens.jpg','Starry Heavens'],['assets/studio/royal-violet.jpg','Royal Violet']];
+function uploadStudioBg(file){ const rd=new FileReader();
+  rd.onload=()=>{ const img=new Image();
+    img.onload=()=>{ const M=1440, sc=Math.min(1, M/Math.max(img.width,img.height));
+      const c=document.createElement('canvas'); c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      const durl=c.toDataURL('image/jpeg',.82);
+      YBPacks.idbPut('studio:bg',durl).then(()=>{ setAppSetting('studiobg','custom'); toast('✓ Stream background set'); openSettings(); })
+        .catch(()=>toast('Could not store the image')); };
+    img.onerror=()=>toast('Could not read that image'); img.src=rd.result; };
+  rd.onerror=()=>toast('Could not read that file'); rd.readAsDataURL(file); }
 function setCamPrefs(id,p){ const all=_camAll(); all[id]=p; try{ localStorage.setItem('yb_cam_prefs',JSON.stringify(all)); }catch(e){} applyCamPrefs(); }
 function applyCamPrefs(){ ['cam','cam2'].forEach(id=>{ const c=$('#'+id); if(!c)return; const p=camPrefs(id);
   const col=CAMCOLORS[p.color%CAMCOLORS.length]; c.classList.toggle('holoborder',col==='holo'); if(col!=='holo')c.style.borderColor=col;
