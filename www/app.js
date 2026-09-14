@@ -52,11 +52,12 @@ function renderBlocks(blocks){ if(!blocks||!blocks.length) return '';
   return blocks.map(b=>{
     if(b.t==='s') return '<div class="cscr">&ldquo;'+linkifyScripture(b.text||'')+'&rdquo;'+(b.ref?'<span class="cscrref">'+linkifyScripture(b.ref)+'</span>':'')+'</div>';
     if(b.t==='ref') return '<div class="cxrefs"><span class="cxrl">Scriptures</span>'+linkifyScripture(b.text||'')+'</div>';
-    if(b.t==='belief') return '<div class="beliefbox"><span class="bblbl">Believe</span>'+linkifyScripture(b.text||'')+'</div>';
+    if(b.t==='belief') return '<div class="beliefbox"><span class="bblbl">Believe</span>'+allowBold(linkifyScripture(b.text||''))+'</div>';
     if(b.t==='prayer') return '<div class="prayerbox">&ldquo;'+linkifyScripture(b.text||'')+'&rdquo;'+(b.ref?'<span class="cscrref">'+linkifyScripture(b.ref)+'</span>':'')+'</div>';
     if(b.t==='refline') return '<div class="refline"><span class="rlt">'+esc(b.text||'')+'</span>'+(b.ref?'<span class="scref" data-ref="'+esc(b.ref)+'">'+linkifyScripture(b.ref)+'</span>':'')+'</div>';
-    return '<p>'+linkifyScripture(b.text||'')+'</p>';
+    return '<p>'+allowBold(linkifyScripture(b.text||''))+'</p>';
   }).join(''); }
+function allowBold(h){ return (h||'').replace(/&lt;(\/?)b&gt;/g,'<$1b>'); }
 
 function renderOnion(dims){
   const draw=DIMLAYERS.slice().reverse();
@@ -185,7 +186,7 @@ function openCommandment(n){ const t=CMDS.find(x=>x.n===n); if(!t) return; _curC
 function openRepentance(){ _curCmd=null; clearInterval(_qTimer); const g=REPENT||{};
   const ov=(g.overview||[]).map(b=> b.t==='contrast'
       ? '<div class="repcontrast"><div class="rc rcr">'+esc(b.regret||'')+'</div><div class="rc rcp">'+esc(b.repent||'')+'</div></div>'
-      : '<p>'+linkifyScripture(b.text||'')+'</p>').join('');
+      : '<p>'+allowBold(linkifyScripture(b.text||''))+'</p>').join('');
   const el=(g.elements||[]).map(x=>'<span class="repel">'+esc(x)+'</span>').join('');
   const qs=(g.questions||[]).map(x=>'<li>'+esc(x)+'</li>').join('');
   const csteps=(g.counsel_steps||[]).map(s=>'<div class="counselstep"><div class="csnum">'+s.n+'</div><div class="csbody">'+
@@ -251,7 +252,16 @@ function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bi
   const go=d=>openReader(bi,ch+d);
   ['#rdprev','#rdprev2'].forEach(s=>{const e=$(s);if(e&&prev)e.onclick=()=>go(-1);});
   ['#rdnext','#rdnext2'].forEach(s=>{const e=$(s);if(e&&next)e.onclick=()=>go(1);});
+  // tap a verse -> select it and open the study drawer (like selecting a verse on desktop)
+  $('#view').querySelectorAll('.rv').forEach((p,i)=>p.onclick=()=>selectVerse(bi,ch,i+1));
+  _rd={bi:bi,ch:ch};
   if(verse){ const el=$('#rv'+verse); if(el) setTimeout(()=>el.scrollIntoView({block:'center'}),60); }
+}
+let _sel=null;   // {bi,ch,v}
+function selectVerse(bi,ch,v){ _sel={bi:bi,ch:ch,v:v};
+  document.querySelectorAll('.rv.hl').forEach(x=>x.classList.remove('hl'));
+  const el=$('#rv'+v); if(el)el.classList.add('hl');
+  openStudy();
 }
 
 function seekCounsel(){ const g=REPENT||{};
@@ -275,11 +285,73 @@ function markNewsSeen(){ try{ localStorage.setItem('yb_news_seen',NEWS.version);
 /* ---------- tab navigation ---------- */
 function nav(tab){ _tab=tab; try{ window.__tab=tab; }catch(e){}
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab || (tab==='repentance'&&b.dataset.tab==='repent')));
+  // the left/right menu buttons appear in the Bible section (sources + verse study), like desktop
+  const inBible=(tab==='bible');
+  const lb=$('#leftmenubtn'), rb=$('#rightmenubtn'); if(lb)lb.hidden=!inBible; if(rb)rb.hidden=!inBible;
+  closeDrawers();
   if(tab==='home') showHome();
   else if(tab==='bible') openBible();
   else if(tab==='commandments') showCommandments();
   else if(tab==='repentance'||tab==='repent') openRepentance();
   else if(tab==='news') openNews(); }
+
+/* ================= DRAWERS (left = sources, right = verse study) — mirrors desktop ================= */
+const DESK_KEY='yb_desktop_url';
+function deskUrl(){ try{ return localStorage.getItem(DESK_KEY)||''; }catch(e){ return ''; } }
+function closeDrawers(){ ['#leftdrawer','#rightdrawer','#scrim'].forEach(s=>{const e=$(s);if(e)e.hidden=true;}); }
+function openDrawer(side){ const d=$(side==='left'?'#leftdrawer':'#rightdrawer'); const other=$(side==='left'?'#rightdrawer':'#leftdrawer');
+  if(other)other.hidden=true; $('#scrim').hidden=false;
+  if(side==='left') buildSources(); else buildStudy();
+  d.hidden=false; }
+/* LEFT drawer — the sources menu (all the sacred books), grouped like the desktop left menu */
+const SRC_LOCKED=[
+  {t:'Beyond the KJV — on your desktop',items:[
+    ['📜','Ethiopian Apocrypha'],['🔴','Red Letter Words of Christ'],
+    ['🕮','1 Enoch (Ethiopic)'],['🕮','2 Enoch (Slavonic)'],['🕮','3 Enoch (Hebrew)'],
+    ['✶','The Nag Hammadi Library'],['✶','Pistis Sophia'],['✶','The Gnostic Bible'],
+    ['🏛','Second Temple & Apocrypha'],['🌐','120+ comparison versions'],
+    ['א','Hebrew / Greek / Aramaic word study'],['🔢',"Strong's + interlinear"]]},
+];
+function buildSources(){ const d=$('#leftdrawer');
+  const ot=KJV.books.filter(b=>b.t==='OT'), nt=KJV.books.filter(b=>b.t==='NT');
+  const grp=(lbl,list)=>'<div class="srcgroup"><div class="srclbl">'+esc(lbl)+'</div>'+
+    list.map(b=>{const i=KJV.books.indexOf(b);return '<button class="srcitem" data-bi="'+i+'"><span class="si">📖</span>'+esc(b.n)+'</button>';}).join('')+'</div>';
+  const locked=SRC_LOCKED.map(g=>'<div class="srcgroup"><div class="srclbl">'+esc(g.t)+'</div>'+
+    g.items.map(it=>'<button class="srcitem locked" data-locked="1"><span class="si">'+it[0]+'</span>'+esc(it[1])+'</button>').join('')+'</div>').join('');
+  d.innerHTML='<div class="drawhdr"><span class="dt">Holy Bible &middot; Sources</span><button class="drawx" id="ldx">✕</button></div>'+
+    '<div class="connectcard"><div class="cct">🖥️ Connect to your desktop</div><p>Unlock every source, all 120+ versions, and full Hebrew/Greek/Aramaic word study — live from your PC.</p><button class="connectbtn" id="lconnect">Connect to YahBible desktop</button></div>'+
+    grp('Old Testament',ot)+grp('New Testament',nt)+locked;
+  $('#ldx',d).onclick=closeDrawers;
+  d.querySelectorAll('.srcitem[data-bi]').forEach(b=>b.onclick=()=>{closeDrawers();openBook(+b.dataset.bi);});
+  d.querySelectorAll('.srcitem.locked').forEach(b=>b.onclick=()=>connectPrompt());
+  $('#lconnect',d).onclick=()=>connectPrompt();
+}
+/* RIGHT drawer — verse study: the selected verse, its words, versions & original language */
+function buildStudy(){ const d=$('#rightdrawer');
+  if(!_sel){ d.innerHTML='<div class="drawhdr"><span class="dt">Verse Study</span><button class="drawx" id="rdx">✕</button></div>'+
+      '<div class="srcnote">Tap a verse in the reader to study it here — its words, cross‑references, other versions, and the original Hebrew or Greek.</div>';
+    $('#rdx',d).onclick=closeDrawers; return; }
+  const b=KJV.books[_sel.bi], v=_sel.v, txt=(b.ch[_sel.ch-1]||[])[v-1]||'';
+  const ref=b.n+' '+_sel.ch+':'+v;
+  const words=txt.replace(/[^A-Za-z' -]/g,' ').split(/\s+/).filter(w=>w.length>1)
+    .map(w=>'<button class="wchip" data-w="'+esc(w)+'">'+esc(w)+'</button>').join('');
+  d.innerHTML='<div class="drawhdr"><span class="dt">Verse Study</span><button class="drawx" id="rdx">✕</button></div>'+
+    '<div class="vsref holo-gold">'+esc(ref)+'</div>'+
+    '<div class="vstext">'+esc(txt)+'</div>'+
+    '<div class="vstabs"><button class="vstab locked" data-x="versions">Compare versions</button>'+
+      '<button class="vstab locked" data-x="orig">Original language</button>'+
+      '<button class="vstab locked" data-x="inter">Interlinear</button></div>'+
+    '<div class="cxlbl">Words — tap for study</div><div class="wchips">'+words+'</div>'+
+    '<div class="connectcard"><div class="cct">🖥️ Full word study on your desktop</div><p>Strong’s, the Hebrew/Greek/Aramaic engine, gematria, and 120+ versions come live from your PC.</p><button class="connectbtn" id="rconnect">Connect to YahBible desktop</button></div>';
+  $('#rdx',d).onclick=closeDrawers;
+  d.querySelectorAll('.wchip,.vstab.locked').forEach(b=>b.onclick=()=>connectPrompt());
+  $('#rconnect',d).onclick=()=>connectPrompt();
+}
+function openStudy(){ openDrawer('right'); }
+function connectPrompt(){
+  toast('🖥️ Connect-to-desktop for full word study & all books is coming in the next update');
+}
+function askTaviel(){ toast('🕊 Ask Tav’iel — the grounded AI — is coming to mobile'); }
 
 /* ---------- self-cam overlay (TikTok streaming) ---------- */
 let _camStream=null;
@@ -313,7 +385,11 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#cambtn').onclick=toggleCam;
   $('#camclose').onclick=stopCam;
   $('#camshape').onclick=()=>$('#cam').classList.toggle('green');
+  $('#leftmenubtn').onclick=()=>openDrawer('left');
+  $('#rightmenubtn').onclick=()=>openDrawer('right');
+  $('#scrim').onclick=closeDrawers;
+  $('#tavbtn').onclick=askTaviel;
   initCamDrag();
-  window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} nav('home'); };
+  window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} const s=$('#scrim'); if(s&&!s.hidden){closeDrawers();return;} nav('home'); };
   nav('home');
 });
