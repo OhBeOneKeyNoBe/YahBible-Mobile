@@ -47,11 +47,44 @@
     </div>
   </div>
 
-  <script src="data/commandments.js"></script>
-  <script src="data/repentance.js"></script>
-  <script src="data/news.js"></script>
-  <script src="data/kjv.js"></script>
-  <script src="packs.js"></script>
-  <script src="app.js"></script>
+  <!-- OTA loader: runs the newest app+layout from the repo (cached), falls back to bundled offline.
+       This is what makes the WHOLE app self-update (layout & features) without reinstalling. -->
+  <script>
+  (function(){
+    var REMOTE='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/www/';
+    var SHELL=['app.css','data/commandments.js','data/repentance.js','data/news.js','data/kjv.js','packs.js','app.js'];
+    function ck(f){return 'yb_ota_'+f;}
+    function bundled(){ // inject the files shipped in the APK (offline fallback)
+      SHELL.forEach(function(f){
+        if(f.slice(-4)==='.css'){var l=document.createElement('link');l.rel='stylesheet';l.href=f;document.head.appendChild(l);}
+        else{document.write('<script src="'+f+'"><\/script>');}
+      });
+    }
+    function inject(f,txt){
+      if(f.slice(-4)==='.css'){var s=document.createElement('style');s.textContent=txt;document.head.appendChild(s);}
+      else{var sc=document.createElement('script');sc.text=txt;document.head.appendChild(sc);}
+    }
+    function runCached(){ // use the newest cached shell if we have a full set, else bundled
+      try{
+        for(var i=0;i<SHELL.length;i++){ if(localStorage.getItem(ck(SHELL[i]))==null){ bundled(); return; } }
+        for(var j=0;j<SHELL.length;j++){ inject(SHELL[j], localStorage.getItem(ck(SHELL[j]))); }
+      }catch(e){ bundled(); }
+    }
+    runCached();
+    // background: fetch the latest shell; if anything changed, cache it for next launch
+    setTimeout(function(){
+      try{
+        var changed=false, pending=SHELL.length;
+        SHELL.forEach(function(f){
+          fetch(REMOTE+f+'?ts='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():null;}).then(function(t){
+            if(t){ try{ if(localStorage.getItem(ck(f))!==t){ localStorage.setItem(ck(f),t); changed=true; } }catch(e){} }
+            if(--pending===0 && changed){ try{ localStorage.setItem('yb_ota_ready','1'); }catch(e){}
+              if(window.toast) toast('✨ Update ready — reopen the app to apply'); }
+          }).catch(function(){ if(--pending===0 && changed && window.toast) toast('✨ Update ready — reopen the app'); });
+        });
+      }catch(e){}
+    }, 2500);
+  })();
+  </script>
 </body>
 </html>
