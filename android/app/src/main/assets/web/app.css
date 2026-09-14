@@ -155,8 +155,38 @@ h1,h2,h3{margin:0}
 .rc{padding:12px 14px;border-radius:11px;font:15px/1.5 "EB Garamond",serif}
 .rcr{background:rgba(200,80,70,.1);border:1px solid rgba(200,80,70,.4);color:#e6b0a6}
 .rcp{background:rgba(95,211,154,.1);border:1px solid rgba(95,211,154,.45);color:#a6e6c0}
-.repepigraph{text-align:center;max-width:560px;margin:12px auto 4px;border-left:none;padding-left:0;color:var(--gold)}
-.repepigraph .cscrref{text-align:center;margin-top:5px}
+.repsubtitle{text-align:center;font:800 10.5px Inter;letter-spacing:.18em;text-transform:uppercase;color:var(--gold2);margin:6px auto 4px;opacity:.85}
+.repepigraph{text-align:center;max-width:560px;margin:10px auto 6px;border-left:none;padding:0;font:italic 18px/1.45 "Cormorant Garamond","EB Garamond",serif;color:var(--gold)}
+.repepigraph .cscrref{display:block;text-align:center;margin-top:5px;font-style:normal}
+/* man-shaped nested layers */
+.onlayer{cursor:pointer;transition:opacity .2s}
+.onion.picked .onlayer{opacity:.5} .onlayer.sel{opacity:1;filter:drop-shadow(0 0 4px rgba(255,255,255,.55))}
+.onion{width:min(230px,60vw)}
+.onilbl{font:800 9.5px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--gold2);margin:2px 0 6px}
+.onionlegitem.sel .olname{color:var(--gold)}
+/* countdown ladder 7->1 */
+.ladintro{font:15px/1.6 "EB Garamond",serif;margin:8px 0 12px}
+.ladder2{display:flex;flex-direction:column;margin:6px 0 12px}
+.ladrow{display:flex;gap:11px;align-items:flex-start;padding:9px 6px;border-radius:9px;position:relative}
+.ladrow.sel{background:rgba(60,48,80,.5)}
+.ladrow:not(:last-child)::after{content:"";position:absolute;left:21px;top:38px;bottom:-1px;width:2px;background:linear-gradient(var(--line),transparent)}
+.ladn{flex:none;width:29px;height:29px;border-radius:50%;color:#14101c;font:800 14px Inter;display:flex;align-items:center;justify-content:center;z-index:1}
+.ladlabel{font:600 15px Inter}
+.laddim{font:700 10.5px Inter;text-transform:uppercase;letter-spacing:.05em;margin-left:3px}
+.ladnote{font:13px/1.5 "EB Garamond",serif;color:var(--dim);margin-top:2px}
+/* three-step counsel */
+.cmdcounsel{border-left:3px solid var(--gold2);padding-left:13px} .cmdcounsel .cmdeye{color:var(--gold2)}
+.counselstep{display:flex;gap:12px;margin:14px 0;padding-top:14px;border-top:1px solid var(--line)}
+.csnum{flex:none;width:32px;height:32px;border-radius:50%;background:linear-gradient(140deg,#e9c877,#caa24e);color:#241833;font:800 16px "Cormorant Garamond",serif;display:flex;align-items:center;justify-content:center}
+.csttl{font:600 20px "Cormorant Garamond",serif;color:var(--gold);line-height:1.1}
+.cssub{font:italic 12.5px "EB Garamond",serif;color:var(--dim);margin-bottom:6px}
+.csbody{flex:1;min-width:0}
+/* creed + prayer + reference-line */
+.beliefbox{margin:10px 0;padding:12px 14px;border-radius:10px;border:1px solid rgba(89,184,255,.4);background:rgba(89,150,255,.08);font:15.5px/1.55 "EB Garamond",serif}
+.beliefbox .bblbl{display:block;font:800 9px Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--sky);margin-bottom:4px}
+.prayerbox{margin:10px 0;padding:12px 15px;border-radius:0 10px 10px 0;border-left:3px solid var(--gold);background:rgba(233,200,119,.08);font:italic 15.5px/1.6 "EB Garamond",serif;color:var(--gold)}
+.prayerbox .cscrref{font-style:normal}
+.refline{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;font:14px/1.5 "EB Garamond",serif;padding:3px 0 3px 11px;border-left:2px solid rgba(95,211,154,.4);margin:5px 0}
 
 /* prayer buttons */
 .prayacts{display:flex;flex-direction:column;gap:9px;margin-top:14px}

@@ -14,7 +14,17 @@ function resolveBook(name){ if(!name) return -1; const k=name.trim().toLowerCase
   if(k in BOOKMAP) return BOOKMAP[k];
   for(const b in BOOKMAP){ if(b.indexOf(k)===0||k.indexOf(b)===0) return BOOKMAP[b]; }
   return -1; }
-const DIMHUE = {Physical:'#e0563b',Emotional:'#e8912e',Mental:'#e7c94e',Ambitional:'#5fd39a',Vocal:'#59b8ff',Intentional:'#9a86e6',Spiritual:'#c07ad9'};
+const DIMHUE = {Physical:'#e0563b',Emotional:'#e8912e',Mental:'#e7c94e',Ambitional:'#5fd39a',Vocal:'#59b8ff',Intentional:'#8a7be8',Spiritual:'#c07ad9'};
+const DIMLAYERS=[
+  {name:'Spiritual',hue:'#c07ad9',sub:'allegiance, counsel, obedience'},
+  {name:'Intentional',hue:'#8a7be8',sub:'will, consent, choice'},
+  {name:'Vocal',hue:'#59b8ff',sub:'speech, vows, testimony'},
+  {name:'Ambitional',hue:'#5fd39a',sub:'desires, pursuits, kingdom'},
+  {name:'Mental',hue:'#e7c94e',sub:'thoughts, reasoning, judgment'},
+  {name:'Emotional',hue:'#e8912e',sub:'affections, fears, attachments'},
+  {name:'Physical',hue:'#e0563b',sub:'the body, actions, habits'}];
+const MAN_PATH='M50 8 C57 8 62 14 62 22 C62 28 58 33 52 34 C66 37 74 52 76 78 C76 100 62 112 50 112 C38 112 24 100 24 78 C26 52 34 37 48 34 C42 33 38 28 38 22 C38 14 43 8 50 8 Z';
+const _LAYERSUB={Spiritual:'the core — allegiance and counsel: whom do I obey?',Intentional:'the will — consent and choice',Vocal:'speech — vows and testimony',Ambitional:'desire — what I pursue as a kingdom',Mental:'thought — reasoning and judgment',Emotional:'affection — fears and attachments',Physical:'the surface — the body and its actions'};
 const GENDIMS = [
   {name:'Physical',marker:'🔴',sub:'the body, actions, habits'},
   {name:'Emotional',marker:'🟠',sub:'affections, fears, attachments'},
@@ -42,26 +52,34 @@ function renderBlocks(blocks){ if(!blocks||!blocks.length) return '';
   return blocks.map(b=>{
     if(b.t==='s') return '<div class="cscr">&ldquo;'+linkifyScripture(b.text||'')+'&rdquo;'+(b.ref?'<span class="cscrref">'+linkifyScripture(b.ref)+'</span>':'')+'</div>';
     if(b.t==='ref') return '<div class="cxrefs"><span class="cxrl">Scriptures</span>'+linkifyScripture(b.text||'')+'</div>';
+    if(b.t==='belief') return '<div class="beliefbox"><span class="bblbl">Believe</span>'+linkifyScripture(b.text||'')+'</div>';
+    if(b.t==='prayer') return '<div class="prayerbox">&ldquo;'+linkifyScripture(b.text||'')+'&rdquo;'+(b.ref?'<span class="cscrref">'+linkifyScripture(b.ref)+'</span>':'')+'</div>';
+    if(b.t==='refline') return '<div class="refline"><span class="rlt">'+esc(b.text||'')+'</span>'+(b.ref?'<span class="scref" data-ref="'+esc(b.ref)+'">'+linkifyScripture(b.ref)+'</span>':'')+'</div>';
     return '<p>'+linkifyScripture(b.text||'')+'</p>';
   }).join(''); }
 
-function renderOnion(dims){ const list=(dims&&dims.length)?dims:GENDIMS; const N=list.length, R=150;
-  const rings=list.map((d,i)=>{ const hue=DIMHUE[d.name]||'#9a86e6', r=R-i*((R-24)/(N-1));
-    return '<circle class="onionring" data-dim="'+esc(d.name)+'" cx="170" cy="170" r="'+r.toFixed(1)+'" style="stroke:'+hue+';fill:'+hue+'"/>'; }).join('');
-  const fig='<g class="onionfig"><circle cx="170" cy="150" r="12"/><path d="M170 164 q-20 4 -22 34 q22 10 44 0 q-2 -30 -22 -34 z"/></g>';
-  const leg=list.map(d=>{ const hue=DIMHUE[d.name]||'#9a86e6';
-    return '<button class="onionlegitem" data-dim="'+esc(d.name)+'"><span class="oldot" style="background:'+hue+'"></span>'+
-      '<span class="olname">'+esc((d.marker?d.marker+' ':'')+d.name)+'</span><span class="olsub">'+esc(d.subtitle||d.sub||'')+'</span></button>'; }).join('');
-  return '<div class="onionwrap"><div class="onion"><svg viewBox="0 0 340 340" class="onionsvg" role="img" aria-label="Seven inward dimensions">'+
-    rings+fig+'</svg><div class="onioncore">Whom do I<br>obey now?</div></div>'+
-    '<div class="onionleg">'+leg+'</div>'+
-    '<div class="onioncap">The body is only the outer surface. Sin usually forms in a deeper layer first — tap a layer.</div></div>'; }
+function renderOnion(dims){
+  const draw=DIMLAYERS.slice().reverse();
+  const men=draw.map((d,i)=>{ const s=(1.0-i*0.108).toFixed(3);
+    return '<g class="onlayer" data-dim="'+esc(d.name)+'" transform="translate(50,62) scale('+s+') translate(-50,-62)"><path d="'+MAN_PATH+'" fill="'+d.hue+'"/></g>'; }).join('');
+  const leg=DIMLAYERS.map(d=>'<button class="onionlegitem" data-dim="'+esc(d.name)+'"><span class="oldot" style="background:'+d.hue+'"></span>'+
+    '<span class="olname">'+esc(d.name)+'</span><span class="olsub">'+esc(d.sub||'')+'</span></button>').join('');
+  return '<div class="onionwrap"><div class="onion"><svg viewBox="0 0 100 124" class="onionsvg" role="img" aria-label="The person in seven layers, spirit at the core">'+
+    men+'</svg></div><div class="onilbl">The person, layer by layer</div><div class="onionleg">'+leg+'</div>'+
+    '<div class="onioncap" id="onioncap">Spirit at the core (violet), flesh on the surface (scarlet). Sin forms in a deeper layer first — tap a layer to see its role.</div></div>'; }
+function renderLadder(g){ if(!g||!g.ladder||!g.ladder.length) return '';
+  const steps=g.ladder.map(l=>'<div class="ladrow" data-dim="'+esc(l.dim)+'"><span class="ladn" style="background:'+l.hue+'">'+l.n+'</span>'+
+    '<div class="ladtx"><div class="ladlabel">'+esc(l.label)+' <span class="laddim" style="color:'+l.hue+'">'+esc(l.dim)+'</span></div>'+
+    (l.note?'<div class="ladnote">'+esc(l.note)+'</div>':'')+'</div></div>').join('');
+  const up=(g.ladder_up||[]).map(x=>'<span class="rup">'+esc(x)+'</span>').join('<span class="rarr">→</span>');
+  return (g.ladder_intro?'<p class="ladintro">'+esc(g.ladder_intro)+'</p>':'')+'<div class="ladder2">'+steps+'</div>'+
+    (up?'<div class="ladderup"><div class="cxlbl">Then turn — from 1 back up to 7</div>'+up+'</div>':''); }
 function onionSelect(scope,name){ if(!name) return;
-  scope.querySelectorAll('.onionring,.onionlegitem').forEach(el=>el.classList.toggle('sel',el.dataset.dim===name));
+  scope.querySelectorAll('.onlayer,.onionlegitem,.ladrow').forEach(el=>el.classList.toggle('sel',el.dataset.dim===name));
   const on=scope.querySelector('.onion'); if(on) on.classList.add('picked');
   const acc=scope.querySelector('.dimacc[data-dim="'+name+'"]');
   if(acc){ acc.classList.add('open'); acc.scrollIntoView({block:'center',behavior:'smooth'}); }
-  const core=scope.querySelector('.onioncore'); if(core) core.classList.toggle('spirit',name==='Spiritual'); }
+  const cap=scope.querySelector('#onioncap'); if(cap) cap.innerHTML='<b style="color:'+(DIMHUE[name]||'#c07ad9')+'">'+esc(name)+'</b> — '+esc(_LAYERSUB[name]||''); }
 
 const CATCHQ={Physical:'How is it broken physically?',Emotional:'How is it broken emotionally?',Mental:'How is it broken mentally?',Ambitional:'How is it broken in ambition?',Vocal:'How is it broken in speech?',Intentional:'How is it broken in the will?',Spiritual:'How is it broken spiritually?'};
 function _stageFor(name){ if(!_curCmd||!_curCmd.repentance) return null; return (_curCmd.repentance.stages||[]).find(s=>s.dimension===name)||null; }
@@ -96,8 +114,6 @@ function renderSection(s){
   return '<div class="cmdsec '+cls+'"><div class="cmdeye">'+esc(s.title||'')+'</div>'+(s.q?'<h3>'+esc(s.q)+'</h3>':'')+renderBlocks(s.blocks)+'</div>'; }
 
 function renderRepentanceSection(t){ if(!t.repentance) return ''; const g=REPENT||{};
-  const down=(g.ladder_down||[]).map((x,i)=>'<li><span class="rln">'+(i+1)+'</span>'+esc(x)+'</li>').join('');
-  const up=(g.ladder_up||[]).map(x=>'<span class="rup">'+esc(x)+'</span>').join('<span class="rarr">→</span>');
   const stages=(t.repentance.stages||[]).map(st=>{ const hue=DIMHUE[st.dimension]||'#9a86e6';
     const warn=(st.warningSigns||[]).map(w=>'<li>'+linkifyScripture(w)+'</li>').join('');
     const sc=(st.scriptures||[]).map(r=>linkifyScripture(r)).join(' · ');
@@ -109,7 +125,7 @@ function renderRepentanceSection(t){ if(!t.repentance) return ''; const g=REPENT
       (sc?'<div class="cxrefs"><span class="cxrl">Scriptures</span>'+sc+'</div>':'')+'</div>'; }).join('');
   return '<div class="cmdsec cmdrepent"><div class="cmdeye">Repentance</div><h3>How do you turn from this, and turn early?</h3>'+
     '<p>'+esc(t.repentance.intro||'')+'</p>'+
-    (down?'<div class="ladder"><div class="cxlbl">The inward ladder — where did it begin?</div><ol class="ladderdown">'+down+'</ol>'+(up?'<div class="ladderup"><div class="cxlbl">Then turn</div>'+up+'</div>':'')+'</div>':'')+
+    renderLadder(g)+
     stages+
     '<div class="prayacts"><button class="seekcounsel">🕊 Seek Counsel in Prayer</button><button class="lordsprayer'+(_lordsSeen?'':' pulse')+'">📖 Read the Full Lord\'s Prayer — KJV</button></div></div>'; }
 
@@ -118,7 +134,7 @@ function setView(html){ const v=$('#view'); v.innerHTML=html; v.scrollTop=0; }
 function wireStudy(scope){ if(!scope) return;
   scope.querySelectorAll('.dimacc .dimhdr').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
   scope.querySelectorAll('.repdim .repdimhdr').forEach(h=>h.onclick=e=>{e.stopPropagation();h.parentElement.classList.toggle('open');});
-  scope.querySelectorAll('.onionring,.onionlegitem').forEach(el=>el.onclick=()=>onionSelect(scope,el.dataset.dim));
+  scope.querySelectorAll('.onlayer,.onionlegitem,.ladrow').forEach(el=>el.onclick=()=>onionSelect(scope,el.dataset.dim));
   scope.querySelectorAll('.seekcounsel').forEach(b=>b.onclick=seekCounsel);
   scope.querySelectorAll('.lordsprayer').forEach(b=>b.onclick=openLordsPrayer);
   scope.querySelectorAll('.backbtn').forEach(b=>b.onclick=()=>nav(b.dataset.back||'home'));
@@ -149,8 +165,8 @@ function rotQuote(){ const q=$('#homeq'), r=$('#homeqr'); if(!q) return; const [
 
 function showCommandments(){ clearInterval(_qTimer);
   setView('<div class="screen"><div class="navcards">'+
-    '<button class="navcard rep" data-go="repentance"><span class="ni">🕊</span>Repentance</button>'+
-    '<button class="navcard news" data-go="news"><span class="ni">✨</span>News</button></div>'+
+    '<button class="navcard news" data-go="news"><span class="ni">✨</span>News</button>'+
+    '<button class="navcard rep" data-go="repentance"><span class="ni">🕊</span>Repentance</button></div>'+
     '<div class="listhdr">The Ten Commandments</div>'+
     CMDS.map(t=>'<button class="cmdrow" data-c="'+t.n+'"><span class="num">'+t.n+'</span><span class="ct">'+esc(t.cmd)+'</span></button>').join('')+
     '</div>');
@@ -171,19 +187,20 @@ function openRepentance(){ _curCmd=null; clearInterval(_qTimer); const g=REPENT|
       ? '<div class="repcontrast"><div class="rc rcr">'+esc(b.regret||'')+'</div><div class="rc rcp">'+esc(b.repent||'')+'</div></div>'
       : '<p>'+linkifyScripture(b.text||'')+'</p>').join('');
   const el=(g.elements||[]).map(x=>'<span class="repel">'+esc(x)+'</span>').join('');
-  const down=(g.ladder_down||[]).map((x,i)=>'<li><span class="rln">'+(i+1)+'</span>'+esc(x)+'</li>').join('');
-  const up=(g.ladder_up||[]).map(x=>'<span class="rup">'+esc(x)+'</span>').join('<span class="rarr">→</span>');
   const qs=(g.questions||[]).map(x=>'<li>'+esc(x)+'</li>').join('');
-  const sp=(g.spirit||[]).map(x=>'<li>'+esc(x)+'</li>').join('');
+  const csteps=(g.counsel_steps||[]).map(s=>'<div class="counselstep"><div class="csnum">'+s.n+'</div><div class="csbody">'+
+    '<div class="csttl">'+esc(s.title)+'</div>'+(s.subtitle?'<div class="cssub">'+esc(s.subtitle)+'</div>':'')+renderBlocks(s.blocks)+'</div></div>').join('');
   setView('<div class="screen study"><button class="backbtn" data-back="commandments">◀ back</button>'+
     '<div class="cmdno">A Foundational Discipline</div><h2 class="cmdttl">'+esc(g.title||'Repentance')+'</h2>'+
-    (g.subtitle?'<div class="cmdfull">'+esc(g.subtitle)+'</div>':'')+
-    (g.epigraph?'<div class="repepigraph cscr">&ldquo;'+linkifyScripture(g.epigraph.quote||'')+'&rdquo;<span class="cscrref">'+linkifyScripture(g.epigraph.ref||'')+'</span></div>':'')+
+    (g.subtitle?'<div class="repsubtitle">'+esc(g.subtitle)+'</div>':'')+
+    (g.epigraph?'<div class="repepigraph">&ldquo;'+linkifyScripture(g.epigraph.quote||'')+'&rdquo;<span class="cscrref">'+linkifyScripture(g.epigraph.ref||'')+'</span></div>':'')+
     '<div class="cmdsec cmddefine"><div class="cmdeye">What it is</div><h3>What is repentance?</h3>'+ov+
       (el?'<div class="cxlbl">Repentance includes</div><div class="repels">'+el+'</div>':'')+'</div>'+
     '<div class="cmdsec cmddims"><div class="cmdeye">Where sin forms</div><h3>See the layer where it begins</h3>'+renderOnion(null)+'</div>'+
-    (down?'<div class="cmdsec cmdrepent"><div class="cmdeye">Catching it earlier</div><h3>The inward ladder</h3><div class="ladder"><ol class="ladderdown">'+down+'</ol>'+(up?'<div class="ladderup"><div class="cxlbl">Then turn</div>'+up+'</div>':'')+'</div>'+(qs?'<div class="cxlbl">Ask yourself</div><ul class="cxlist">'+qs+'</ul>':'')+'</div>':'')+
-    (sp?'<div class="cmdsec cmdkeep"><div class="cmdeye">Spiritual alignment</div><h3>Seeking the Father\'s counsel</h3><p>'+linkifyScripture(g.spirit_note||'')+'</p><div class="cxlbl">The Holy Spirit helps by</div><ul class="cxlist">'+sp+'</ul></div>':'')+
+    '<div class="cmdsec cmdrepent"><div class="cmdeye">Catching it earlier</div><h3>The inward ladder — a countdown, 7 to 1</h3>'+renderLadder(g)+
+      (qs?'<div class="cxlbl">Ask yourself</div><ul class="cxlist">'+qs+'</ul>':'')+'</div>'+
+    (csteps?'<div class="cmdsec cmdcounsel"><div class="cmdeye">Spiritual alignment</div><h3>'+esc(g.counsel_title||"Seeking the Father's Counsel")+'</h3>'+
+      (g.counsel_lead?'<div class="cscr">&ldquo;'+linkifyScripture(g.counsel_lead)+'&rdquo;<span class="cscrref">'+linkifyScripture(g.counsel_lead_ref||'')+'</span></div>':'')+csteps+'</div>':'')+
     '<div class="cmdsec cmdprayer"><div class="cmdeye">Prayer</div><h3>How should you pray?</h3><div class="prayacts"><button class="seekcounsel">🕊 Seek Counsel in Prayer</button><button class="lordsprayer'+(_lordsSeen?'':' pulse')+'">📖 Read the Full Lord\'s Prayer — KJV</button></div>'+
       (g.prayer_refs?'<div class="cxrefs"><span class="cxrl">Suggested Scriptures</span>'+linkifyScripture(g.prayer_refs)+'</div>':'')+'</div></div>');
   wireStudy($('#view')); }
