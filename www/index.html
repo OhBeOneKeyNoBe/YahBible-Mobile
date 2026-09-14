@@ -38,13 +38,14 @@
     <button class="tab" data-tab="news"><span class="ti">✨</span>News</button>
   </nav>
 
-  <!-- draggable self-cam overlay (circle / green-screen) for TikTok screen-share -->
-  <div id="cam">
+  <!-- draggable + pinch-resizable self-cam windows (front / back), each independent -->
+  <div id="cam" class="camwin">
     <video id="camvid" autoplay playsinline muted></video>
-    <div id="camctl">
-      <button id="camshape" title="Circle / green-screen">◐</button>
-      <button id="camclose" title="Stop camera">✕</button>
-    </div>
+    <div class="camctl"><button class="camshape" data-cam="cam" title="Circle / green-screen">◐</button><button class="camclose" data-cam="cam" title="Stop">✕</button></div>
+  </div>
+  <div id="cam2" class="camwin">
+    <video id="camvid2" autoplay playsinline muted></video>
+    <div class="camctl"><button class="camshape" data-cam="cam2" title="Circle / green-screen">◐</button><button class="camclose" data-cam="cam2" title="Stop">✕</button></div>
   </div>
 
   <!-- OTA loader: runs the newest app+layout from the repo (cached), falls back to bundled offline.
