@@ -330,8 +330,23 @@ h1,h2,h3{margin:0}
   border:2px solid var(--gold);box-shadow:0 8px 30px rgba(0,0,0,.5);display:none;touch-action:none;background:#000}
 #cam{left:16px;bottom:96px} #cam2{right:16px;bottom:96px}
 .camwin.on{display:block}
-.camwin.green{border-color:var(--grn)}
+/* shapes: round (default), landscape, portrait */
+.camwin.cf-land{border-radius:16px;width:200px;height:118px}
+.camwin.cf-port{border-radius:16px;width:120px;height:200px}
+.camwin.cf-round{border-radius:50%}
+/* mirror toggle — video is mirrored by default (natural selfie); .mirror shows it un-flipped */
 .camwin video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.camwin.mirror video{transform:scaleX(1)}
+/* green-screen: key out the backdrop behind the front camera (approximate, CSS blend) */
+.camwin.green{border-color:var(--grn)}
+.camwin.green video{mix-blend-mode:screen;background:#000}
+/* holographic rainbow animated border */
+.camwin.holoborder{border-color:transparent;position:fixed}
+.camwin.holoborder::before{content:"";position:absolute;inset:-3px;border-radius:inherit;z-index:-1;
+  background:conic-gradient(from 0deg,#e0563b,#e8912e,#e7c94e,#5fd39a,#59b8ff,#6a7be8,#c07ad9,#ff7ac6,#e0563b);
+  animation:holospin 4s linear infinite}
+@keyframes holospin{to{transform:rotate(360deg)}}
+.camwin .camctl{flex-wrap:wrap}
 .camwin .camctl{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;padding:4px;background:linear-gradient(0deg,rgba(0,0,0,.6),transparent)}
 .camwin .camctl button{width:26px;height:26px;border-radius:50%;border:none;background:rgba(0,0,0,.5);color:#fff;font-size:12px;cursor:pointer}
 #cammenu{position:fixed;z-index:90;background:var(--panel);border:1px solid var(--gold2);border-radius:12px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 12px 40px rgba(0,0,0,.6)}

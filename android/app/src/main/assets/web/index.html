@@ -41,11 +41,23 @@
   <!-- draggable + pinch-resizable self-cam windows (front / back), each independent -->
   <div id="cam" class="camwin">
     <video id="camvid" autoplay playsinline muted></video>
-    <div class="camctl"><button class="camshape" data-cam="cam" title="Circle / green-screen">◐</button><button class="camclose" data-cam="cam" title="Stop">✕</button></div>
+    <div class="camctl">
+      <button class="camcolor" data-cam="cam" title="Border colour">🎨</button>
+      <button class="camform" data-cam="cam" title="Shape: round / landscape / portrait">⬭</button>
+      <button class="cammirror" data-cam="cam" title="Mirror">🪞</button>
+      <button class="camgreen" data-cam="cam" title="Green-screen (remove background)">🟩</button>
+      <button class="camclose" data-cam="cam" title="Stop">✕</button>
+    </div>
   </div>
   <div id="cam2" class="camwin">
     <video id="camvid2" autoplay playsinline muted></video>
-    <div class="camctl"><button class="camshape" data-cam="cam2" title="Circle / green-screen">◐</button><button class="camclose" data-cam="cam2" title="Stop">✕</button></div>
+    <div class="camctl">
+      <button class="camcolor" data-cam="cam2" title="Border colour">🎨</button>
+      <button class="camform" data-cam="cam2" title="Shape">⬭</button>
+      <button class="cammirror" data-cam="cam2" title="Mirror">🪞</button>
+      <button class="camgreen" data-cam="cam2" title="Green-screen">🟩</button>
+      <button class="camclose" data-cam="cam2" title="Stop">✕</button>
+    </div>
   </div>
 
   <!-- OTA loader — VERSION-GATED: only runs a cached web shell if it is strictly NEWER than the
@@ -53,7 +65,7 @@
        web copy from ever masking newer bundled features. -->
   <script>
   (function(){
-    var BUNDLED_VER=20260914020;   // bump every APK build; OTA applies only if remote > this
+    var BUNDLED_VER=20260914030;   // bump every APK build; OTA applies only if remote > this
     var REMOTE='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/www/';
     var SHELL=['app.css','data/commandments.js','data/repentance.js','data/news.js','data/kjv.js','packs.js','app.js'];
     function ck(f){return 'yb_ota_'+f;}
