@@ -458,3 +458,5 @@ h1,h2,h3{margin:0}
 .setctl{display:flex;align-items:center;gap:10px;margin:8px 0}
 .setctl label{flex:none;width:130px;font:600 13px Inter;color:var(--ink2)}
 .setctl input[type=range]{flex:1;accent-color:var(--gold)}
+.camblock{margin:10px 0;padding:10px 0 4px;border-top:1px solid var(--line)}
+.camblbl{font:700 13px Inter;color:var(--gold2);margin-bottom:6px}
