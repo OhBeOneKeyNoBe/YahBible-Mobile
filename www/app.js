@@ -240,26 +240,52 @@ function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bi
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab==='bible'));
   ch=Math.max(1,Math.min(b.ch.length,ch||1)); _rd={bi:bi,ch:ch};
   const verses=b.ch[ch-1]||[];
-  const body=verses.map((tx,i)=>'<p class="rv'+(verse===i+1?' hl':'')+'" id="rv'+(i+1)+'"><span class="rvn">'+(i+1)+'</span>'+esc(tx)+'<span class="ilslot" id="il'+(i+1)+'"></span></p>').join('');
+  const body=verses.map((tx,i)=>'<p class="rv'+(verse===i+1?' hl':'')+'" id="rv'+(i+1)+'"><span class="rvn">'+(i+1)+'</span>'+wordize(tx,i+1)+'<span class="ilslot" id="il'+(i+1)+'"></span></p>').join('');
   const prev=ch>1, next=ch<b.ch.length;
   setView('<div class="screen reader"><div class="rdbar"><button class="backbtn" id="rdbooks">📚 '+esc(b.a)+'</button>'+
     '<div class="rdttlwrap"><span class="rdttl">'+esc(b.n)+' '+ch+'</span>'+
       '<span class="ileye" id="ilbtn" title="Show the Hebrew/Greek under each verse">&#128065;</span>'+
       '<span class="treeeye" id="verbtn" title="Compare versions under each verse"><svg viewBox="0 0 24 24"><path d="M12 2 L16 10 L14 10 L18 16 L13 16 L13 21 L11 21 L11 16 L6 16 L10 10 L8 10 Z"/></svg></span></div>'+
-    '<div class="rdnav"><button id="rdprev"'+(prev?'':' disabled')+'>‹</button><button id="rdnext"'+(next?'':' disabled')+'>›</button></div></div>'+
-    '<div class="rdbody">'+body+'</div>'+
-    '<div class="rdfoot">'+(prev?'<button class="rdmore" id="rdprev2">‹ '+esc(b.n)+' '+(ch-1)+'</button>':'<span></span>')+
-      (next?'<button class="rdmore" id="rdnext2">'+esc(b.n)+' '+(ch+1)+' ›</button>':'<span></span>')+'</div></div>');
+    '<div class="rdswipehint">swipe ← → for chapters</div></div>'+
+    '<div class="rdbody" id="rdbody">'+body+'</div></div>');
   $('#rdbooks').onclick=()=>openBook(bi);
-  const go=d=>openReader(bi,ch+d);
-  ['#rdprev','#rdprev2'].forEach(s=>{const e=$(s);if(e&&prev)e.onclick=()=>go(-1);});
-  ['#rdnext','#rdnext2'].forEach(s=>{const e=$(s);if(e&&next)e.onclick=()=>go(1);});
-  // tap a verse -> select it and open the study drawer (like selecting a verse on desktop)
-  $('#view').querySelectorAll('.rv').forEach((p,i)=>p.onclick=()=>selectVerse(bi,ch,i+1));
+  const go=d=>{ const t=ch+d; if(t>=1&&t<=b.ch.length) openReader(bi,t); };
+  // WORD tap -> word study (desktop-style); tapping a verse number selects the verse
+  $('#view').querySelectorAll('.rvn').forEach((n)=>n.onclick=e=>{e.stopPropagation();selectVerse(bi,ch,+n.parentElement.id.slice(2));});
+  $('#view').querySelectorAll('.rw').forEach((w)=>w.onclick=e=>{e.stopPropagation();tapWord(b,ch,+w.dataset.v,w.textContent,w);});
   $('#ilbtn').onclick=()=>toggleChapterInterlinear(b,ch);
   $('#verbtn').onclick=()=>toggleChapterVersions(b,ch);
-  _rd={bi:bi,ch:ch};
+  initSwipe($('#rdbody'),go);
+  _rd={bi:bi,ch:ch}; _ilOn=false; _verOn=false;
+  colorOriginals(b,ch);   // highlight which words have an original (desktop-style), if the pack is here
   if(verse){ const el=$('#rv'+verse); if(el) setTimeout(()=>el.scrollIntoView({block:'center'}),60); }
+}
+function wordize(tx,v){ return tx.split(/(\s+)/).map(t=>/[A-Za-z]/.test(t)
+  ? '<span class="rw" data-v="'+v+'">'+esc(t)+'</span>' : esc(t)).join(''); }
+/* left/right swipe to change chapters */
+function initSwipe(el,go){ if(!el) return; let x0=null,y0=null;
+  el.addEventListener('touchstart',e=>{ if(e.touches.length!==1){x0=null;return;} x0=e.touches[0].clientX; y0=e.touches[0].clientY; },{passive:true});
+  el.addEventListener('touchend',e=>{ if(x0==null) return; const t=e.changedTouches[0];
+    const dx=t.clientX-x0, dy=t.clientY-y0;
+    if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.6){ go(dx<0?1:-1); } x0=null; },{passive:true}); }
+/* colour the words that have a real original in this verse (needs the word-study pack) */
+async function colorOriginals(b,ch){
+  if(!(window.YBPacks && await YBPacks.have('ws:'+b.a).catch(()=>false))) return;
+  try{ const ws=await YBPacks.ensureBookWords(b.a);
+    const verses=b.ch[ch-1]||[];
+    for(let i=1;i<=verses.length;i++){ const toks=(((ws||{})[String(ch)]||{})[String(i)])||[];
+      const origSet=new Set(); toks.forEach(t=>{ (t.e||'').toLowerCase().split(/\s+/).forEach(w=>{const c=w.replace(/[^a-z]/g,''); if(c.length>1)origSet.add(c);}); });
+      const p=$('#rv'+i); if(!p) continue;
+      p.querySelectorAll('.rw').forEach(w=>{ const c=w.textContent.toLowerCase().replace(/[^a-z]/g,'');
+        if(origSet.has(c)||[...origSet].some(o=>o.indexOf(c)>=0||c.indexOf(o)>=0)) w.classList.add('hasorig'); });
+    }
+  }catch(e){}
+}
+async function tapWord(b,ch,v,word,el){ _sel={bi:KJV.books.indexOf(b),ch:ch,v:v};
+  document.querySelectorAll('.rw.sel').forEach(x=>x.classList.remove('sel')); if(el)el.classList.add('sel');
+  openDrawer('right');
+  // after the drawer builds, run the word's study
+  setTimeout(()=>{ if(window.YBPacks) YBPacks.have('ws:'+b.a).then(h=>{ if(h) showWordPack(word,b,ch,v); }); },250);
 }
 /* chapter-level interlinear: show the Hebrew/Greek + Strong's + English under each verse (desktop-style) */
 let _ilOn=false;
@@ -276,7 +302,7 @@ async function toggleChapterInterlinear(b,ch){
       const toks=(((ws||{})[String(ch)]||{})[String(i)])||[];
       const slot=$('#il'+i); if(!slot) continue;
       slot.innerHTML = toks.length? '<span class="illine">'+toks.map(t=>{
-        const def=(S&&S[t.s])||''; const dshort=def.split('—').pop().trim().slice(0,40);
+        const def=strongLook(S,t.s); const dshort=def.split('—').pop().trim().slice(0,40);
         return '<span class="iltok" data-s="'+esc(t.s||'')+'"><span class="ilo">'+esc(t.o||'')+'</span>'+
           '<span class="ile">'+esc(t.e||'')+'</span><span class="ils">'+esc(t.s||'')+'</span>'+
           (dshort?'<span class="ild">'+esc(dshort)+'</span>':'')+'</span>';
@@ -286,7 +312,7 @@ async function toggleChapterInterlinear(b,ch){
     if(btn)btn.textContent='א Hebrew / Greek';
   }catch(e){ _ilOn=false; if(btn){btn.classList.remove('on');btn.textContent='א Hebrew / Greek';} toast('could not load originals'); }
 }
-function showStrongDefToast(sid,glyph,S){ const def=(S&&S[sid])||''; toast(glyph+' · '+sid+(def?' — '+def.split('—').pop().trim().slice(0,60):'')); }
+function showStrongDefToast(sid,glyph,S){ const def=strongLook(S,sid); toast(glyph+' · '+sid+(def?' — '+def.split('—').pop().trim().slice(0,60):'')); }
 /* chapter-level version comparison: stack the user's favourite versions under each verse (tree, desktop-style) */
 let _verOn=false;
 function favVersions(){ try{ return JSON.parse(localStorage.getItem('yb_fav_versions')||'null')||['akjv','asv','BSB','basicenglish']; }catch(e){ return ['akjv','asv','BSB','basicenglish']; } }
@@ -457,8 +483,10 @@ async function showWordPack(word,b,ch,v){ const el=$('#vspanel'); if(!el) return
     await showStrongDef(m.s, m.o);
   }catch(e){ el.innerHTML='<div class="srcnote">could not load — try Downloads</div>'; }
 }
+function strongLook(S,sid){ if(!S||!sid) return ''; if(S[sid]) return S[sid];
+  const m=/^([HG])0*(\d+)$/.exec(sid); if(m){ const k=m[1]+m[2]; if(S[k]) return S[k]; } return ''; }
 async function showStrongDef(sid, glyph){ const el=$('#vspanel'); if(!el||!sid) return;
-  let def=''; try{ const S=await YBPacks.ensureStrongs(); def=(S&&S[sid])||''; }catch(e){}
+  let def=''; try{ const S=await YBPacks.ensureStrongs(); def=strongLook(S,sid); }catch(e){}
   el.innerHTML='<div class="wsstudy"><div class="wsglyph holo-gold">'+esc(glyph||'')+'</div><div class="wssid">'+esc(sid)+'</div>'+
     '<div class="wsdef">'+esc(def||'(definition in the word‑study pack)')+'</div></div>';
 }
@@ -514,22 +542,38 @@ async function openSettings(){ clearInterval(_qTimer);
     '<p class="setnote">Pick the translations to stack under each verse when you tap the tree 🌳 in a chapter.</p>'+
     '<div class="favver" id="favver">'+[['akjv','KJV'],['asv','ASV'],['BSB','BSB'],['basicenglish','BBE'],['ERV','ERV'],['GNV','Geneva'],['ylt','YLT'],['web','WEB'],['darby','Darby'],['aleppo','Aleppo (Heb)']].map(v=>'<button class="favchip'+(favVersions().indexOf(v[0])>=0?' on':'')+'" data-v="'+v[0]+'">'+v[1]+'</button>').join('')+'</div></div>'+
     '<div class="cmdsec"><div class="cmdeye">Beyond the packs</div><h3>Sync with your desktop</h3>'+
-    '<p class="setnote">For the deep lexicon and anything not in a pack, connect to your YahBible desktop over the internet.</p>'+
-    '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://your-pc:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Save</button></div></div>'+
+    '<p class="setnote">Enter your PC’s <b>network address</b> (not localhost) &mdash; e.g. <b>http://192.168.1.20:41537</b>. Your phone and PC must be on the same Wi‑Fi, and the desktop must have <b>Network / LAN mode</b> turned on (in the desktop app’s settings). <b>127.0.0.1 will not work</b> from a phone.</p>'+
+    '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://192.168.x.x:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Test &amp; save</button></div></div>'+
     '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">Study content v'+APP_CONTENT_VER+' · <button id="chkupd" class="miniupd">Check for updates</button></p></div>'+
     '<button class="cmdback" id="cmdback">◀ back</button></div>');
   $('#view').querySelectorAll('.backbtn,#cmdback').forEach(b=>b.onclick=()=>nav('bible'));
   const cu=$('#chkupd'); if(cu) cu.onclick=()=>checkUpdates(false).then(()=>openSettings());
   const au=$('#applyupd'); if(au) au.onclick=()=>applyContentUpdate();
-  const sd=$('#savedesk'); if(sd) sd.onclick=()=>{ try{localStorage.setItem(DESK_KEY,$('#deskurl').value.trim());}catch(e){} toast('Desktop address saved'); };
-  const si=$('#dosignin'); if(si) si.onclick=()=>{ const n=$('#lg_name').value.trim(), e=$('#lg_email').value.trim();
-    if(!n&&!e){ toast('Enter a name or email'); return; } setAccount({name:n,email:e}); toast('Signed in'); openSettings(); };
+  const sd=$('#savedesk'); if(sd) sd.onclick=async()=>{ const u=$('#deskurl').value.trim(); try{localStorage.setItem(DESK_KEY,u);}catch(e){}
+    if(u){ toast('Testing connection…'); const ok=await pingDesktop(u); toast(ok?'✓ Connected to your desktop':'✗ Could not reach it — see the note below'); } };
+  const si=$('#dosignin'); if(si) si.onclick=async()=>{ const n=$('#lg_name').value.trim(), e=$('#lg_email').value.trim(), pw=$('#lg_pw').value;
+    if(!n&&!e){ toast('Enter a name or email'); return; }
+    const u=deskUrl();
+    if(u){ toast('Signing in to your desktop…'); const r=await desktopLogin(u,n||e,pw); if(r.ok){ setAccount({name:n||e,email:e,desktop:u,synced:true}); toast('✓ Signed in & synced'); openSettings(); return; }
+      toast(r.error||'Desktop sign-in failed — signed in locally'); }
+    setAccount({name:n,email:e}); openSettings(); };
   const gg=$('#doguest'); if(gg) gg.onclick=()=>{ setAccount({name:'Guest',guest:true}); openSettings(); };
   const so=$('#signout'); if(so) so.onclick=()=>{ setAccount(null); toast('Signed out'); openSettings(); };
   $('#view').querySelectorAll('#favver .favchip').forEach(ch=>ch.onclick=()=>{ let f=favVersions(); const v=ch.dataset.v;
     const i=f.indexOf(v); if(i>=0)f.splice(i,1); else f.push(v); try{localStorage.setItem('yb_fav_versions',JSON.stringify(f));}catch(e){} ch.classList.toggle('on'); });
   wirePackRows();
 }
+function normUrl(u){ u=(u||'').trim(); if(!u) return ''; if(!/^https?:\/\//.test(u)) u='http://'+u; return u.replace(/\/+$/,''); }
+async function pingDesktop(u){ u=normUrl(u); try{ const r=await fetch(u+'/api/status',{cache:'no-store'}); return r.ok; }
+  catch(e){ try{ const r2=await fetch(u+'/',{mode:'no-cors'}); return true; }catch(e2){ return false; } } }
+async function desktopLogin(u,user,pw){ u=normUrl(u);
+  try{ const r=await fetch(u+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pw})});
+    const d=await r.json().catch(()=>({})); if(d&&d.ok!==false){ try{localStorage.setItem('yb_desk_token',d.token||d.session||'');}catch(e){} return {ok:true}; }
+    // try signup if login failed
+    const r2=await fetch(u+'/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pw,email:user.indexOf('@')>0?user:''})});
+    const d2=await r2.json().catch(()=>({})); if(d2&&d2.ok!==false) return {ok:true};
+    return {ok:false,error:(d2&&d2.error)||'sign-in failed'};
+  }catch(e){ return {ok:false,error:'Could not reach the desktop — check the address & Wi-Fi'}; } }
 function getAccount(){ try{ return JSON.parse(localStorage.getItem('yb_account')||'null'); }catch(e){ return null; } }
 function setAccount(a){ try{ if(a) localStorage.setItem('yb_account',JSON.stringify(a)); else localStorage.removeItem('yb_account'); }catch(e){} }
 async function renderPackRow(p){
@@ -588,44 +632,57 @@ function toggleCam(){ const cam=$('#cam');
   m.querySelectorAll('button').forEach(bt=>bt.onclick=()=>{ m.remove(); startCam(bt.dataset.f); });
   setTimeout(()=>{ const off=e=>{ if(!m.contains(e.target)&&e.target!==$('#cambtn')){ m.remove(); document.removeEventListener('click',off);} }; document.addEventListener('click',off); },0);
 }
-async function startCam(mode){ const cam=$('#cam'), btn=$('#cambtn');
+async function startCam(mode){ const btn=$('#cambtn');
   try{
-    if(mode==='both'){
+    if(mode==='both'||mode==='user'){
       _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});
-      $('#camvid').srcObject=_camStream;
-      try{ _camStream2=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-        let v2=$('#camvid2'); if(!v2){ v2=document.createElement('video'); v2.id='camvid2'; v2.autoplay=true; v2.playsInline=true; v2.muted=true; $('#cam').appendChild(v2);} v2.srcObject=_camStream2; cam.classList.add('both');
-      }catch(e){ toast('This device shows one camera at a time'); }
-    }else{
-      _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:mode},audio:false});
-      $('#camvid').srcObject=_camStream; cam.classList.remove('both');
+      $('#camvid').srcObject=_camStream; $('#cam').classList.add('on');
     }
-    cam.classList.add('on'); btn.classList.add('on');
+    if(mode==='both'||mode==='environment'){
+      _camStream2=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+      $('#camvid2').srcObject=_camStream2; $('#cam2').classList.add('on');
+      $('#cam2').style.left='auto'; $('#cam2').style.right='16px';   // start the back cam on the other side
+    }
+    btn.classList.add('on');
   }catch(e){ toast('Camera unavailable — allow camera access'); }
 }
-function stopCam(){ const cam=$('#cam'), btn=$('#cambtn');
-  [_camStream,_camStream2].forEach(s=>{ if(s) s.getTracks().forEach(t=>t.stop()); });
-  _camStream=_camStream2=null; cam.classList.remove('on','both'); btn.classList.remove('on'); }
-function initCamDrag(){ const cam=$('#cam'); let sx,sy,ox,oy,drag=false;
-  const start=e=>{ const p=e.touches?e.touches[0]:e; drag=true; sx=p.clientX; sy=p.clientY;
-    const r=cam.getBoundingClientRect(); ox=r.left; oy=r.top; cam.style.bottom='auto'; cam.style.right='auto'; };
-  const move=e=>{ if(!drag) return; const p=e.touches?e.touches[0]:e;
-    let x=ox+(p.clientX-sx), y=oy+(p.clientY-sy);
-    x=Math.max(4,Math.min(window.innerWidth-cam.offsetWidth-4,x));
-    y=Math.max(56,Math.min(window.innerHeight-cam.offsetHeight-4,y));
-    cam.style.left=x+'px'; cam.style.top=y+'px'; e.preventDefault(); };
-  const end=()=>drag=false;
-  cam.addEventListener('mousedown',start); cam.addEventListener('touchstart',start,{passive:true});
-  window.addEventListener('mousemove',move); window.addEventListener('touchmove',move,{passive:false});
-  window.addEventListener('mouseup',end); window.addEventListener('touchend',end); }
+function stopCamWin(id){ const s=id==='cam'?_camStream:_camStream2; if(s)s.getTracks().forEach(t=>t.stop());
+  if(id==='cam')_camStream=null; else _camStream2=null; $('#'+id).classList.remove('on','both');
+  if(!$('#cam').classList.contains('on')&&!$('#cam2').classList.contains('on')) $('#cambtn').classList.remove('on'); }
+function stopCam(){ stopCamWin('cam'); stopCamWin('cam2'); document.querySelectorAll('#cammenu').forEach(x=>x.remove()); }
+/* each cam window: drag (1 finger) + pinch-resize (2 fingers), independently */
+function initCamWin(cam){ let sx,sy,ox,oy,drag=false, pinch=false, startDist=0, startW=0;
+  const dist=t=>Math.hypot(t[0].clientX-t[1].clientX, t[0].clientY-t[1].clientY);
+  cam.addEventListener('touchstart',e=>{
+    if(e.target.closest('.camctl')) return;
+    if(e.touches.length===2){ pinch=true; drag=false; startDist=dist(e.touches); startW=cam.offsetWidth; }
+    else{ drag=true; pinch=false; const p=e.touches[0]; sx=p.clientX; sy=p.clientY;
+      const r=cam.getBoundingClientRect(); ox=r.left; oy=r.top; cam.style.bottom='auto'; cam.style.right='auto'; }
+  },{passive:true});
+  cam.addEventListener('touchmove',e=>{
+    if(pinch&&e.touches.length===2){ const w=Math.max(90,Math.min(window.innerWidth*0.95, startW*dist(e.touches)/startDist));
+      cam.style.width=w+'px'; cam.style.height=w+'px'; e.preventDefault(); return; }
+    if(drag){ const p=e.touches[0]; let x=ox+(p.clientX-sx), y=oy+(p.clientY-sy);
+      x=Math.max(2,Math.min(window.innerWidth-cam.offsetWidth-2,x));
+      y=Math.max(52,Math.min(window.innerHeight-cam.offsetHeight-2,y));
+      cam.style.left=x+'px'; cam.style.top=y+'px'; e.preventDefault(); }
+  },{passive:false});
+  cam.addEventListener('touchend',()=>{drag=false;pinch=false;});
+  // mouse fallback (desktop preview)
+  let md=false;
+  cam.addEventListener('mousedown',e=>{ if(e.target.closest('.camctl'))return; md=true; const r=cam.getBoundingClientRect(); ox=r.left;oy=r.top;sx=e.clientX;sy=e.clientY;cam.style.bottom='auto';cam.style.right='auto';});
+  window.addEventListener('mousemove',e=>{ if(!md)return; cam.style.left=Math.max(2,ox+(e.clientX-sx))+'px'; cam.style.top=Math.max(52,oy+(e.clientY-sy))+'px';});
+  window.addEventListener('mouseup',()=>md=false);
+}
+function initCamDrag(){ initCamWin($('#cam')); initCamWin($('#cam2'));
+  document.querySelectorAll('.camclose').forEach(b=>b.onclick=e=>{e.stopPropagation();stopCamWin(b.dataset.cam);});
+  document.querySelectorAll('.camshape').forEach(b=>b.onclick=e=>{e.stopPropagation();$('#'+b.dataset.cam).classList.toggle('green');}); }
 
 /* ---------- boot ---------- */
 window.addEventListener('DOMContentLoaded',()=>{
   if(newsUnseen()){ const n=document.querySelector('.tab[data-tab="news"]'); if(n){ const d=document.createElement('span'); d.className='dot'; d.id='newsdot'; n.appendChild(d); } }
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>nav(b.dataset.tab==='repent'?'repentance':b.dataset.tab));
   $('#cambtn').onclick=toggleCam;
-  $('#camclose').onclick=stopCam;
-  $('#camshape').onclick=()=>$('#cam').classList.toggle('green');
   $('#leftmenubtn').onclick=()=>openDrawer('left');
   $('#rightmenubtn').onclick=()=>openDrawer('right');
   $('#scrim').onclick=closeDrawers;
