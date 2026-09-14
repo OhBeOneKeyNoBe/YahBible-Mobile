@@ -547,7 +547,9 @@ async function openSettings(){ clearInterval(_qTimer);
     '<div class="favver" id="favver">'+[['akjv','KJV'],['asv','ASV'],['BSB','BSB'],['basicenglish','BBE'],['ERV','ERV'],['GNV','Geneva'],['ylt','YLT'],['web','WEB'],['darby','Darby'],['aleppo','Aleppo (Heb)']].map(v=>'<button class="favchip'+(favVersions().indexOf(v[0])>=0?' on':'')+'" data-v="'+v[0]+'">'+v[1]+'</button>').join('')+'</div></div>'+
     '<div class="cmdsec"><div class="cmdeye">Beyond the packs</div><h3>Sync with your desktop</h3>'+
     '<p class="setnote">Enter your PC’s <b>network address</b> (not localhost) &mdash; e.g. <b>http://192.168.1.20:41537</b>. Your phone and PC must be on the same Wi‑Fi, and the desktop must have <b>Network / LAN mode</b> turned on (in the desktop app’s settings). <b>127.0.0.1 will not work</b> from a phone.</p>'+
-    '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://192.168.x.x:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Test &amp; save</button></div></div>'+
+    '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://192.168.x.x:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Test &amp; save</button></div>'+
+    '<button id="openfull" class="connectbtn" style="margin-top:10px">🖥️ Open the full desktop app (1:1) →</button>'+
+    '<p class="setnote">When your desktop is reachable, this loads the complete YahBible &mdash; every book, all 120+ versions, the deep word study, the 2D/3D Gnostic map &mdash; exactly as on desktop.</p></div>'+
     '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">Study content v'+APP_CONTENT_VER+' · <button id="chkupd" class="miniupd">Check for updates</button></p></div>'+
     '<button class="cmdback" id="cmdback">◀ back</button></div>');
   $('#view').querySelectorAll('.backbtn,#cmdback').forEach(b=>b.onclick=()=>nav('bible'));
@@ -555,6 +557,8 @@ async function openSettings(){ clearInterval(_qTimer);
   const au=$('#applyupd'); if(au) au.onclick=()=>applyContentUpdate();
   const sd=$('#savedesk'); if(sd) sd.onclick=async()=>{ const u=$('#deskurl').value.trim(); try{localStorage.setItem(DESK_KEY,u);}catch(e){}
     if(u){ toast('Testing connection…'); const ok=await pingDesktop(u); toast(ok?'✓ Connected to your desktop':'✗ Could not reach it — see the note below'); } };
+  const of=$('#openfull'); if(of) of.onclick=async()=>{ const u=normUrl(deskUrl()); if(!u){ toast('Enter your desktop address first'); return; }
+    toast('Opening the full app…'); const ok=await pingDesktop(u); if(ok){ location.href=u+'/'; } else { toast('✗ Desktop not reachable — check Wi-Fi & the address'); } };
   const si=$('#dosignin'); if(si) si.onclick=async()=>{ const n=$('#lg_name').value.trim(), e=$('#lg_email').value.trim(), pw=$('#lg_pw').value;
     if(!n&&!e){ toast('Enter a name or email'); return; }
     const u=deskUrl();
