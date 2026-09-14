@@ -294,7 +294,7 @@ async function toggleChapterInterlinear(b,ch){
   if(_ilOn){ _ilOn=false; document.querySelectorAll('.ilslot').forEach(s=>s.innerHTML=''); if(btn)btn.classList.remove('on'); return; }
   if(!(window.YBPacks && await YBPacks.have('ws:'+b.a).catch(()=>false))){
     toast('Download the word‑study pack to see the original here'); connectPrompt(); return; }
-  _ilOn=true; if(btn){btn.classList.add('on'); btn.textContent='… loading';}
+  _ilOn=true; if(btn){btn.classList.add('on','loading');}
   try{
     const ws=await YBPacks.ensureBookWords(b.a); const S=await YBPacks.ensureStrongs().catch(()=>({}));
     const verses=b.ch[ch-1]||[];
@@ -303,14 +303,18 @@ async function toggleChapterInterlinear(b,ch){
       const slot=$('#il'+i); if(!slot) continue;
       slot.innerHTML = toks.length? '<span class="illine">'+toks.map(t=>{
         const def=strongLook(S,t.s); const dshort=def.split('—').pop().trim().slice(0,40);
-        return '<span class="iltok" data-s="'+esc(t.s||'')+'"><span class="ilo">'+esc(t.o||'')+'</span>'+
+        return '<span class="iltok" data-s="'+esc(t.s||'')+'" data-v="'+i+'" data-o="'+esc(t.o||'')+'"><span class="ilo">'+esc(t.o||'')+'</span>'+
           '<span class="ile">'+esc(t.e||'')+'</span><span class="ils">'+esc(t.s||'')+'</span>'+
           (dshort?'<span class="ild">'+esc(dshort)+'</span>':'')+'</span>';
       }).join('')+'</span>' : '';
     }
-    document.querySelectorAll('.iltok').forEach(x=>x.onclick=e=>{e.stopPropagation();_sel={bi:KJV.books.indexOf(b),ch:ch,v:1};showStrongDefToast(x.dataset.s,x.querySelector('.ilo').textContent,S);});
-    if(btn)btn.textContent='א Hebrew / Greek';
-  }catch(e){ _ilOn=false; if(btn){btn.classList.remove('on');btn.textContent='א Hebrew / Greek';} toast('could not load originals'); }
+    // clicking a Hebrew/Greek word opens the RIGHT drawer with its full breakdown (desktop-style)
+    document.querySelectorAll('.iltok').forEach(x=>x.onclick=e=>{ e.stopPropagation();
+      _sel={bi:KJV.books.indexOf(b),ch:ch,v:+x.dataset.v};
+      openDrawer('right');
+      setTimeout(()=>showStrongDef(x.dataset.s, x.dataset.o), 220); });
+    if(btn)btn.classList.remove('loading');
+  }catch(e){ _ilOn=false; if(btn){btn.classList.remove('on','loading');} toast('could not load originals'); }
 }
 function showStrongDefToast(sid,glyph,S){ const def=strongLook(S,sid); toast(glyph+' · '+sid+(def?' — '+def.split('—').pop().trim().slice(0,60):'')); }
 /* chapter-level version comparison: stack the user's favourite versions under each verse (tree, desktop-style) */
