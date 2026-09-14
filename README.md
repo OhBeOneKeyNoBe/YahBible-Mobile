@@ -1,60 +1,62 @@
 # YahBible Mobile
 
-The mobile edition of **YahBible** — the offline scripture‑study companion. A phone‑first,
-fully‑offline web app (the `www/` UI) that is wrapped into a native Android shell for a real
-installable app.
+The mobile edition of **YahBible** — an offline scripture‑study app. A phone‑first, fully‑offline
+web UI (`www/`) wrapped in a lightweight native **Android WebView** shell, so it installs as a real
+Android app and needs no internet and no server.
 
-- 🖥️ Desktop edition: **YahBible** (GitHub: `OhBeOneKeyNoBe/YahBible`) · Hugging Face docs
-- 🌐 [RealizeUS.me](https://www.realizeus.me/@yahwehtsidkenu)
+- 🖥️ Desktop edition: **YahBible** — [Hugging Face](https://huggingface.co/OhBeOneKeyNoBe/YahBible)
+- 🌐 Creator: [RealizeUS.me/@yahwehtsidkenu](https://www.realizeus.me/@yahwehtsidkenu)
 
-## What it is (v0.1)
+---
 
-A self‑contained study app that works with **no internet and no desktop connection**:
+## Features
 
-- **Home** — the YahBible wordmark (א YahBible ת), the holy‑fish backdrop, and a rotating verse.
-- **Study — the Ten Commandments** — each commandment read as questions (*"What is Adultery?"*,
-  *"How do you keep this commandment?"*), the seven inward dimensions as accordions, the
-  interactive **human‑dimension onion diagram**, and every insight section in source order.
-- **Repentance** — its own category: what repentance is, the Regret‑vs‑Repentance distinction,
-  the inward ladder, a turning stage per dimension, **Seek Counsel in Prayer** (the Matthew‑6
-  flow), and the Lord's Prayer.
-- **News & Updates** — the release‑notes / guided‑tour feed (the tab shows a dot until viewed).
-- **Self‑cam overlay** — a draggable circular / green‑screen camera for TikTok screen‑share.
+| | |
+|---|---|
+| <img src="docs/screenshots/01-home.png" width="230"> | **Home** — the YahBible wordmark (א YahBible ת), the holy‑fish backdrop, and a rotating verse. Five tabs: Home · Bible · Study · Repent · News. |
+| <img src="docs/screenshots/02-bible-reader.png" width="230"> | **Offline KJV Bible** — all 66 books, 31,102 verses, bundled in the app. Book → chapter → reader, with verse highlighting and prev/next. Every scripture reference anywhere in the app opens the reader at that verse. |
+| <img src="docs/screenshots/03-commandment-qa.png" width="230"> | **The Ten Commandments, as questions** — each commandment opens as a study of clear questions: *“What is Adultery?”*, *“How do you keep this commandment?”*, and *“How is it broken?”* in each of the seven inward dimensions. |
+| <img src="docs/screenshots/04-dimensions.png" width="230"> | **The seven dimensions** — 🔴 Physical · 🟠 Emotional · 🟡 Mental · 🟢 Ambitional · 🔵 Vocal · 🟣 Intentional · 🟪 Spiritual — each an accordion with examples, scripture, and how to keep it. |
+| <img src="docs/screenshots/05-repentance-layers.png" width="230"> | **Where sin forms** — an interactive figure of the person in seven nested layers, spirit at the core (violet) to flesh on the surface (scarlet). Tap a layer to open its dimension. |
+| <img src="docs/screenshots/06-ladder.png" width="230"> | **The inward ladder** — a countdown 7→1, from the spirit down to the outward act, so you learn to see (and turn from) sin earlier. |
+| <img src="docs/screenshots/07-counsel.png" width="230"> | **Seeking the Father’s Counsel** — three steps (Adoption · Counsel · Blessings), the full Lord’s Prayer, and *Seek Counsel in Prayer* as a guided flow. |
+| <img src="docs/screenshots/08-news.png" width="230"> | **News & Updates** — a release‑notes and guided‑tour feed; the tab shows a dot until you’ve read what’s new. |
 
-All study content is **bundled offline** (`www/data/*.js`, generated from the desktop edition's
-single‑source JSON). Notes and reading progress will sync to your desktop (the Zion'iel Network
-node = your PC) when it is reachable.
+Plus a **draggable self‑cam overlay** (circle / green‑screen) for streaming, and the app is
+categorised as a **game** for store placement.
+
+---
+
+## Build it yourself
+
+The web UI in `www/` is a self‑contained offline app — open `www/index.html` in a browser (phone
+width) to preview it. The Android shell in `android/` bundles `www/` into `assets/web/`.
+
+**Requirements:** JDK 17, the Android SDK (platform‑34, build‑tools 34) — no NDK/Rust (pure WebView).
+
+```bash
+cd android
+echo "sdk.dir=/path/to/Android/sdk" > local.properties
+./gradlew assembleDebug          # -> app/build/outputs/apk/debug/app-debug.apk
+```
+
+Install on a device: `adb install app/build/outputs/apk/debug/app-debug.apk`.
+
+---
 
 ## Layout
 
 ```
 YahBible-Mobile/
-  www/                     ← the offline web UI (drops into the Android WebView shell)
-    index.html
-    app.css
-    app.js
-    data/                  ← bundled study content (commandments / repentance / news)
-    assets/holy-fish.png
-  android/                 ← native Android shell (added in the wrap step; forked from Zioniel.ai)
-  README.md
+  www/                 the offline web UI (Home / Bible / Ten Commandments / Repentance / News)
+    index.html  app.js  app.css  fonts.css
+    data/              bundled content: KJV, commandments, repentance, news
+    fonts/  assets/
+  android/             native WebView shell (me.realizeus.yahbible), bundles www/ into assets/web
+  docs/screenshots/    the images above
 ```
 
-## Run the web UI locally (desktop preview)
+## Content note
 
-```
-cd www
-py -m http.server 41599 --bind 127.0.0.1
-# open http://127.0.0.1:41599/  in a browser (use device toolbar / a phone width)
-```
-
-## Build the Android APK (toolchain step)
-
-The `.apk` needs a one‑time Android toolchain: **JDK 17**, the **Android SDK + NDK**, and the
-Rust Android targets. Once installed, the `www/` folder is copied into the shell's
-`assets/web/` and built with Gradle. See `docs/BUILD_ANDROID.md` (added in the wrap step).
-
-## Lineage
-
-The Android shell is forked from the **Zion'iel Companion / Zioniel.ai** app
-(`OhBeOneKeyNoBe/Zioniel.ai`), reusing its desktop‑pairing, WebView, and floating‑overlay
-pieces. The internal source structure is proprietary; nothing in this public README exposes it.
+Study content is generated from the desktop YahBible’s single source and bundled offline. The KJV
+text is public domain. The app is a devotional/study tool; the internal desktop pipeline is separate.
