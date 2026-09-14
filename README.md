@@ -34,6 +34,15 @@ link that opens the reader at that exact verse.
 
 <img src="docs/screenshots/02-bible-reader.png" width="300" alt="Offline KJV Bible reader">
 
+### The full study desk — sources & word study, like the desktop
+A **sources** menu on the left (every book, and — connected to your desktop — the Ethiopian
+Apocrypha, the Red Letter Words, the Enoch and Gnostic scriptures, and 120+ versions), and a
+**verse-study** panel on the right: tap any verse to see its words, compare versions, and open the
+original Hebrew or Greek. When paired with your desktop, the full engine comes live.
+
+<img src="docs/screenshots/09-sources.png" width="290" alt="Sources menu">
+<img src="docs/screenshots/10-verse-study.png" width="290" alt="Verse study panel">
+
 ### The Ten Commandments — studied as questions
 Each commandment opens as a study of clear questions — *“What is Adultery?”*, *“How do you keep this
 commandment?”*, and *“How is it broken?”* — answered plainly, with the scripture behind each answer.
