@@ -558,7 +558,7 @@ async function openSettings(){ clearInterval(_qTimer);
   const sd=$('#savedesk'); if(sd) sd.onclick=async()=>{ const u=$('#deskurl').value.trim(); try{localStorage.setItem(DESK_KEY,u);}catch(e){}
     if(u){ toast('Testing connection…'); const ok=await pingDesktop(u); toast(ok?'✓ Connected to your desktop':'✗ Could not reach it — see the note below'); } };
   const of=$('#openfull'); if(of) of.onclick=async()=>{ const u=normUrl(deskUrl()); if(!u){ toast('Enter your desktop address first'); return; }
-    toast('Opening the full app…'); const ok=await pingDesktop(u); if(ok){ location.href=u+'/'; } else { toast('✗ Desktop not reachable — check Wi-Fi & the address'); } };
+    toast('Opening the full app…'); const ok=await pingDesktop(u); if(ok){ showDesktop(u); } else { toast('✗ Desktop not reachable — check Wi-Fi & the address'); } };
   const si=$('#dosignin'); if(si) si.onclick=async()=>{ const n=$('#lg_name').value.trim(), e=$('#lg_email').value.trim(), pw=$('#lg_pw').value;
     if(!n&&!e){ toast('Enter a name or email'); return; }
     const u=deskUrl();
@@ -707,7 +707,27 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#tavbtn').onclick=askTaviel;
   $('#settingsbtn').onclick=openSettings;
   initCamDrag();
-  window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} const s=$('#scrim'); if(s&&!s.hidden){closeDrawers();return;} nav('home'); };
+  const cf=$('#camfab'); if(cf) cf.onclick=toggleCam;
+  const dx=$('#deskexit'); if(dx) dx.onclick=exitDesktop;
+  window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} const s=$('#scrim'); if(s&&!s.hidden){closeDrawers();return;} const df=$('#deskframe'); if(df&&!df.hidden){exitDesktop();return;} nav('home'); };
   nav('home');
   setTimeout(()=>checkUpdates(true),1500);   // quiet update check on launch
+  autoLoadDesktop();                          // become the FULL 1:1 app when the desktop is reachable
 });
+/* When the desktop PC is reachable, load the real desktop app in a full-screen frame (1:1),
+   keeping the camera / studio overlays floating on top. Falls back to the offline app otherwise. */
+async function autoLoadDesktop(){
+  const u=normUrl(deskUrl()); if(!u) return;   // no desktop set -> stay on the offline app
+  const ok=await pingDesktop(u); if(!ok) return;
+  showDesktop(u);
+}
+function showDesktop(u){ u=normUrl(u||deskUrl()); if(!u) return;
+  const df=$('#deskframe'); if(!df) return;
+  df.src=u+'/'; df.hidden=false;
+  $('#view').style.display='none'; const tb=$('#tabbar'); if(tb)tb.style.display='none'; const top=$('#topbar'); if(top)top.style.display='none';
+  const cf=$('#camfab'); if(cf)cf.hidden=false; const dx=$('#deskexit'); if(dx)dx.hidden=false;
+  try{ window.__tab='desktop'; }catch(e){}
+}
+function exitDesktop(){ const df=$('#deskframe'); if(df){df.hidden=true; df.src='about:blank';}
+  $('#view').style.display=''; const tb=$('#tabbar'); if(tb)tb.style.display=''; const top=$('#topbar'); if(top)top.style.display='';
+  $('#camfab').hidden=true; $('#deskexit').hidden=true; nav('home'); }
