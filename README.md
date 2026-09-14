@@ -35,13 +35,24 @@ link that opens the reader at that exact verse.
 <img src="docs/screenshots/02-bible-reader.png" width="300" alt="Offline KJV Bible reader">
 
 ### The full study desk — sources & word study, like the desktop
-A **sources** menu on the left (every book, and — connected to your desktop — the Ethiopian
-Apocrypha, the Red Letter Words, the Enoch and Gnostic scriptures, and 120+ versions), and a
-**verse-study** panel on the right: tap any verse to see its words, compare versions, and open the
-original Hebrew or Greek. When paired with your desktop, the full engine comes live.
+A **sources** menu on the left (every book, plus the Ethiopian Apocrypha, the Red Letter Words, the
+Enoch and Gnostic scriptures, and 120+ versions), and a **verse-study** panel on the right: tap any
+verse to see its words, compare versions, and open the original Hebrew or Greek. Tapping a book in
+the menu unfolds its **chapter numbers right there** — tap one and you're reading it.
 
-<img src="docs/screenshots/09-sources.png" width="290" alt="Sources menu">
+<img src="docs/screenshots/13-menu-accordion.png" width="290" alt="Chapters unfold inside the menu">
 <img src="docs/screenshots/10-verse-study.png" width="290" alt="Verse study panel">
+
+### The Gnostic Map & Lineage — a world to explore, offline
+The full **2D/3D cosmology map** from the books of Enoch — the disc of the world, the dome, the
+portals of the sun, the ten heavens and the four hollow places — drawn over the real azimuthal map,
+with everything clickable. The **giant beings** stand hidden: tap a gold marker and one is revealed
+at its true, towering scale. Beside it, the complete **Gnostic Lineage**: the chain of emanation
+from the Monad down to Adam & Eve, the angelic hierarchy of 1–3 Enoch, a search over every being,
+and the biblical bloodline — 73 generations from Adam, with every branching family.
+
+<img src="docs/screenshots/15-gnostic-map.png" width="290" alt="The Gnostic Map — 2D/3D cosmology">
+<img src="docs/screenshots/14-gnostic-lineage.png" width="290" alt="The Gnostic Lineage">
 
 ### Grows with you — updates & downloadable packs
 The app **updates itself** over the internet, and you can **download expanded packs** that then work
@@ -91,8 +102,14 @@ you've read the latest.
 
 <img src="docs/screenshots/08-news.png" width="300" alt="News and Updates">
 
-Plus a **draggable self-cam overlay** (circle or green-screen) for streaming your study on TikTok and
-elsewhere.
+### Studio mode — stream your study
+**Front and back cameras at once**, each its own draggable, pinch-resizable window with its own
+settings: ten border colours (through the rainbow to holographic), round or widescreen shape,
+mirror, and a borderless **green-screen** mode for keying — made for streaming your study on TikTok
+and elsewhere. All of it lives in Settings; one 🎥 button opens and closes the cameras.
+
+And behind everything swims the **holy-fish school** — twelve fish and eight slowly-rotating seeds
+of life, just like the desktop — with the RealizeUS community one tap away on the bottom bar.
 
 ---
 
