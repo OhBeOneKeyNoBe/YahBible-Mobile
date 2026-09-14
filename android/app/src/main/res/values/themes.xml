@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.YahBible" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/yb_bg</item>
+        <item name="android:statusBarColor">@color/yb_bg</item>
+        <item name="android:navigationBarColor">@color/yb_bg</item>
+        <item name="android:colorPrimary">@color/yb_bg</item>
+        <item name="android:colorAccent">@color/yb_gold</item>
+    </style>
+</resources>

@@ -4,6 +4,16 @@ const $ = (s, r) => (r || document).querySelector(s);
 const CMDS = (window.YB_CMDS || []);
 const REPENT = (window.YB_REPENT || null);
 const NEWS = (window.YB_NEWS || { version: "", entries: [] });
+const KJV = (window.YB_KJV || { books: [] });
+/* resolve a scripture reference's book name to a KJV book index */
+const BOOKMAP = {};
+KJV.books.forEach((b,i)=>{ BOOKMAP[b.n.toLowerCase()]=i; BOOKMAP[b.a.toLowerCase()]=i; });
+BOOKMAP['psalm']=BOOKMAP['psalms']; BOOKMAP['song of songs']=BOOKMAP['song of solomon'];
+BOOKMAP['canticles']=BOOKMAP['song of solomon']; BOOKMAP['1 cor']=BOOKMAP['1 corinthians'];
+function resolveBook(name){ if(!name) return -1; const k=name.trim().toLowerCase();
+  if(k in BOOKMAP) return BOOKMAP[k];
+  for(const b in BOOKMAP){ if(b.indexOf(k)===0||k.indexOf(b)===0) return BOOKMAP[b]; }
+  return -1; }
 const DIMHUE = {Physical:'#e0563b',Emotional:'#e8912e',Mental:'#e7c94e',Ambitional:'#5fd39a',Vocal:'#59b8ff',Intentional:'#9a86e6',Spiritual:'#c07ad9'};
 const GENDIMS = [
   {name:'Physical',marker:'🔴',sub:'the body, actions, habits'},
@@ -24,7 +34,9 @@ function linkifyScripture(text){ if(!text) return '';
   return esc(text).replace(/((?:[1-3]\s)?[A-Z][A-Za-z]+)\s+(\d+):(\d+(?:[–\-]\d+)?)/g,
     (mm,b,c,v)=>'<span class="scref" data-ref="'+esc(b+' '+c+':'+v)+'">'+mm+'</span>'); }
 function wireScref(scope){ (scope||document).querySelectorAll('.scref').forEach(el=>el.onclick=e=>{
-  e.stopPropagation(); toast('📖 '+el.dataset.ref+' — full Bible reader is coming to mobile'); }); }
+  e.stopPropagation(); const m=/^(.+?)\s+(\d+):(\d+)/.exec(el.dataset.ref||'');
+  if(m){ const bi=resolveBook(m[1]); if(bi>=0){ openReader(bi,+m[2],+m[3]); return; } }
+  toast('📖 '+(el.dataset.ref||'')); }); }
 
 function renderBlocks(blocks){ if(!blocks||!blocks.length) return '';
   return blocks.map(b=>{
@@ -166,6 +178,7 @@ function openRepentance(){ _curCmd=null; clearInterval(_qTimer); const g=REPENT|
   setView('<div class="screen study"><button class="backbtn" data-back="commandments">◀ back</button>'+
     '<div class="cmdno">A Foundational Discipline</div><h2 class="cmdttl">'+esc(g.title||'Repentance')+'</h2>'+
     (g.subtitle?'<div class="cmdfull">'+esc(g.subtitle)+'</div>':'')+
+    (g.epigraph?'<div class="repepigraph cscr">&ldquo;'+linkifyScripture(g.epigraph.quote||'')+'&rdquo;<span class="cscrref">'+linkifyScripture(g.epigraph.ref||'')+'</span></div>':'')+
     '<div class="cmdsec cmddefine"><div class="cmdeye">What it is</div><h3>What is repentance?</h3>'+ov+
       (el?'<div class="cxlbl">Repentance includes</div><div class="repels">'+el+'</div>':'')+'</div>'+
     '<div class="cmdsec cmddims"><div class="cmdeye">Where sin forms</div><h3>See the layer where it begins</h3>'+renderOnion(null)+'</div>'+
@@ -188,6 +201,42 @@ function openNews(){ clearInterval(_qTimer); markNewsSeen();
   $('#view').querySelectorAll('.newsgo').forEach(b=>b.onclick=()=>{ const l=b.dataset.link;
     if(l==='repentance') nav('repentance'); else if(l&&l.indexOf('cmd:')===0){ nav('commandments'); openCommandment(+l.slice(4)); } }); }
 
+/* ---------- Bible reader (offline KJV) ---------- */
+let _rd={bi:42,ch:1};
+function bookGrid(list){ return '<div class="bookgrid">'+list.map(b=>{ const i=KJV.books.indexOf(b);
+  return '<button class="bookcell" data-bi="'+i+'">'+esc(b.n)+'</button>'; }).join('')+'</div>'; }
+function openBible(){ clearInterval(_qTimer);
+  const ot=KJV.books.filter(b=>b.t==='OT'), nt=KJV.books.filter(b=>b.t==='NT');
+  setView('<div class="screen"><div class="listhdr">Holy Bible · KJV</div>'+
+    '<div class="testlbl">Old Testament</div>'+bookGrid(ot)+
+    '<div class="testlbl">New Testament</div>'+bookGrid(nt)+'</div>');
+  $('#view').querySelectorAll('.bookcell').forEach(b=>b.onclick=()=>openBook(+b.dataset.bi)); }
+function openBook(bi){ const b=KJV.books[bi]; if(!b) return; _rd.bi=bi;
+  const chs=b.ch.map((_,i)=>'<button class="chcell" data-ch="'+(i+1)+'">'+(i+1)+'</button>').join('');
+  setView('<div class="screen"><button class="backbtn" id="bkback">◀ books</button>'+
+    '<h2 class="cmdttl" style="margin:8px 0 4px">'+esc(b.n)+'</h2><div class="cmdno">choose a chapter</div>'+
+    '<div class="chgrid">'+chs+'</div></div>');
+  $('#bkback').onclick=openBible;
+  $('#view').querySelectorAll('.chcell').forEach(c=>c.onclick=()=>openReader(bi,+c.dataset.ch)); }
+function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bible';
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.tab==='bible'));
+  ch=Math.max(1,Math.min(b.ch.length,ch||1)); _rd={bi:bi,ch:ch};
+  const verses=b.ch[ch-1]||[];
+  const body=verses.map((tx,i)=>'<p class="rv'+(verse===i+1?' hl':'')+'" id="rv'+(i+1)+'"><span class="rvn">'+(i+1)+'</span>'+esc(tx)+'</p>').join('');
+  const prev=ch>1, next=ch<b.ch.length;
+  setView('<div class="screen reader"><div class="rdbar"><button class="backbtn" id="rdbooks">📚 '+esc(b.a)+'</button>'+
+    '<div class="rdttl">'+esc(b.n)+' '+ch+'</div>'+
+    '<div class="rdnav"><button id="rdprev"'+(prev?'':' disabled')+'>‹</button><button id="rdnext"'+(next?'':' disabled')+'>›</button></div></div>'+
+    '<div class="rdbody">'+body+'</div>'+
+    '<div class="rdfoot">'+(prev?'<button class="rdmore" id="rdprev2">‹ '+esc(b.n)+' '+(ch-1)+'</button>':'<span></span>')+
+      (next?'<button class="rdmore" id="rdnext2">'+esc(b.n)+' '+(ch+1)+' ›</button>':'<span></span>')+'</div></div>');
+  $('#rdbooks').onclick=()=>openBook(bi);
+  const go=d=>openReader(bi,ch+d);
+  ['#rdprev','#rdprev2'].forEach(s=>{const e=$(s);if(e&&prev)e.onclick=()=>go(-1);});
+  ['#rdnext','#rdnext2'].forEach(s=>{const e=$(s);if(e&&next)e.onclick=()=>go(1);});
+  if(verse){ const el=$('#rv'+verse); if(el) setTimeout(()=>el.scrollIntoView({block:'center'}),60); }
+}
+
 function seekCounsel(){ const g=REPENT||{};
   const steps=(g.counsel_flow||[]).map((x,i)=>'<li><span class="scn">'+(i+1)+'</span>'+esc(x)+'</li>').join('');
   const ov=document.createElement('div'); ov.className='scoverlay'; ov.id='scoverlay';
@@ -199,16 +248,18 @@ function seekCounsel(){ const g=REPENT||{};
   $('.scclose',ov).onclick=()=>ov.remove(); ov.onclick=e=>{ if(e.target===ov) ov.remove(); };
   $('.lordsprayer',ov).onclick=()=>{ ov.remove(); openLordsPrayer(); }; wireScref(ov); }
 function openLordsPrayer(){ _lordsSeen=true; document.querySelectorAll('.lordsprayer').forEach(b=>b.classList.remove('pulse'));
-  toast('📖 The full Lord\'s Prayer & Bible reader arrive in the next mobile update'); }
+  const sc=document.querySelector('#scoverlay'); if(sc) sc.remove();
+  const bi=resolveBook('Matthew'); if(bi>=0) openReader(bi,6,9); else toast('Matthew 6:9'); }
 
 /* ---------- news pulse (per-version, localStorage) ---------- */
 function newsUnseen(){ try{ return NEWS.version && localStorage.getItem('yb_news_seen')!==NEWS.version; }catch(e){ return false; } }
 function markNewsSeen(){ try{ localStorage.setItem('yb_news_seen',NEWS.version); }catch(e){} const d=$('#newsdot'); if(d) d.remove(); }
 
 /* ---------- tab navigation ---------- */
-function nav(tab){ _tab=tab;
+function nav(tab){ _tab=tab; try{ window.__tab=tab; }catch(e){}
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab || (tab==='repentance'&&b.dataset.tab==='repent')));
   if(tab==='home') showHome();
+  else if(tab==='bible') openBible();
   else if(tab==='commandments') showCommandments();
   else if(tab==='repentance'||tab==='repent') openRepentance();
   else if(tab==='news') openNews(); }
@@ -246,5 +297,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#camclose').onclick=stopCam;
   $('#camshape').onclick=()=>$('#cam').classList.toggle('green');
   initCamDrag();
+  window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} nav('home'); };
   nav('home');
 });
