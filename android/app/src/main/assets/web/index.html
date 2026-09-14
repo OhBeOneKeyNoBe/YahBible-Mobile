@@ -12,13 +12,12 @@
   <div id="fishbg"><img src="assets/holy-fish.png" alt=""></div>
 
   <header id="topbar">
-    <button class="topbtn menubtn" id="leftmenubtn" title="Sources" aria-label="Open sources menu" hidden>☰</button>
+    <button class="topbtn menubtn" id="leftmenubtn" title="Sources" aria-label="Open sources menu">☰</button>
     <div class="wordmark"><span class="heb">א</span><span class="yb">YahBible</span><span class="heb">ת</span>
       <button class="tavlink" id="tavbtn" title="Ask Tav'iel">&#9834; Tav&rsquo;iel</button></div>
     <div class="topright">
-      <button class="topbtn" id="settingsbtn" title="Settings & account" aria-label="Settings">⚙️</button>
-      <button class="topbtn" id="cambtn" title="Self-cam for streaming" aria-label="Self-cam">🎥</button>
-      <button class="topbtn menubtn" id="rightmenubtn" title="Verse study" aria-label="Open verse study" hidden>☰</button>
+      <button class="topbtn" id="cambtn" title="Self-cam / studio" aria-label="Self-cam">🎥</button>
+      <button class="topbtn menubtn" id="rightmenubtn" title="Menu &amp; verse study" aria-label="Open menu">☰</button>
     </div>
   </header>
 
@@ -26,7 +25,6 @@
 
   <!-- FULL 1:1 desktop app, shown when the desktop is reachable; camera overlays float on top -->
   <iframe id="deskframe" title="YahBible" hidden></iframe>
-  <button id="camfab" class="topbtn" title="Self-cam / studio" hidden>🎥</button>
   <button id="deskexit" title="Offline app" hidden>⤢</button>
 
   <!-- LEFT drawer: sources (all the sacred books) — mirrors the desktop left menu -->
@@ -52,7 +50,7 @@
        web copy from ever masking newer bundled features. -->
   <script>
   (function(){
-    var BUNDLED_VER=20260914080;   // bump every APK build; OTA applies only if remote > this
+    var BUNDLED_VER=20260914090;   // bump every APK build; OTA applies only if remote > this
     var REMOTE='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/www/';
     var SHELL=['app.css','data/commandments.js','data/repentance.js','data/news.js','data/kjv.js','packs.js','app.js'];
     function ck(f){return 'yb_ota_'+f;}

@@ -367,7 +367,7 @@ function nav(tab){ _tab=tab; try{ window.__tab=tab; }catch(e){}
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab || (tab==='repentance'&&b.dataset.tab==='repent')));
   // the left/right menu buttons appear in the Bible section (sources + verse study), like desktop
   const inBible=(tab==='bible');
-  const lb=$('#leftmenubtn'), rb=$('#rightmenubtn'); if(lb)lb.hidden=!inBible; if(rb)rb.hidden=!inBible;
+  // menu buttons stay visible everywhere
   closeDrawers();
   if(tab==='home') showHome();
   else if(tab==='bible') openBible();
@@ -392,26 +392,61 @@ const SRC_LOCKED=[
     ['🏛','Second Temple & Apocrypha'],['🌐','120+ comparison versions'],
     ['א','Hebrew / Greek / Aramaic word study'],['🔢',"Strong's + interlinear"]]},
 ];
-function buildSources(){ const d=$('#leftdrawer');
-  const ot=KJV.books.filter(b=>b.t==='OT'), nt=KJV.books.filter(b=>b.t==='NT');
-  const grp=(lbl,list)=>'<div class="srcgroup"><div class="srclbl">'+esc(lbl)+'</div>'+
-    list.map(b=>{const i=KJV.books.indexOf(b);return '<button class="srcitem" data-bi="'+i+'"><span class="si">📖</span>'+esc(b.n)+'</button>';}).join('')+'</div>';
-  d.innerHTML='<div class="drawhdr"><span class="dt">Holy Bible &middot; Sources</span><button class="drawx" id="ldx">✕</button></div>'+
-    '<button class="srcitem" id="lsettings" style="border-color:rgba(233,200,119,.4)"><span class="si">⚙️</span>Settings &amp; Downloads</button>'+
-    grp('Old Testament',ot)+grp('New Testament',nt)+
-    '<div class="srcgroup"><div class="srclbl">More sacred books</div><div id="srcextra"><div class="srcnote">loading sources…</div></div></div>';
+/* which source pack ids belong to which desktop group */
+const SRC_GROUPS={
+  bible:['ethiopian_apocrypha','redletter'],
+  gnostic:['gnostic_bible','nag_hammadi','pistis_sophia','second_temple','dss','christian'],
+  questionable:['quran','mandaean','talmud','targum','midrash','mishnah','tosefta','kabbalah','josephus','torah','yahweh_tsidkenu_full']
+};
+const SRC_LABEL={ethiopian_apocrypha:'Ethiopian Apocrypha',redletter:'Red Letter Words',gnostic_bible:'The Gnostic Bible',
+  nag_hammadi:'The Nag Hammadi Library',pistis_sophia:'Pistis Sophia',second_temple:'Second Temple & Apocrypha',dss:'Dead Sea Scrolls',
+  christian:'Christian Writings',quran:'Quran',mandaean:'Mandaean Scriptures',talmud:'The Talmud',targum:'Targums',midrash:'Midrash',
+  mishnah:'Mishnah',tosefta:'Tosefta',kabbalah:'Kabbalah',josephus:'Josephus',torah:'Torah (Hebrew)',yahweh_tsidkenu_full:'Yahweh Tsidkenu'};
+async function srcItemHtml(id){ const got=window.YBPacks && await YBPacks.have('src:'+id).catch(()=>false);
+  return '<button class="srcline'+(got?'':' dl')+'" data-src="'+esc(id)+'"><span class="si">'+(got?'📖':'⬇')+'</span>'+esc(SRC_LABEL[id]||id)+'</button>'; }
+async function buildSources(){ const d=$('#leftdrawer');
+  d.innerHTML='<div class="drawhdr"><span class="dt holo-gold">Holy Bible</span><button class="drawx" id="ldx">✕</button></div>'+
+    '<div class="lmlogos"><span class="lmyhwh">יהוה</span> The Logos</div>'+
+    '<div class="srcgroup">'+
+      '<button class="srcline" data-grp="torah"><span class="si">•</span>The Torah</button>'+
+      '<button class="srcline" data-grp="ot"><span class="si">•</span>Old Testament</button>'+
+      '<button class="srcline" data-grp="nt"><span class="si">•</span>New Testament</button>'+
+      '<button class="srcline dl" data-src="ethiopian_apocrypha"><span class="si">⬇</span>Ethiopian Apocrypha</button>'+
+      '<button class="srcline dl" data-src="redletter"><span class="si">⬇</span>Red Letter Words</button>'+
+    '</div>'+
+    '<div class="srcacc" id="acc_gn"><button class="accbtn">Gnostic Scriptures <span class="acccar">▸</span></button>'+
+      '<div class="accbody"><button class="srcline gnmap" data-map="1"><span class="si">🗺</span>Gnostic Map (2D/3D)</button>'+
+      '<button class="srcline gnmap" data-lineage="1"><span class="si">✶</span>Gnostic Lineage</button>'+
+      SRC_GROUPS.gnostic.map(id=>'<button class="srcline dl" data-src="'+id+'"><span class="si">⬇</span>'+esc(SRC_LABEL[id]||id)+'</button>').join('')+'</div></div>'+
+    '<div class="srcacc" id="acc_q"><button class="accbtn">Questionable Sources <span class="acccar">▸</span></button>'+
+      '<div class="accbody">'+SRC_GROUPS.questionable.map(id=>'<button class="srcline dl" data-src="'+id+'"><span class="si">⬇</span>'+esc(SRC_LABEL[id]||id)+'</button>').join('')+'</div></div>'+
+    '<button class="connectbtn" id="dlall" style="margin:12px 0 6px">⬇ Download everything (offline)</button>'+
+    '<button class="srcline" id="lsettings" style="border-color:rgba(233,200,119,.4);margin-top:4px"><span class="si">⚙️</span>Settings &amp; Downloads</button>';
   $('#ldx',d).onclick=closeDrawers;
-  d.querySelectorAll('.srcitem[data-bi]').forEach(b=>b.onclick=()=>{closeDrawers();openBook(+b.dataset.bi);});
   $('#lsettings',d).onclick=()=>{closeDrawers();openSettings();};
-  // populate the extra sources (downloadable, then openable)
-  if(window.YBPacks){ YBPacks.sourcesIndex().then(async(list)=>{ const box=$('#srcextra'); if(!box) return;
-    if(!list.length){ box.innerHTML='<div class="srcnote">Connect to the internet once to list the extra sources.</div>'; return; }
-    const rows=await Promise.all(list.map(async s=>{ const got=await YBPacks.have('src:'+s.id).catch(()=>false);
-      return '<button class="srcitem'+(got?'':' dl')+'" data-src="'+esc(s.id)+'"><span class="si">'+(got?'📖':'⬇')+'</span>'+esc(s.name)+
-        '<span class="srcsz">'+(got?'':fmtMB(s.size||0))+'</span></button>'; }));
-    box.innerHTML=rows.join('');
-    box.querySelectorAll('.srcitem[data-src]').forEach(b=>b.onclick=()=>openSource(b.dataset.src, b));
-  }).catch(()=>{ const box=$('#srcextra'); if(box) box.innerHTML='<div class="srcnote">could not list sources</div>'; }); }
+  $('#dlall',d).onclick=()=>downloadEverything();
+  d.querySelectorAll('.srcline[data-grp]').forEach(b=>b.onclick=()=>{closeDrawers();openBookGroup(b.dataset.grp);});
+  d.querySelectorAll('.srcline[data-src]').forEach(b=>b.onclick=()=>openSource(b.dataset.src,b));
+  d.querySelectorAll('.gnmap').forEach(b=>b.onclick=()=>{ toast('The Gnostic Map/Lineage open in the full desktop app'); connectPrompt(); });
+  d.querySelectorAll('.srcacc .accbtn').forEach(a=>a.onclick=()=>a.parentElement.classList.toggle('open'));
+  // mark installed sources with the book icon
+  d.querySelectorAll('.srcline[data-src]').forEach(async b=>{ if(window.YBPacks && await YBPacks.have('src:'+b.dataset.src).catch(()=>false)){ b.classList.remove('dl'); const si=b.querySelector('.si'); if(si)si.textContent='📖'; } });
+}
+function openBookGroup(kind){ let list;
+  if(kind==='torah') list=KJV.books.slice(0,5);
+  else if(kind==='ot') list=KJV.books.filter(b=>b.t==='OT');
+  else list=KJV.books.filter(b=>b.t==='NT');
+  setView('<div class="screen"><div class="listhdr">'+(kind==='torah'?'The Torah':kind==='ot'?'Old Testament':'New Testament')+'</div>'+
+    '<div class="bookgrid">'+list.map(bk=>{const i=KJV.books.indexOf(bk);return '<button class="bookcell" data-bi="'+i+'">'+esc(bk.n)+'</button>';}).join('')+'</div></div>');
+  $('#view').querySelectorAll('.bookcell').forEach(c=>c.onclick=()=>openBook(+c.dataset.bi)); }
+async function downloadEverything(){ toast('Downloading everything — this may take a while…');
+  try{ const list=await YBPacks.sourcesIndex();
+    for(const s of (list||[])){ try{ await YBPacks.ensureSource(s.id); }catch(e){} }
+    // versions + word study per book
+    for(const bk of KJV.books){ try{ await YBPacks.ensureBookVersions(bk.a); }catch(e){} try{ await YBPacks.ensureBookWords(bk.a); }catch(e){} }
+    try{ await YBPacks.ensureStrongs(); }catch(e){}
+    toast('✓ Everything downloaded — works fully offline now');
+  }catch(e){ toast('Download needs internet — some parts may be missing'); }
 }
 let _srcCache={};
 async function openSource(id, btn){
@@ -432,11 +467,22 @@ function openSourceBook(id,book){ const data=_srcCache[id]||{}; const units=data
     '<div class="rdbody">'+units.map(u=>'<p class="rv"><span class="rvn">'+esc(u[0]||'')+'</span>'+esc(u[1]||'')+'</p>').join('')+'</div></div>');
   $('#sbk').onclick=()=>openSource(id);
 }
-/* RIGHT drawer — verse study: the selected verse, its words, versions & original language */
+/* the right-menu nav (desktop-style): Settings, News (א-ת), Repentance (dove), Ten Commandments */
+function rightNavHtml(){ const pulse=newsUnseen()?' pulse':'';
+  return '<div class="rmnav">'+
+    '<button class="rmitem" data-go="settings"><span class="rmi">⚙️</span>Settings &amp; Downloads</button>'+
+    '<button class="rmitem'+pulse+'" data-go="news"><span class="rmi rmat">א&#8202;ת</span>News &amp; Updates'+(newsUnseen()?'<span class="newsdot"></span>':'')+'</button>'+
+    '<button class="rmitem" data-go="repentance"><span class="rmi rmdove">🕊</span>Repentance</button>'+
+    '<button class="rmitem" data-go="commandments"><span class="rmi">📜</span>The Ten Commandments</button>'+
+    '</div>'; }
+function wireRightNav(scope){ scope.querySelectorAll('.rmitem[data-go]').forEach(b=>b.onclick=()=>{ closeDrawers();
+  const g=b.dataset.go; if(g==='settings')openSettings(); else nav(g); }); }
+/* RIGHT drawer — nav + verse study */
 async function buildStudy(){ const d=$('#rightdrawer');
-  if(!_sel){ d.innerHTML='<div class="drawhdr"><span class="dt">Verse Study</span><button class="drawx" id="rdx">✕</button></div>'+
-      '<div class="srcnote">Tap a verse in the reader to study it here — its words, cross‑references, other versions, and the original Hebrew or Greek.</div>';
-    $('#rdx',d).onclick=closeDrawers; return; }
+  if(!_sel){ d.innerHTML='<div class="drawhdr"><span class="dt">Menu</span><button class="drawx" id="rdx">✕</button></div>'+
+      rightNavHtml()+
+      '<div class="srcnote">Tap a verse in the reader to study it here — its words, versions, and the original Hebrew or Greek.</div>';
+    $('#rdx',d).onclick=closeDrawers; wireRightNav(d); return; }
   const b=KJV.books[_sel.bi], v=_sel.v, txt=(b.ch[_sel.ch-1]||[])[v-1]||'';
   const ref=b.n+' '+_sel.ch+':'+v;
   const words=txt.replace(/[^A-Za-z' -]/g,' ').split(/\s+/).filter(w=>w.length>1)
@@ -444,7 +490,8 @@ async function buildStudy(){ const d=$('#rightdrawer');
   // which packs are installed?
   const haveVer=window.YBPacks && await YBPacks.have('ver:'+b.a).catch(()=>false);
   const haveWs =window.YBPacks && await YBPacks.have('ws:'+b.a).catch(()=>false);
-  d.innerHTML='<div class="drawhdr"><span class="dt">Verse Study</span><button class="drawx" id="rdx">✕</button></div>'+
+  d.innerHTML='<div class="drawhdr"><span class="dt">Menu &amp; Verse Study</span><button class="drawx" id="rdx">✕</button></div>'+
+    rightNavHtml()+
     '<div class="vsref holo-gold">'+esc(ref)+'</div>'+
     '<div class="vstext">'+esc(txt)+'</div>'+
     '<div class="vstabs"><button class="vstab'+(haveVer?'':' locked')+'" data-x="versions">Compare versions</button>'+
@@ -457,6 +504,7 @@ async function buildStudy(){ const d=$('#rightdrawer');
   const rc=$('#rconnect',d); if(rc) rc.onclick=()=>connectPrompt();
   d.querySelectorAll('.vstab').forEach(bt=>bt.onclick=()=>{ if(bt.classList.contains('locked')){connectPrompt();return;} showVsPanel(bt.dataset.x,b,_sel.ch,v); });
   d.querySelectorAll('.wchip').forEach(bt=>bt.onclick=()=>{ if(haveWs) showWordPack(bt.dataset.w,b,_sel.ch,v); else connectPrompt(); });
+  wireRightNav(d);
 }
 async function showVsPanel(kind,b,ch,v){ const el=$('#vspanel'); if(!el) return; el.innerHTML='<div class="srcnote">loading…</div>';
   try{
@@ -511,8 +559,7 @@ async function checkUpdates(silent){
   }
   if(!silent) toast('Up to date · v'+(MANIFEST.contentVersion||APP_CONTENT_VER));
 }
-function markContentUpdate(v){ try{ localStorage.setItem('yb_update_avail',v); }catch(e){}
-  const b=$('#settingsbtn'); if(b) b.classList.add('hasupd'); }
+function markContentUpdate(v){ try{ localStorage.setItem('yb_update_avail',v); }catch(e){} }
 /* the "connect / get more" prompt now opens the Downloads screen */
 function connectPrompt(){ closeDrawers(); openSettings(); }
 
@@ -719,7 +766,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   $('#rightmenubtn').onclick=()=>openDrawer('right');
   $('#scrim').onclick=closeDrawers;
   $('#tavbtn').onclick=askTaviel;
-  $('#settingsbtn').onclick=openSettings;
+  /* settings opened from the right menu */
   initCamDrag();
   const cf=$('#camfab'); if(cf) cf.onclick=toggleCam;
   const dx=$('#deskexit'); if(dx) dx.onclick=exitDesktop;
@@ -739,9 +786,9 @@ function showDesktop(u){ u=normUrl(u||deskUrl()); if(!u) return;
   const df=$('#deskframe'); if(!df) return;
   df.src=u+'/'; df.hidden=false;
   $('#view').style.display='none'; const tb=$('#tabbar'); if(tb)tb.style.display='none'; const top=$('#topbar'); if(top)top.style.display='none';
-  const cf=$('#camfab'); if(cf)cf.hidden=false; const dx=$('#deskexit'); if(dx)dx.hidden=false;
+  const dx=$('#deskexit'); if(dx)dx.hidden=false;
   try{ window.__tab='desktop'; }catch(e){}
 }
 function exitDesktop(){ const df=$('#deskframe'); if(df){df.hidden=true; df.src='about:blank';}
   $('#view').style.display=''; const tb=$('#tabbar'); if(tb)tb.style.display=''; const top=$('#topbar'); if(top)top.style.display='';
-  $('#camfab').hidden=true; $('#deskexit').hidden=true; nav('home'); }
+  $('#deskexit').hidden=true; nav('home'); }
