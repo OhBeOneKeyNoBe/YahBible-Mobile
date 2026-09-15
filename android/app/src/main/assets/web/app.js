@@ -784,12 +784,12 @@ function haveNative(){ return !!window.YahNative; }
 let _engManifest=null, _engDl=null;   // {files:[...], i, running}
 async function engineManifest(){ if(_engManifest) return _engManifest;
   const r=await fetch(ENGINE_MANIFEST,{cache:'no-store'}); _engManifest=await r.json(); return _engManifest; }
-async function engineDataState(){ if(!haveNative()) return {have:0,total:0};
-  try{ const m=await engineManifest(); let have=0;
-    m.files.forEach(f=>{ if(YahNative.hasFile(f.rel)) have++; });
-    return {have, total:m.files.length,
+async function engineDataState(){ if(!haveNative()) return {have:0,total:0,missing:[]};
+  try{ const m=await engineManifest(); let have=0; const missing=[];
+    m.files.forEach(f=>{ if(YahNative.hasFile(f.rel)) have++; else missing.push(f.rel); });
+    return {have, total:m.files.length, missing,
       mb:Math.round(m.files.reduce((a,f)=>a+f.size,0)/1048576)};
-  }catch(e){ return {have:0,total:0,err:String(e).slice(0,60)}; }
+  }catch(e){ return {have:0,total:0,missing:[],err:String(e).slice(0,60)}; }
 }
 async function engineDownloadData(){ if(_engDl&&_engDl.running){ toast('Already downloading'); return; }
   let m; try{ m=await engineManifest(); }catch(e){ toast('Needs internet for the manifest'); return; }
@@ -842,7 +842,9 @@ async function buildEngineSec(el){
   el.innerHTML=
     '<p class="setnote">The COMPLETE desktop app — every book, 122 versions, the interlinear, the Gnostic map, and Tav\'iel the grounded AI — runs INSIDE your phone. Download once; works forever offline.</p>'+
     '<div class="camblbl">1 · Desktop data ('+(ds.mb||1236)+' MB installed size)</div>'+
-    '<div class="setnote">'+ds.have+' / '+(ds.total||33)+' files installed</div>'+
+    '<div class="setnote">'+ds.have+' / '+(ds.total||33)+' files installed'+
+      ((ds.missing&&ds.missing.length&&ds.missing.length<=6)
+        ? ' — missing: '+ds.missing.map(r=>r.split('/').pop()).join(', ') : '')+'</div>'+
     '<div class="packbar" id="engbar" style="margin:6px 0"><span></span></div><div class="setnote" id="englbl"></div>'+
     '<button class="connectbtn" id="engdl">'+(ds.have>=(ds.total||33)&&ds.total?'✓ Data installed':'⬇ Download desktop data')+'</button>'+
     '<div class="camblbl" style="margin-top:14px">2 · The AI mind (choose one — or both)</div>'+
@@ -857,11 +859,18 @@ async function buildEngineSec(el){
       : (ds.total&&ds.have>=ds.total
           ? '<button class="connectbtn" id="engstart">'+(st==='starting'?'⏳ starting…':'▶ Start the Full Engine')+'</button>'
           : '<button class="connectbtn" id="engstart" disabled>▶ Start (needs all '+(ds.total||33)+' data files — '+ds.have+' installed)</button>'))+
+    (st==='up'?'<button class="miniupd" id="engdiag" style="margin-top:10px">🩺 Engine health check (AI + search)</button><div class="setnote" id="engdiagout"></div>':'')+
     '<p class="setnote">Tav\'iel inside it is grounded in Scripture and settled truth, searches the Bible however you name a verse, cites every quote checkably, and remembers your walks (TempTorus memory).</p>';
   const dl=$('#engdl',el); if(dl) dl.onclick=engineDownloadData;
   el.querySelectorAll('.aidl').forEach(b=>b.onclick=()=>engineDownloadAI(+b.dataset.i));
   const es=$('#engstart',el); if(es) es.onclick=engineStart;
   const ee=$('#engenter',el); if(ee) ee.onclick=engineEnter;
+  const eg=$('#engdiag',el); if(eg) eg.onclick=async()=>{ const out=$('#engdiagout');
+    if(out)out.textContent='testing the AI — first load can take a minute or two…';
+    try{ const r=await fetch('http://127.0.0.1:41537/api/ai_diag').then(x=>x.json());
+      if(out)out.textContent='backend: '+(r.backend||'?')+' · model: '+String(r.model||'').split('/').pop()
+        +' · load: '+(r.load||'?')+' · gen: '+(r.gen||'?')+' · search hits: '+r.search;
+    }catch(e){ if(out)out.textContent='engine not reachable: '+String(e).slice(0,80); } };
 }
 function askTaviel(){
   if(haveNative()&&YahNative.engineState()==='up'){ engineEnter(); toast('Ask Tav\'iel in the chat — she reasons offline'); return; }

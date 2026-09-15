@@ -3137,6 +3137,35 @@ class H(BaseHTTPRequestHandler):
                 if not cur:
                     return self._send({"ok": False, "error": "sign in first"})
                 return self._send(gh_sync(cur["user"], q.get("dir", "pull")))
+            if p == "/api/ai_diag":         # 🩺 exact truth about the AI on THIS ground
+                out = {"android": bool(os.environ.get("YAHBIBLE_ANDROID"))}
+                try:
+                    import tav_llm
+                    B = tav_llm.backend()
+                    out["backend"] = B.__name__
+                    if hasattr(B, "model_path"):
+                        mp = B.model_path()
+                        out["model"] = mp or "NONE INSTALLED"
+                        out["model_exists"] = bool(mp and os.path.isfile(mp))
+                    try:
+                        tier = B.open_tier("root", cap_mb=1400, ctx=4096)
+                        out["load"] = "ok"
+                        try:
+                            r = B.generate(tier, "Say the one word: YES", grounding="",
+                                           max_tokens=8, system="You answer in one word.")
+                            out["gen"] = (r.get("text") or "(empty)")[:60]
+                        except Exception as e:
+                            out["gen"] = "ERROR: " + type(e).__name__ + ": " + str(e)[:160]
+                    except Exception as e:
+                        out["load"] = "ERROR: " + type(e).__name__ + ": " + str(e)[:200]
+                except Exception as e:
+                    out["backend"] = "ERROR: " + type(e).__name__ + ": " + str(e)[:160]
+                try:
+                    import tav_scripture as TS
+                    out["search"] = len(TS.search("love one another", 3))
+                except Exception as e:
+                    out["search"] = "ERROR: " + type(e).__name__ + ": " + str(e)[:120]
+                return self._send(out)
             if p == "/api/mobile_status":   # the desktop UI polls this to light its sync indicator
                 mp = globals().get("_MOBILE_PING") or {}
                 ago = time.time() - mp.get("ts", 0)

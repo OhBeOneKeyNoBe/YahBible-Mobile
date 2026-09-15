@@ -34,9 +34,16 @@ def open_tier(chakra=None, cap_mb=None, ctx=4096):
     p = model_path()
     if not p:
         raise RuntimeError("no AI model installed — download one in Settings")
-    ok = _java().ensure(p, int(ctx))
+    J = _java()
+    ok = J.ensure(p, int(ctx))
     if not ok:
-        raise RuntimeError("model failed to load: " + os.path.basename(p))
+        why = ""
+        try:
+            why = str(J.lastError() or "")
+        except Exception:
+            pass
+        raise RuntimeError("model failed to load: " + os.path.basename(p) +
+                           (" — " + why[:220] if why else ""))
     return {"model": p, "ctx": ctx}
 
 
