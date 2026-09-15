@@ -379,11 +379,11 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
   .mscrim{display:none;position:fixed;inset:0;z-index:75;background:#0007}  /* the edge stays visible */
   .frame.mleft .mscrim,.frame.mright .mscrim{display:block}
   .mid{padding-bottom:40px}
-  /* the relocated tools, organized at the top of the right menu */
-  #mtools{display:flex;flex-direction:column;gap:9px;padding:2px 0 12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
-  #mtools .mtrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  #mtools .mtrow .ctplus,#mtools .mtrow .ctbtn,#mtools .mtrow .cog{width:38px;height:38px;border-radius:50%;
-    border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center}
+  /* the right menu's top is ONLY News & Updates + Repentance — no tool buttons above them */
+  #lefttoggle,#mobsync,#mtools{display:none!important}
+  /* the KJV holo picker sits BESIDE the Verse Study label */
+  #studywrap>.lbl .verpick{margin-left:8px}
+  #studywrap>.lbl .verpick .holoacr{font-size:13px;padding:3px 8px}
   /* right menu: nothing cut off — everything contained, aligned to ITS panel */
   .col.right{overflow-x:hidden}
   .col.right>*,.col.right #studywrap,.col.right #studycard,.col.right #verswrap,.col.right #sideextra
@@ -392,12 +392,30 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
   /* Profile · Settings · Studio Mode pinned at the BOTTOM of the right menu */
   .col.right{display:flex;flex-direction:column}
   .col.right>*{flex:none}
-  #mrfoot{margin-top:auto;position:sticky;bottom:0;padding:10px 0 6px;border-top:1px solid var(--line);
-    background:var(--bg);display:flex;flex-direction:column;gap:6px}
-  #mrfoot .mfrow{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--line);
-    border-radius:11px;cursor:pointer;background:hsl(var(--hue) 24% 16% / .6);color:var(--ink);font:600 13.5px Inter}
-  #mrfoot .mfrow .ctplus,#mrfoot .mfrow .cog,#mrfoot .mfrow .holoplus{width:34px;height:34px;border-radius:50%;
-    border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:none;pointer-events:none}
+  /* Studio Mode · Settings · Profile: ONE row of three at the menu's foot — the Ten
+     Commandments list above stays whole and visible */
+  #mrfoot{margin-top:auto;position:sticky;bottom:0;padding:8px 0 6px;border-top:1px solid var(--line);
+    background:var(--bg);display:flex;flex-direction:row;gap:8px}
+  #mrfoot .mfrow{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;
+    border:1px solid var(--line);border-radius:11px;cursor:pointer;
+    background:hsl(var(--hue) 24% 16% / .6);color:var(--ink);font:600 10px Inter;text-align:center}
+  #mrfoot .mfrow .ctplus,#mrfoot .mfrow .cog,#mrfoot .mfrow .holoplus{width:30px;height:30px;border-radius:50%;
+    border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:none;pointer-events:none;font-size:14px}
+  /* SETTINGS TAKEOVER: the whole right menu becomes organized setting accordions */
+  .settings.inpanel .msec{border:1px solid var(--line);border-radius:11px;margin:8px 0;overflow:hidden;
+    background:hsl(var(--hue) 24% 14% / .55)}
+  .settings.inpanel .msec>summary{cursor:pointer;padding:11px 12px;font:800 10.5px Inter;
+    letter-spacing:.12em;text-transform:uppercase;color:#e9c877;list-style:none;display:flex;justify-content:space-between}
+  .settings.inpanel .msec>summary::-webkit-details-marker{display:none}
+  .settings.inpanel .msec>summary::after{content:"▸"}
+  .settings.inpanel .msec[open]>summary::after{content:"▾"}
+  .settings.inpanel .msecbody{padding:2px 12px 12px}
+  #msetback{display:flex;align-items:center;gap:8px;padding:10px 12px;margin:0 0 6px;cursor:pointer;
+    border:1px solid var(--line);border-radius:11px;background:hsl(var(--hue) 24% 18% / .7);
+    color:var(--ink);font:700 13px Inter}
+  /* RealizeUS lives WITHIN the header/footer bounds */
+  #mrealize{position:fixed;left:0;right:0;bottom:58px;z-index:60;border:0;width:100%;background:#fff;display:none}
+  #mrealize.on{display:block}
   /* the SAME footer tab bar the pure phone app has (hidden when framed inside the app) */
   #mtabbar{position:fixed;left:0;right:0;bottom:0;z-index:74;display:flex;height:58px;
     background:linear-gradient(0deg,hsl(var(--hue) 26% 12%),hsl(var(--hue) 26% 10% / .92));border-top:1px solid var(--line)}
@@ -4038,20 +4056,19 @@ applySet(); boot(); loadCommandments();
    right menu's top tools; Profile/Settings/Studio Mode pin to its bottom. Everything
    restores on desktop widths. */
 (function(){
-  var TOP=['lefttoggle','mobsync'];                       // -> #mtools row (with verpick)
-  var FOOT=[['profilebtn','Profile'],['cog','Settings'],['studiobtn','Studio Mode']];
+  var FOOT=[['studiobtn','Studio Mode'],['cog','Settings'],['profilebtn','Profile']];
   var marks={}, moved=false;
   function el(id){return document.getElementById(id);}
   function verpick(){return document.querySelector('.verpick');}
   function mark(n,key){ if(!marks[key]){var m=document.createComment('mt:'+key); n.parentNode.insertBefore(m,n); marks[key]=m;} }
   function toMenu(){ if(moved)return;
     var side=document.getElementById('side'); if(!side)return;
-    var t=el('mtools');
-    if(!t){ t=document.createElement('div'); t.id='mtools'; side.insertBefore(t,side.firstChild); }
-    var row=t.querySelector('.mtrow');
-    if(!row){ row=document.createElement('div'); row.className='mtrow'; t.appendChild(row); }
-    var v=verpick(); if(v){ mark(v,'verpick'); row.appendChild(v); }
-    TOP.forEach(function(id){var n=el(id); if(n){ mark(n,id); row.appendChild(n); }});
+    // the KJV holo picker moves BESIDE the 'Verse Study' label
+    var lbl=document.querySelector('#studywrap>.lbl');
+    var v=verpick(); if(v&&lbl){ mark(v,'verpick');
+      var rx=lbl.querySelector('#rightx');
+      if(rx)lbl.insertBefore(v,rx); else lbl.appendChild(v); }
+    // Studio Mode · Settings · Profile — three in ONE row at the foot
     var f=el('mrfoot');
     if(!f){ f=document.createElement('div'); f.id='mrfoot'; side.appendChild(f); }
     FOOT.forEach(function(p){ var n=el(p[0]); if(!n)return; mark(n,p[0]);
@@ -4061,13 +4078,57 @@ applySet(); boot(); loadCommandments();
       f.appendChild(r); });
     moved=true; }
   function toHeader(){ if(!moved)return;
-    ['verpick'].concat(TOP).concat(FOOT.map(function(p){return p[0];})).forEach(function(key){
+    ['verpick'].concat(FOOT.map(function(p){return p[0];})).forEach(function(key){
       var n=(key==='verpick')?verpick():el(key), m=marks[key];
       if(n&&m&&m.parentNode)m.parentNode.insertBefore(n,m.nextSibling); });
     var f=el('mrfoot'); if(f)f.innerHTML='';
     moved=false; }
   function apply(){ if(window.matchMedia('(max-width:820px)').matches) toMenu(); else toHeader(); }
   apply(); window.addEventListener('resize',apply);
+})();
+/* SETTINGS TAKEOVER on phones: every setting in its OWN accordion, filling the whole
+   right menu (study steps aside until '← Back'). Studio Mode settings live inside too. */
+(function(){
+  var built=false;
+  function group(sp){
+    if(built)return; built=true;
+    var groups=[['Appearance',/^(Theme|Reader text size|Hebrew|Accent hue|Auto-randomize)/i],
+                ['Home & quotes',/^(Christ-quote|Show the)/i],
+                ['Background & the fish',/^(Center transparency|Holy-fish|Background|Menu transparency)/i],
+                ['Reading',/^(Continuous scroll)/i],
+                ['Comparison languages',/^(Comparison languages)/i],
+                ['Version order',/^(Version order)/i]];
+    var rows=[].slice.call(sp.querySelectorAll(':scope>.row'));
+    var made={};
+    function sec(name){ if(made[name])return made[name];
+      var d=document.createElement('details'); d.className='msec';
+      d.innerHTML='<summary>'+name+'</summary>';
+      var b=document.createElement('div'); b.className='msecbody'; d.appendChild(b);
+      sp.appendChild(d); made[name]={d:d,b:b}; return made[name]; }
+    rows.forEach(function(r){
+      var lab=(r.querySelector('label')||{}).textContent||r.textContent||'';
+      var hit=null;
+      groups.forEach(function(g){ if(!hit&&g[1].test(lab.trim())) hit=g[0]; });
+      sec(hit||'More').b.appendChild(r); });
+    var su=sp.querySelector(':scope>.setuser'); if(su)sec('Account').b.appendChild(su);
+    // Studio Mode gets its own section, its settings & launcher inside Settings
+    var st=sec('Studio Mode');
+    var lb=document.createElement('button'); lb.className='go'; lb.innerHTML='&#128247; Open Studio Mode';
+    lb.onclick=function(){ var s=document.getElementById('studiobtn'); if(s)s.click(); };
+    var note=document.createElement('div'); note.className='ruhint';
+    note.textContent='Critique video content against the words of Christ — the studio opens over the reader.';
+    st.b.appendChild(lb); st.b.appendChild(note);
+    // ← Back to the Verse Study
+    var back=document.createElement('div'); back.id='msetback'; back.innerHTML='&#8592;&nbsp; Back to Verse Study';
+    back.onclick=function(){ toggleSettingsPanel(false); };
+    sp.insertBefore(back, sp.firstChild);
+  }
+  var _cog=document.getElementById('cog');
+  if(_cog)_cog.addEventListener('click',function(){
+    if(window.innerWidth>820)return;
+    setTimeout(function(){ var sp=document.getElementById('setpanel');
+      if(sp&&sp.classList.contains('inpanel-open')) group(sp); },50);
+  },true);
 })();
 /* Tav'iel morphs the header into the search bar (mic · Find · Ask) on phones */
 (function(){
@@ -4102,14 +4163,25 @@ applySet(); boot(); loadCommandments();
     '<button data-t="realizeus"><span class="mti">&#128081;</span>RealizeUS</button>';
   document.body.appendChild(bar);
   var f=document.querySelector('.frame');
+  var rz=null;
+  function realize(on){
+    if(!rz){ rz=document.createElement('iframe'); rz.id='mrealize';
+      rz.src='https://realizeus.org'; document.body.appendChild(rz); }
+    var hd=document.querySelector('header');
+    var top=hd?Math.round(hd.getBoundingClientRect().bottom):54;
+    rz.style.top=top+'px';
+    rz.style.height=Math.max(200, window.innerHeight-58-top)+'px';   // iframes ignore bottom-stretch
+    rz.classList.toggle('on', on);
+  }
   bar.querySelectorAll('button').forEach(function(b){ b.onclick=function(){
     var t=b.dataset.t;
     if(f)f.classList.remove('mleft','mright');
+    realize(false);                                        // any tab leaves RealizeUS
     if(t==='home'){ goHome(); }
     else if(t==='bible'){ if(f)f.classList.add('mleft'); }
     else if(t==='study'){ if(typeof renderTenCmd==='function')renderTenCmd(); if(f)f.classList.add('mright'); }
     else if(t==='repent'){ if(typeof openRepentance==='function')openRepentance(); }
-    else if(t==='realizeus'){ window.open('https://www.RealizeUS.me/@yahwehtsidkenu','_blank'); }
+    else if(t==='realizeus'){ realize(true); }             // WITHIN the header/footer bounds
   };});
 })();
 </script></body></html>"""
