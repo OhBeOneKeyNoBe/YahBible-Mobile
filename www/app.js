@@ -863,10 +863,16 @@ async function openSettings(){ clearInterval(_qTimer);
         block('cam','🤳 Front camera')+block('cam2','📷 Back camera')+bgRow+homeRow; })())+
     sec('packs','📦 Downloads &amp; packs',
       '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+rows.join(''))+
-    sec('sync','🖥️ Desktop sync',
+    sec('sync','🖥️ Desktop &amp; GitHub sync',
       '<p class="setnote">Enter your PC’s <b>network address</b> (not localhost) &mdash; e.g. <b>http://192.168.1.20:41537</b>. Your phone and PC must be on the same Wi‑Fi, and the desktop must have <b>Network / LAN mode</b> turned on. <b>127.0.0.1 will not work</b> from a phone.</p>'+
       '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://192.168.x.x:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Test &amp; save</button></div>'+
-      '<button id="openfull" class="connectbtn" style="margin-top:10px">🖥️ Open the full desktop app (1:1) →</button>')+
+      '<button id="openfull" class="connectbtn" style="margin-top:10px">🖥️ Open the full desktop app (1:1) →</button>'+
+      (function(){ const g=ghCfg(); return '<div class="camblbl" style="margin-top:16px">☁️ GitHub vault (works anywhere, no Wi-Fi pairing)</div>'+
+      '<p class="setnote">A <b>private</b> repo carries your profile, settings &amp; reading progress between desktop and phone. Your token is stored only on this device — passwords are never synced. Use a fine-grained token limited to the one repo (Contents: read &amp; write).</p>'+
+      '<input id="ghrepo" class="setinput" placeholder="owner/repo" value="'+esc(g.repo)+'" style="margin-bottom:8px">'+
+      '<input id="ghtok" class="setinput" type="password" placeholder="GitHub token (github_pat_… or ghp_…)" value="'+esc(g.token)+'" style="margin-bottom:10px">'+
+      '<div class="setrow"><button id="ghpull" class="connectbtn" style="width:auto;padding:9px 14px">⬇ Load from GitHub</button>'+
+      '<button id="ghpush" class="connectbtn" style="width:auto;padding:9px 14px">⬆ Save to GitHub</button></div>'; })())+
     '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">'+
       (function(){ const bv=window.__bundledVer||0; let ov=0; try{ ov=parseInt(localStorage.getItem('yb_ota_ver')||'0',10)||0; }catch(e){}
         const run=ov>bv?ov:bv;
@@ -883,6 +889,12 @@ async function openSettings(){ clearInterval(_qTimer);
     if(u){ toast('Testing connection…'); const ok=await pingDesktop(u); toast(ok?'✓ Connected to your desktop':'✗ Could not reach it — see the note below'); } };
   const of=$('#openfull'); if(of) of.onclick=async()=>{ const u=normUrl(deskUrl()); if(!u){ toast('Enter your desktop address first'); return; }
     toast('Opening the full app…'); const ok=await pingDesktop(u); if(ok){ showDesktop(u); } else { toast('✗ Desktop not reachable — check Wi-Fi & the address'); } };
+  const _ghSave=()=>{ const c=ghCfg(); c.repo=($('#ghrepo')?$('#ghrepo').value.trim():c.repo)||c.repo;
+    c.token=$('#ghtok')?$('#ghtok').value.trim():c.token; setGhCfg(c); };
+  const gp=$('#ghpull'); if(gp) gp.onclick=async()=>{ _ghSave(); if(!ghCfg().token){ toast('Paste your GitHub token first'); return; }
+    gp.disabled=true; toast('Loading from GitHub…'); await ghPull(false); gp.disabled=false; };
+  const gq=$('#ghpush'); if(gq) gq.onclick=async()=>{ _ghSave(); if(!ghCfg().token){ toast('Paste your GitHub token first'); return; }
+    gq.disabled=true; toast('Saving to GitHub…'); await ghPush(); gq.disabled=false; };
   const si=$('#dosignin'); if(si) si.onclick=async()=>{ const n=$('#lg_name').value.trim(), e=$('#lg_email').value.trim(), pw=$('#lg_pw').value;
     if(!n&&!e){ toast('Enter a name or email'); return; }
     const u=deskUrl();
@@ -1016,6 +1028,68 @@ function openProfile(){ closeDrawers(); clearInterval(_qTimer);
     row.innerHTML= ok
       ? '<span class="syncdot on"></span>Desktop at '+esc(u.replace(/^https?:\/\//,''))+' — <b>sync established</b>'
       : '<span class="syncdot off"></span>Desktop at '+esc(u.replace(/^https?:\/\//,''))+' — not reachable right now'; })();
+}
+/* ---------- GitHub sync: a PRIVATE repo carries profile/settings/progress across devices.
+   The token is entered on THIS device and stored only here — never bundled, never uploaded.
+   Credentials (passwords) are NEVER written to the repo. ---------- */
+function ghCfg(){ try{ return Object.assign({repo:'OhBeOneKeyNoBe/YahBible-Sync',token:''}, JSON.parse(localStorage.getItem('yb_gh')||'{}')); }catch(e){ return {repo:'OhBeOneKeyNoBe/YahBible-Sync',token:''}; } }
+function setGhCfg(c){ try{ localStorage.setItem('yb_gh',JSON.stringify(c)); }catch(e){} }
+function ghFile(){ const a=getAccount(); const u=((a&&(a.name||a.email))||'default').toLowerCase().replace(/[^a-z0-9_.-]/g,'_'); return 'sync/'+u+'.json'; }
+async function ghReq(method,body){ const c=ghCfg(); if(!c.token) throw new Error('no token');
+  const url='https://api.github.com/repos/'+c.repo+'/contents/'+ghFile();
+  const r=await fetch(url,{method:method,headers:{'Authorization':'Bearer '+c.token,'Accept':'application/vnd.github+json'},
+    body:body?JSON.stringify(body):undefined});
+  if(r.status===404) return null;
+  if(!r.ok) throw new Error('GitHub '+r.status);
+  return r.json(); }
+function _b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
+function _b64d(s){ return decodeURIComponent(escape(atob((s||'').replace(/\n/g,'')))); }
+/* mobile yb_read {Gen:{3:1}} <-> canonical desktop refs ["Genesis|3"] */
+function progToRefs(){ const p=readProg(), out=[];
+  KJV.books.forEach(b=>{ Object.keys(p[b.a]||{}).forEach(ch=>out.push(b.n+'|'+ch)); });
+  let extra=[]; try{ extra=JSON.parse(localStorage.getItem('yb_read_extra')||'[]'); }catch(e){}
+  return out.concat(extra); }
+function refsToProg(refs){ const byName={}; KJV.books.forEach(b=>byName[b.n]=b.a);
+  const p=readProg(); const extra=new Set(); let known=0;
+  (refs||[]).forEach(r=>{ const i=r.indexOf('|'); if(i<0) return;
+    const bk=r.slice(0,i), rest=r.slice(i+1);
+    if(byName[bk]&&/^\d+$/.test(rest)){ (p[byName[bk]]=p[byName[bk]]||{})[rest]=1; known++; }
+    else extra.add(r); });   // apocrypha/desktop-only refs: preserved for round-trip
+  try{ localStorage.setItem('yb_read',JSON.stringify(p)); localStorage.setItem('yb_read_extra',JSON.stringify([...extra])); }catch(e){}
+  return known; }
+async function ghPull(quiet){
+  try{
+    const f=await ghReq('GET'); if(!f){ if(!quiet) toast('Nothing in the vault yet — Save first'); return false; }
+    const d=JSON.parse(_b64d(f.content)); if(!d||d.kind!=='yahbible-sync') throw new Error('bad file');
+    if(d.profile){ const pr=profileData();
+      if(d.profile.bio!=null) pr.bio=d.profile.bio; setProfileData(pr);
+      if(d.profile.avatar){ try{ localStorage.setItem('yb_avatar',d.profile.avatar); }catch(e){} }
+      const a=getAccount(); if(d.profile.name&&(!a||!a.name)) setAccount(Object.assign(a||{},{name:d.profile.name})); }
+    if(d.settings){ try{ const cur=appSettings(); localStorage.setItem('yb_app_settings',JSON.stringify(Object.assign(cur,d.settings))); }catch(e){} applyAppSettings(); }
+    if(d.favs&&d.favs.length){ try{ localStorage.setItem('yb_fav_versions',JSON.stringify(d.favs)); }catch(e){} }
+    const n=refsToProg(d.progress);
+    if(!quiet) toast('✓ Loaded from GitHub — '+n+' chapters of progress');
+    return true;
+  }catch(e){ if(!quiet) toast('GitHub load failed: '+(e.message||'')); return false; }
+}
+async function ghPush(){
+  try{
+    const f=await ghReq('GET');                       // merge over what's there — never clobber
+    let base={}; if(f){ try{ base=JSON.parse(_b64d(f.content))||{}; }catch(e){ base={}; } }
+    const a=getAccount(), pr=profileData();
+    let av=''; try{ av=localStorage.getItem('yb_avatar')||''; }catch(e){}
+    base.kind='yahbible-sync'; base.ts=Date.now();
+    base.profile=Object.assign(base.profile||{},{name:(a&&(a.name||a.email))||'',bio:pr.bio||''});
+    if(av) base.profile.avatar=av;
+    base.settings=appSettings();
+    base.favs=favVersions();
+    base.progress=[...new Set((base.progress||[]).concat(progToRefs()))];
+    const body={message:'YahBible mobile sync',content:_b64e(JSON.stringify(base))};
+    if(f&&f.sha) body.sha=f.sha;
+    await ghReq('PUT',body);
+    toast('✓ Saved to GitHub ('+base.progress.length+' progress refs)');
+    return true;
+  }catch(e){ toast('GitHub save failed: '+(e.message||'')); return false; }
 }
 function normUrl(u){ u=(u||'').trim(); if(!u) return ''; if(!/^https?:\/\//.test(u)) u='http://'+u; return u.replace(/\/+$/,''); }
 async function pingDesktop(u){ u=normUrl(u); let ok=false;
@@ -1242,6 +1316,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const dx=$('#deskexit'); if(dx) dx.onclick=exitDesktop;
   window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} const s=$('#scrim'); if(s&&!s.hidden){closeDrawers();return;} const df=$('#deskframe'); if(df&&!df.hidden){exitDesktop();return;} nav('home'); };
   applyAppSettings();                         // accent hue, background visibility, reader size
+  if(ghCfg().token) setTimeout(()=>ghPull(true),2500);   // quiet vault pull on launch
   nav('home');
   setTimeout(()=>checkUpdates(true),1500);   // quiet update check on launch
   autoLoadDesktop();                          // become the FULL 1:1 app when the desktop is reachable
