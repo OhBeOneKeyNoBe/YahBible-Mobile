@@ -1056,7 +1056,7 @@ function openProfile(){ closeDrawers(); clearInterval(_qTimer);
 function ghCfg(){ try{ return Object.assign({repo:'OhBeOneKeyNoBe/YahBible-Sync',token:''}, JSON.parse(localStorage.getItem('yb_gh')||'{}')); }catch(e){ return {repo:'OhBeOneKeyNoBe/YahBible-Sync',token:''}; } }
 /* the vault is MASTER-ONLY tooling: shown for the creator's identity, or on a device that
    already carries a token, or after the hidden unlock (7 taps on the Version line) */
-const MASTER_IDS=['yahwehtsidkenu','virtuousdeity@gmail.com',"elan'iel",'elaniel'];
+const MASTER_IDS=['yahwehtsidkenu','@yahwehtsidkenu','virtuousdeity@proton.me','virtuousdeity@gmail.com',"elan'iel",'elaniel'];
 function isMaster(){ try{ if(localStorage.getItem('yb_master')==='1') return true; }catch(e){}
   if(ghCfg().token) return true;
   const a=getAccount(); if(!a) return false;
