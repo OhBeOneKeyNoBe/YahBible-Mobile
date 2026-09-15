@@ -785,7 +785,8 @@ async function openSettings(){ clearInterval(_qTimer);
     ? '<div class="cmdsec"><div class="cmdeye">Account</div><h3>Signed in</h3>'+
       '<div class="acctrow"><div class="acctav">'+esc((acct.name||acct.email||'Y')[0].toUpperCase())+'</div>'+
       '<div><div class="acctname">'+esc(acct.name||acct.email)+'</div><div class="acctsub">'+esc(acct.email||'on this device')+'</div></div>'+
-      '<button id="signout" class="miniupd" style="margin-left:auto">Sign out</button></div></div>'
+      '<button id="signout" class="miniupd" style="margin-left:auto">Sign out</button></div>'+
+      (acct.unverified?'<p class="setnote">⚠ Not yet on the Zion’iel Network — this name isn’t claimed. Connect to your desktop and sign in again to register it.</p>':'')+'</div>'
     : '<div class="cmdsec cmdlogin"><div class="cmdeye">Account</div><h3>Sign in or create an account</h3>'+
       '<p class="setnote">Your account (the Zion’iel Network) keeps your notes, bookmarks &amp; reading progress across your phone and desktop.</p>'+
       '<input id="lg_name" class="setinput" placeholder="Name or username" style="margin-bottom:8px">'+
@@ -867,13 +868,14 @@ async function openSettings(){ clearInterval(_qTimer);
       '<p class="setnote">Enter your PC’s <b>network address</b> (not localhost) &mdash; e.g. <b>http://192.168.1.20:41537</b>. Your phone and PC must be on the same Wi‑Fi, and the desktop must have <b>Network / LAN mode</b> turned on. <b>127.0.0.1 will not work</b> from a phone.</p>'+
       '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://192.168.x.x:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Test &amp; save</button></div>'+
       '<button id="openfull" class="connectbtn" style="margin-top:10px">🖥️ Open the full desktop app (1:1) →</button>'+
-      (function(){ const g=ghCfg(); return '<div class="camblbl" style="margin-top:16px">☁️ GitHub vault (works anywhere, no Wi-Fi pairing)</div>'+
+      (function(){ if(!isMaster()) return '';   // master-only tooling — hidden for everyone else
+        const g=ghCfg(); return '<div class="camblbl" style="margin-top:16px">☁️ GitHub vault (works anywhere, no Wi-Fi pairing)</div>'+
       '<p class="setnote">A <b>private</b> repo carries your profile, settings &amp; reading progress between desktop and phone. Your token is stored only on this device — passwords are never synced. Use a fine-grained token limited to the one repo (Contents: read &amp; write).</p>'+
       '<input id="ghrepo" class="setinput" placeholder="owner/repo" value="'+esc(g.repo)+'" style="margin-bottom:8px">'+
       '<input id="ghtok" class="setinput" type="password" placeholder="GitHub token (github_pat_… or ghp_…)" value="'+esc(g.token)+'" style="margin-bottom:10px">'+
       '<div class="setrow"><button id="ghpull" class="connectbtn" style="width:auto;padding:9px 14px">⬇ Load from GitHub</button>'+
       '<button id="ghpush" class="connectbtn" style="width:auto;padding:9px 14px">⬆ Save to GitHub</button></div>'; })())+
-    '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">'+
+    '<div class="cmdsec"><div class="cmdeye" id="verline">Version</div><p class="setnote">'+
       (function(){ const bv=window.__bundledVer||0; let ov=0; try{ ov=parseInt(localStorage.getItem('yb_ota_ver')||'0',10)||0; }catch(e){}
         const run=ov>bv?ov:bv;
         return '<b>App build '+(run||'unknown')+'</b>'+(ov>bv?' (self-updated over APK '+bv+')':'')+' · Study content v'+APP_CONTENT_VER; })()+
@@ -898,9 +900,22 @@ async function openSettings(){ clearInterval(_qTimer);
   const si=$('#dosignin'); if(si) si.onclick=async()=>{ const n=$('#lg_name').value.trim(), e=$('#lg_email').value.trim(), pw=$('#lg_pw').value;
     if(!n&&!e){ toast('Enter a name or email'); return; }
     const u=deskUrl();
-    if(u){ toast('Signing in to your desktop…'); const r=await desktopLogin(u,n||e,pw); if(r.ok){ setAccount({name:n||e,email:e,desktop:u,synced:true}); toast('✓ Signed in & synced'); openSettings(); return; }
-      toast(r.error||'Desktop sign-in failed — signed in locally'); }
-    setAccount({name:n,email:e}); openSettings(); };
+    // one identity across devices: the Zion'iel Network node is the registry — it decides
+    // whether the name/email is free, taken, or yours (sign-in with the right password)
+    if(u && await pingDesktop(u)){
+      toast('Checking the Zion’iel Network…');
+      const r=await desktopLogin(u,n||e,pw,e);
+      if(r.ok){ setAccount({name:n||e,email:e,desktop:u,synced:true}); toast('✓ Signed in & synced across your devices'); openSettings(); return; }
+      const msg=(r.error||'').toLowerCase();
+      if(msg.indexOf('taken')>=0||msg.indexOf('in use')>=0||msg.indexOf('wrong')>=0||msg.indexOf('password')>=0){
+        toast('✗ '+(r.error||'sign-in failed')); return; }   // conflict: never shadow a taken identity locally
+      toast(r.error||'Network error — signed in on this device only');
+      setAccount({name:n,email:e,unverified:true}); openSettings(); return;
+    }
+    // node unreachable: local account, clearly marked unverified until the network can check it
+    setAccount({name:n,email:e,unverified:true});
+    toast('Signed in on this device — the name will be claimed on the Zion’iel Network when your desktop is reachable');
+    openSettings(); };
   const gg=$('#doguest'); if(gg) gg.onclick=()=>{ setAccount({name:'Guest',guest:true}); openSettings(); };
   const so=$('#signout'); if(so) so.onclick=()=>{ setAccount(null); toast('Signed out'); openSettings(); };
   const sh=$('#s_hue'); if(sh) sh.oninput=()=>setAppSetting('hue',+sh.value);
@@ -914,6 +929,12 @@ async function openSettings(){ clearInterval(_qTimer);
   const sbg=$('#s_showbg'); if(sbg) sbg.onclick=()=>{ setAppSetting('showbg', appSettings().showbg?0:1); sbg.classList.toggle('on'); };
   const sct=$('#s_cont'); if(sct) sct.onclick=()=>{ setAppSetting('contscroll', +appSettings().contscroll?0:1); sct.classList.toggle('on'); };
   const srs=$('#s_reset'); if(srs) srs.onclick=()=>{ try{localStorage.removeItem('yb_app_settings');}catch(e){} applyAppSettings(); toast('Settings reset'); openSettings(); };
+  // hidden master unlock: 7 taps on the Version label toggles the vault tooling
+  const vl=$('#verline'); if(vl){ let taps=0,t0=0; vl.onclick=()=>{ const now=Date.now();
+    if(now-t0>2500) taps=0; t0=now; taps++;
+    if(taps>=7){ taps=0; const on=(function(){try{return localStorage.getItem('yb_master')==='1';}catch(e){return false;}})();
+      try{ localStorage.setItem('yb_master', on?'0':'1'); }catch(e){}
+      toast(on?'Master tools hidden':'👑 Master tools revealed'); openSettings(); } }; }
   $('#view').querySelectorAll('.s_theme').forEach(bt=>bt.onclick=()=>{ setAppSetting('theme',bt.dataset.t);
     $('#view').querySelectorAll('.s_theme.on').forEach(x=>x.classList.remove('on')); bt.classList.add('on'); });
   $('#view').querySelectorAll('.s_olc').forEach(bt=>bt.onclick=()=>{ setAppSetting('olc',bt.dataset.m);
@@ -1033,6 +1054,14 @@ function openProfile(){ closeDrawers(); clearInterval(_qTimer);
    The token is entered on THIS device and stored only here — never bundled, never uploaded.
    Credentials (passwords) are NEVER written to the repo. ---------- */
 function ghCfg(){ try{ return Object.assign({repo:'OhBeOneKeyNoBe/YahBible-Sync',token:''}, JSON.parse(localStorage.getItem('yb_gh')||'{}')); }catch(e){ return {repo:'OhBeOneKeyNoBe/YahBible-Sync',token:''}; } }
+/* the vault is MASTER-ONLY tooling: shown for the creator's identity, or on a device that
+   already carries a token, or after the hidden unlock (7 taps on the Version line) */
+const MASTER_IDS=['yahwehtsidkenu','virtuousdeity@gmail.com',"elan'iel",'elaniel'];
+function isMaster(){ try{ if(localStorage.getItem('yb_master')==='1') return true; }catch(e){}
+  if(ghCfg().token) return true;
+  const a=getAccount(); if(!a) return false;
+  const ids=[(a.name||''),(a.email||'')].map(s=>s.toLowerCase().trim());
+  return MASTER_IDS.some(m=>ids.indexOf(m)>=0); }
 function setGhCfg(c){ try{ localStorage.setItem('yb_gh',JSON.stringify(c)); }catch(e){} }
 function ghFile(){ const a=getAccount(); const u=((a&&(a.name||a.email))||'default').toLowerCase().replace(/[^a-z0-9_.-]/g,'_'); return 'sync/'+u+'.json'; }
 async function ghReq(method,body){ const c=ghCfg(); if(!c.token) throw new Error('no token');
@@ -1099,13 +1128,15 @@ async function pingDesktop(u){ u=normUrl(u); let ok=false;
     const a=getAccount(); const nm=(a&&(a.name||a.email))||'YahBible mobile';
     try{ fetch(u+'/api/mobile_ping?name='+encodeURIComponent(nm),{cache:'no-store'}).catch(()=>{}); }catch(e){} }
   return ok; }
-async function desktopLogin(u,user,pw){ u=normUrl(u);
+async function desktopLogin(u,user,pw,email){ u=normUrl(u);
   try{ const r=await fetch(u+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pw})});
     const d=await r.json().catch(()=>({})); if(d&&d.ok!==false){ try{localStorage.setItem('yb_desk_token',d.token||d.session||'');}catch(e){} return {ok:true}; }
-    // try signup if login failed
-    const r2=await fetch(u+'/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pw,email:user.indexOf('@')>0?user:''})});
+    // try signup if login failed — the EMAIL travels too, so the registry can enforce it
+    const r2=await fetch(u+'/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pw,email:(email||'')||(user.indexOf('@')>0?user:'')})});
     const d2=await r2.json().catch(()=>({})); if(d2&&d2.ok!==false) return {ok:true};
-    return {ok:false,error:(d2&&d2.error)||'sign-in failed'};
+    let err=(d2&&d2.error)||'sign-in failed';
+    if(/taken/i.test(err)) err='That name exists on the Zion’iel Network — wrong password? (or pick another name)';
+    return {ok:false,error:err};
   }catch(e){ return {ok:false,error:'Could not reach the desktop — check the address & Wi-Fi'}; } }
 function getAccount(){ try{ return JSON.parse(localStorage.getItem('yb_account')||'null'); }catch(e){ return null; } }
 function setAccount(a){ try{ if(a) localStorage.setItem('yb_account',JSON.stringify(a)); else localStorage.removeItem('yb_account'); }catch(e){} }
