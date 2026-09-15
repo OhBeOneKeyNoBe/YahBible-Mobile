@@ -636,8 +636,10 @@ body.seethru .drawer{box-shadow:none}
 .syncdot.off{background:#d05252;box-shadow:0 0 0 3px rgba(208,82,82,.22)}
 /* left-menu footer: Profile above Settings, PINNED to the very bottom of the drawer —
    when the list is short it sits at the drawer's foot; when long it stays in view */
-#leftdrawer{display:flex;flex-direction:column}
+#leftdrawer{flex-direction:column}
+#leftdrawer:not([hidden]){display:flex}   /* flex ONLY when open — never override hidden */
 #leftdrawer>*{flex:none}
+[hidden]{display:none !important}          /* the hidden attribute always wins, everywhere */
 .lmfoot{margin-top:auto;position:sticky;bottom:0;padding:12px 0 4px;border-top:1px solid var(--line);
   background:linear-gradient(0deg,rgba(var(--bgrgb),var(--menuop)) 70%,rgba(var(--bgrgb),0))}
 .lmfoot .srcline{border-color:rgba(var(--goldrgb),.35)}
