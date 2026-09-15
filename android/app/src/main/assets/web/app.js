@@ -1013,9 +1013,11 @@ async function openSettings(){ clearInterval(_qTimer);
       toast(r.error||'Network error — signed in on this device only');
       setAccount({name:n,email:e,unverified:true}); openSettings(); return;
     }
-    // node unreachable: local account, clearly marked unverified until the network can check it
+    // node unreachable: say WHY plainly, and point at the fix — never fail silently
+    if(!u){ toast('⚠ No desktop address set — enter your PC’s address in 🖥️ Desktop & GitHub sync below, then sign in again');
+      setAccount({name:n,email:e,unverified:true}); OPEN.sync=true; openSettings(); return; }
     setAccount({name:n,email:e,unverified:true});
-    toast('Signed in on this device — the name will be claimed on the Zion’iel Network when your desktop is reachable');
+    toast('⚠ Your desktop at '+u+' is not reachable (same Wi-Fi? app running?) — signed in on this device only, unverified');
     openSettings(); };
   const gg=$('#doguest'); if(gg) gg.onclick=()=>{ setAccount({name:'Guest',guest:true}); openSettings(); };
   const so=$('#signout'); if(so) so.onclick=()=>{ setAccount(null); toast('Signed out'); openSettings(); };
