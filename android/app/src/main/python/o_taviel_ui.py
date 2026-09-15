@@ -351,18 +351,34 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
 #mnav{display:none}
 .mscrim{display:none;position:fixed;inset:0;z-index:75;background:#000a}   /* hidden + out of the grid on desktop */
 @media (max-width:820px){
-  header{position:sticky;top:0;z-index:70}
-  #mnav{display:flex;align-items:center;gap:8px;margin-right:auto}
+  header{position:sticky;top:0;z-index:70;flex-wrap:nowrap;gap:6px}
+  /* CONDENSED HEADER: only ☰ left · YahBible · Tav'iel · ☰ right — every other control
+     is relocated by script into #mtools at the top of the right menu */
+  #mnav{display:contents}
   #mnav button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:hsl(var(--hue) 24% 20% / .6);color:var(--ink);font-size:18px;cursor:pointer}
+  #mleftbtn{order:-2}
+  #homebtn{order:1;margin-left:auto}
+  #tavielbtn{order:2;margin-right:auto}
+  #mrightbtn{order:99}
   .frame{grid-template-columns:1fr!important;height:auto;min-height:calc(100vh - 39px)}
-  .col.left,.col.right{position:fixed;top:0;bottom:0;width:min(88vw,360px);z-index:80;overflow-y:auto;
-    background:var(--bg);box-shadow:0 0 40px #000c;transition:transform .25s ease}
+  /* drawers like the desktop panels: OPAQUE (page content never shows through the menu),
+     but narrower than the screen so the page's edge stays visible beside it */
+  .col.left,.col.right{position:fixed;top:0;bottom:0;width:min(86vw,360px);z-index:80;overflow-y:auto;
+    background:var(--bg)!important;backdrop-filter:none!important;
+    box-shadow:0 0 40px #000c;transition:transform .25s ease}
   .col.left{left:0;transform:translateX(-101%)} .col.right{right:0;transform:translateX(101%)}
   .frame.mleft .col.left{transform:none} .frame.mright .col.right{transform:none}
-  .mscrim{display:none;position:fixed;inset:0;z-index:75;background:#000a}
+  .mscrim{display:none;position:fixed;inset:0;z-index:75;background:#0007}  /* the edge stays visible */
   .frame.mleft .mscrim,.frame.mright .mscrim{display:block}
   .mid{padding-bottom:40px}
+  /* the relocated tools, organized at the top of the right menu */
+  #mtools{display:flex;flex-direction:column;gap:9px;padding:2px 0 12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+  #mtools .searchwrap{display:flex;width:100%}
+  #mtools .mtrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  #mtools .mtrow .ctplus,#mtools .mtrow .ctbtn,#mtools .mtrow .cog{width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center}
 }
+@media (min-width:821px){ #mtools{display:none} }
 /* holographic collapse ✕ (close the verse study / menu) */
 .holocollapse{background:transparent;border:0;cursor:pointer;font:800 15px Inter;line-height:1;
   background-image:linear-gradient(92deg,#ff5b8a,#ffb14e,#ffe14e,#5fd3a2,#59b8ff,#a58cff,#ff5b8a);background-size:280% 100%;
@@ -766,7 +782,21 @@ html.guest .conclbtn{display:none}  /* conclusions are for signed-in users, not 
 .gnode.angelic .gnname{color:hsl(214 45% 30%)}
 :root[data-theme="night"] .gnode.angelic{background:hsl(214 34% 17%);border-color:hsl(210 35% 36%)}
 :root[data-theme="night"] .gnode.angelic .gnname{color:hsl(210 60% 82%)}
-@media(max-width:820px){.gmap.wide{max-width:640px}.grow.gtwocol,.gcolhead{grid-template-columns:1fr}.gtwocol .gcol-ang{border-left:0;padding-left:0}}
+/* phones keep the TWO columns (Emanation | Angelic Hierarchy), condensed to fit */
+@media(max-width:820px){
+  .reader{padding-left:14px!important;padding-right:14px!important}   /* the 54px desktop column gutters waste a phone's width */
+  .lineagezone{padding-left:8px!important;padding-right:8px!important}
+  .gmap.wide{max-width:100%;padding:14px 8px 50px}
+  .grow.gtwocol,.gcolhead{grid-template-columns:1fr 1fr;gap:8px}
+  .gtwocol .gcol{gap:6px}
+  .gtwocol .gcol-ang{border-left:1px solid var(--paperrule,var(--line));padding-left:8px}
+  .gnode{min-width:0;width:100%;padding:8px 7px;border-radius:9px}
+  .gnode .gnname{font-size:14.5px;line-height:1.15}
+  .gnode .gnaka{font-size:9.5px;line-height:1.2}
+  .gnode .gnmore{font-size:9.5px}
+  .gche,.gcha{font-size:10px}
+  .gdivide span{font-size:10px;max-width:94%}
+}
 .gdivide{width:100%;max-width:600px;margin:18px 0;text-align:center;position:relative}
 .gdivide span{display:inline-block;background:var(--bg);padding:4px 14px;font:600 11.5px Inter;letter-spacing:.03em;color:var(--gold);position:relative;z-index:1}
 .gdivide::before{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
@@ -3966,5 +3996,34 @@ applySet(); boot(); loadCommandments();
     if(e.target.closest('#menu .booklink,#menu .srcline,#menu a,#menu .navlink')) setTimeout(close,80);
     if(e.target.closest('.w,.vn,.origtok')) { f.classList.add('mright'); }
   });
+})();
+/* CONDENSED MOBILE HEADER: relocate every header control except ☰/YahBible/Tav'iel/☰
+   into #mtools at the top of the right menu — and restore them on desktop widths. */
+(function(){
+  var IDS=['searchwrap','lefttoggle','studiobtn','splitplus','notesplus','mobsync','profilebtn','cog'];
+  var marks={}, moved=false;
+  function el(id){return document.getElementById(id)||document.querySelector('.'+id);}
+  function verpick(){return document.querySelector('.verpick');}
+  function ensureMarks(){ if(marks.done)return;
+    IDS.forEach(function(id){var n=el(id); if(n){var m=document.createComment('mt:'+id);
+      n.parentNode.insertBefore(m,n); marks[id]=m;}});
+    var v=verpick(); if(v){var m=document.createComment('mt:verpick'); v.parentNode.insertBefore(m,v); marks.verpick=m;}
+    marks.done=true; }
+  function toMenu(){ if(moved)return; ensureMarks();
+    var side=document.getElementById('side'); if(!side)return;
+    var t=document.getElementById('mtools');
+    if(!t){ t=document.createElement('div'); t.id='mtools'; side.insertBefore(t,side.firstChild); }
+    var sw=el('searchwrap'); if(sw)t.appendChild(sw);
+    var row=t.querySelector('.mtrow');
+    if(!row){ row=document.createElement('div'); row.className='mtrow'; t.appendChild(row); }
+    var v=verpick(); if(v)row.appendChild(v);
+    IDS.slice(1).forEach(function(id){var n=el(id); if(n)row.appendChild(n);});
+    moved=true; }
+  function toHeader(){ if(!moved)return;
+    IDS.forEach(function(id){var n=el(id),m=marks[id]; if(n&&m&&m.parentNode)m.parentNode.insertBefore(n,m.nextSibling);});
+    var v=verpick(); if(v&&marks.verpick&&marks.verpick.parentNode)marks.verpick.parentNode.insertBefore(v,marks.verpick.nextSibling);
+    moved=false; }
+  function apply(){ if(window.matchMedia('(max-width:820px)').matches) toMenu(); else toHeader(); }
+  apply(); window.addEventListener('resize',apply);
 })();
 </script></body></html>"""
