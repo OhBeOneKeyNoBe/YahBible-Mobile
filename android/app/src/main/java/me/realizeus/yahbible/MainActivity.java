@@ -46,6 +46,9 @@ public class MainActivity extends Activity {
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
 
+        // the Full Desktop Engine bridge (downloads, in-process Python server, on-device AI)
+        web.addJavascriptInterface(new YahBridge(this), "YahNative");
+
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {

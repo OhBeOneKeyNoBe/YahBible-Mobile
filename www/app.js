@@ -763,7 +763,94 @@ async function showStrongDef(sid, glyph){ const el=$('#vspanel'); if(!el||!sid) 
     '<div class="wsdef">'+esc(def||'(definition in the word‑study pack)')+'</div></div>';
 }
 function openStudy(){ openDrawer('right'); }
-function askTaviel(){ toast('🕊 Ask Tav’iel — the grounded AI — is coming to mobile'); }
+/* ============ THE FULL DESKTOP ENGINE — Python + AI, fully offline on the phone ============ */
+const ENGINE_MANIFEST='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/packs/desktop/manifest.json';
+const ENGINE_BASE='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/packs/desktop/';
+const AI_MODELS=[
+  {id:'qwen', name:"🕊 Tav'iel Mind — Qwen 1.5B (recommended)", file:'ai/qwen25-1.5b-q8.task', mb:1710,
+   url:'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task'},
+  {id:'r1', name:'🧠 Deep Reasoning — DeepSeek-R1 1.5B (thinks aloud, slower)', file:'ai/deepseek-r1-1.5b-q8.task', mb:1749,
+   url:'https://huggingface.co/litert-community/DeepSeek-R1-Distill-Qwen-1.5B/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B_multi-prefill-seq_q8_ekv4096.task'}];
+function haveNative(){ return !!window.YahNative; }
+let _engManifest=null, _engDl=null;   // {files:[...], i, running}
+async function engineManifest(){ if(_engManifest) return _engManifest;
+  const r=await fetch(ENGINE_MANIFEST,{cache:'no-store'}); _engManifest=await r.json(); return _engManifest; }
+async function engineDataState(){ if(!haveNative()) return {have:0,total:0};
+  try{ const m=await engineManifest(); let have=0;
+    m.files.forEach(f=>{ if(YahNative.hasFile(f.rel)) have++; });
+    return {have, total:m.files.length,
+      mb:Math.round(m.files.reduce((a,f)=>a+f.size,0)/1048576)};
+  }catch(e){ return {have:0,total:0,err:String(e).slice(0,60)}; }
+}
+async function engineDownloadData(){ if(_engDl&&_engDl.running){ toast('Already downloading'); return; }
+  let m; try{ m=await engineManifest(); }catch(e){ toast('Needs internet for the manifest'); return; }
+  const todo=m.files.filter(f=>!YahNative.hasFile(f.rel));
+  if(!todo.length){ toast('✓ Desktop data complete'); refreshEngineUI(); return; }
+  _engDl={files:todo, i:0, running:true};
+  toast('Downloading the desktop engine data — '+todo.length+' files');
+  _engNext();
+}
+function _engNext(){ const d=_engDl; if(!d||d.i>=d.files.length){ if(d)d.running=false; refreshEngineUI(); toast('✓ Desktop data installed'); return; }
+  const f=d.files[d.i];
+  YahNative.download(ENGINE_BASE+f.gz, f.rel, true);
+  const bar=$('#engbar'), lbl=$('#englbl');
+  const poll=setInterval(()=>{
+    let st={}; try{ st=JSON.parse(YahNative.dlStatus(f.rel)); }catch(e){}
+    if(lbl) lbl.textContent='('+(d.i+1)+'/'+d.files.length+') '+f.rel.split('/').pop()+' — '+Math.round((st.done||0)/1048576)+' MB';
+    if(bar&&f.size) bar.firstChild.style.width=Math.min(100,Math.round(100*(st.done||0)/f.size))+'%';
+    if(st.state==='done'){ clearInterval(poll); d.i++; _engNext(); }
+    else if(st.state==='error'){ clearInterval(poll); d.running=false; toast('✗ download failed: '+f.rel+' — tap again to resume'); refreshEngineUI(); }
+  }, 600);
+}
+function engineDownloadAI(mi){ const mdl=AI_MODELS[mi]; if(!mdl) return;
+  if(YahNative.hasFile(mdl.file)){ toast('✓ '+mdl.name+' installed'); return; }
+  YahNative.download(mdl.url, mdl.file, false);
+  toast('Downloading '+mdl.name+' ('+mdl.mb+' MB)');
+  const poll=setInterval(()=>{
+    let st={}; try{ st=JSON.parse(YahNative.dlStatus(mdl.file)); }catch(e){}
+    const lbl=$('#ailbl'+mi); if(lbl) lbl.textContent=Math.round((st.done||0)/1048576)+' / '+mdl.mb+' MB';
+    const bar=$('#aibar'+mi); if(bar) bar.firstChild.style.width=Math.min(100,Math.round(100*(st.done||0)/(mdl.mb*1048576)))+'%';
+    if(st.state==='done'){ clearInterval(poll); toast('✓ AI installed — Tav\'iel can reason offline'); refreshEngineUI(); }
+    else if(st.state==='error'){ clearInterval(poll); toast('✗ AI download failed — tap again to resume'); }
+  }, 700);
+}
+function engineStart(){ if(!haveNative()) return;
+  YahNative.startEngine(); toast('Breathing life into the engine…');
+  const poll=setInterval(()=>{ const s=YahNative.engineState();
+    if(s==='up'){ clearInterval(poll); try{localStorage.setItem('yb_engine_auto','1');}catch(e){}
+      toast('✓ The Full Desktop Engine is ALIVE'); refreshEngineUI(); }
+    else if(s==='down'){ clearInterval(poll); toast('✗ engine failed to start'); refreshEngineUI(); }
+  }, 900); }
+function engineEnter(){ showDesktop('http://127.0.0.1:41537'); }
+function refreshEngineUI(){ const el=$('#engsec'); if(el) buildEngineSec(el); }
+async function buildEngineSec(el){
+  const ds=await engineDataState();
+  const st=haveNative()?YahNative.engineState():'none';
+  const ai=AI_MODELS.map((m,i)=>({m,i,have:haveNative()&&YahNative.hasFile(m.file)}));
+  el.innerHTML=
+    '<p class="setnote">The COMPLETE desktop app — every book, 122 versions, the interlinear, the Gnostic map, and Tav\'iel the grounded AI — runs INSIDE your phone. Download once; works forever offline.</p>'+
+    '<div class="camblbl">1 · Desktop data ('+(ds.mb||1236)+' MB installed size)</div>'+
+    '<div class="setnote">'+ds.have+' / '+(ds.total||33)+' files installed</div>'+
+    '<div class="packbar" id="engbar" style="margin:6px 0"><span></span></div><div class="setnote" id="englbl"></div>'+
+    '<button class="connectbtn" id="engdl">'+(ds.have>=(ds.total||33)&&ds.total?'✓ Data installed':'⬇ Download desktop data')+'</button>'+
+    '<div class="camblbl" style="margin-top:14px">2 · The AI mind (choose one — or both)</div>'+
+    ai.map(x=>'<div style="margin:6px 0"><button class="connectbtn aidl" data-i="'+x.i+'">'+(x.have?'✓ ':'⬇ ')+esc(x.m.name)+'</button>'+
+      '<div class="packbar" id="aibar'+x.i+'"><span></span></div><div class="setnote" id="ailbl'+x.i+'"></div></div>').join('')+
+    '<div class="camblbl" style="margin-top:14px">3 · The engine</div>'+
+    (st==='up'
+      ? '<button class="connectbtn" id="engenter">🖥️ ENTER THE FULL DESKTOP (offline) →</button>'
+      : '<button class="connectbtn" id="engstart"'+(ds.have?'':' disabled')+'>'+(st==='starting'?'⏳ starting…':'▶ Start the Full Engine')+'</button>')+
+    '<p class="setnote">Tav\'iel inside it is grounded in Scripture and settled truth, searches the Bible however you name a verse, cites every quote checkably, and remembers your walks (TempTorus memory).</p>';
+  const dl=$('#engdl',el); if(dl) dl.onclick=engineDownloadData;
+  el.querySelectorAll('.aidl').forEach(b=>b.onclick=()=>engineDownloadAI(+b.dataset.i));
+  const es=$('#engstart',el); if(es) es.onclick=engineStart;
+  const ee=$('#engenter',el); if(ee) ee.onclick=engineEnter;
+}
+function askTaviel(){
+  if(haveNative()&&YahNative.engineState()==='up'){ engineEnter(); toast('Ask Tav\'iel in the chat — she reasons offline'); return; }
+  if(haveNative()){ openSettings(); setTimeout(()=>{ const s=document.querySelector('.setsec[data-sec=engine]'); if(s){ s.classList.add('open'); s.scrollIntoView(); } },400);
+    toast('🕊 Tav\'iel lives in the Full Desktop Engine — set it up here'); return; }
+  toast('🕊 Ask Tav\'iel — the grounded AI — needs the full app build'); }
 
 /* ============ UPDATES & DOWNLOADABLE PACKS ============ */
 const APP_CONTENT_VER='2026.09.14';   // bundled study-content version
@@ -834,6 +921,7 @@ async function openSettings(){ clearInterval(_qTimer);
     '<div class="cmdno">App</div><h2 class="cmdttl">Settings</h2>'+
     acctCard+
     (upd&&upd>APP_CONTENT_VER?'<div class="updbanner">✨ New study content available (v'+esc(upd)+'). <button id="applyupd" class="miniupd">Update now</button></div>':'')+
+    (haveNative()?sec('engine','🖥️ Full Desktop Engine','<div id="engsec"><div class="srcnote">checking…</div></div>'):'')+
     sec('eye','👁 Eye settings', olcSeg+vlcPick)+
     sec('appear','🎨 Appearance &amp; theme',
       '<div class="camblbl">Theme</div><div class="setrow" style="flex-wrap:wrap;gap:8px">'+
@@ -895,6 +983,7 @@ async function openSettings(){ clearInterval(_qTimer);
   // section accordions remember their open state across re-renders
   $('#view').querySelectorAll('.setsec>.accbtn').forEach(ab=>ab.onclick=()=>{ const p=ab.parentElement;
     p.classList.toggle('open'); OPEN[p.dataset.sec]=p.classList.contains('open'); });
+  const eng=$('#engsec'); if(eng) buildEngineSec(eng);
   $('#view').querySelectorAll('.backbtn,#cmdback').forEach(b=>b.onclick=()=>nav('bible'));
   const cu=$('#chkupd'); if(cu) cu.onclick=()=>checkUpdates(false).then(()=>openSettings());
   const au=$('#applyupd'); if(au) au.onclick=()=>applyContentUpdate();
@@ -1385,6 +1474,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   window.__goHome=function(){ const o=document.querySelector('#scoverlay'); if(o){o.remove();return;} const s=$('#scrim'); if(s&&!s.hidden){closeDrawers();return;} const df=$('#deskframe'); if(df&&!df.hidden){exitDesktop();return;} nav('home'); };
   applyAppSettings();                         // accent hue, background visibility, reader size
   if(ghCfg().token) setTimeout(()=>ghPull(true),2500);   // quiet vault pull on launch
+  // the Full Engine wakes with the app once the user has started it before
+  try{ if(haveNative()&&localStorage.getItem('yb_engine_auto')==='1') setTimeout(()=>YahNative.startEngine(),1200); }catch(e){}
   nav('home');
   setTimeout(()=>checkUpdates(true),1500);   // quiet update check on launch
   autoLoadDesktop();                          // become the FULL 1:1 app when the desktop is reachable
