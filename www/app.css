@@ -113,7 +113,7 @@ h1,h2,h3{margin:0}
   box-shadow:0 0 40px rgba(0,0,0,.6)}
 /* menu transparency: with it active, an open menu reveals the FISH BACKGROUND — never the page
    content — so the main view and tab bar step out of sight while a drawer is open */
-body.seethru #view,body.seethru #tabbar{visibility:hidden}
+body.seethru #view,body.seethru #tabbar,body.seethru #topbar{visibility:hidden}
 body.seethru #scrim{background:rgba(8,5,15,.10);backdrop-filter:none}
 body.seethru .drawer{box-shadow:none}
 .drawer.left{left:0;border-right:1px solid var(--line);transform:translateX(-100%);animation:slideL .26s ease forwards}
@@ -653,14 +653,19 @@ body.seethru .drawer{box-shadow:none}
 .logosyhwh{font:700 clamp(48px,16vw,74px) "Noto Serif Hebrew",serif;line-height:1}
 .logossub{font:italic 13px/1.5 var(--fital);color:var(--gold2);margin-top:6px}
 .logospage .heb{font-family:"Noto Serif Hebrew",serif;color:var(--gold);font-size:1.15em}
-/* The Logos: sized exactly like the Torah / OT / NT group headers */
-.lmlogosrow{margin:2px 0 2px}
-.lmlogosrow .lmyhwh{font:700 13px "Noto Serif Hebrew",serif;color:var(--gold);margin-right:4px}
+/* The Logos: a category header — larger, like Gnostic/Questionable below */
+.lmlogosrow{margin:2px 0 2px;font-size:13px !important}
+.lmlogosrow .lmyhwh{font:700 15px "Noto Serif Hebrew",serif;color:var(--gold);margin-right:4px}
 .lmlogosrow:active{opacity:.7}
-/* nested source accordions sit a step in from their category header */
+/* the category headers (Gnostic Scriptures · Questionable Sources): larger font */
+#acc_gn>.accbtn,#acc_q>.accbtn{font-size:13px}
+/* TOP-LEVEL sources (Ethiopian Apocrypha · Red Letter Words) look exactly like the
+   Torah / OT / NT group headers: gold, uppercase, no icon */
+.srcgroup>.srcnest>.accbtn .si{display:none}
+/* nested source accordions (inside Gnostic/Questionable) sit a step in, reading-weight */
 .accbody .srcnest{margin:2px 0 2px 8px}
-.srcnest>.accbtn{text-transform:none;letter-spacing:.02em;font:600 13.5px Inter;color:var(--ink);padding:8px 4px}
-.srcnest>.accbtn .si{flex:none;font-size:13px;color:var(--sky);margin-right:7px}
+.accbody .srcnest>.accbtn{text-transform:none;letter-spacing:.02em;font:600 13.5px Inter;color:var(--ink);padding:8px 4px}
+.accbody .srcnest>.accbtn .si{flex:none;font-size:13px;color:var(--sky);margin-right:7px}
 .srcnest.open>.accbtn{color:var(--gold2)}
 .srcnest>.accbtn{display:flex;align-items:center}
 .srcnest>.accbtn .acccar{margin-left:auto}
