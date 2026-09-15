@@ -10,8 +10,10 @@ android {
         applicationId = "me.realizeus.yahbible"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1"
+        // versionCode rises every shipped build (yyMMddNN) so Android installs updates OVER
+        // the old app — keeping settings & downloads — and the version is visible on-device.
+        versionCode = 26091421
+        versionName = "0.1.20260914210"
     }
 
     buildTypes {
