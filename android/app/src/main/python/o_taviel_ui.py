@@ -404,9 +404,14 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
   #mtabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
     background:transparent;border:0;color:var(--ink);font:600 10px Inter;cursor:pointer}
   #mtabbar button .mti{font-size:17px;line-height:1}
-  body.framed #mtabbar{display:none}
   .mid{padding-bottom:74px}
-  body.framed .mid{padding-bottom:40px}
+  /* left menu: flex column so the framed '✕ Exit to app' row pins to its bottom */
+  .col.left{display:flex;flex-direction:column}
+  .col.left>*{flex:none}
+  #mlfoot{margin-top:auto;position:sticky;bottom:0;padding:10px 0 6px;border-top:1px solid var(--line);
+    background:var(--bg)}
+  #mlfoot .mfrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);
+    border-radius:11px;cursor:pointer;background:hsl(var(--hue) 24% 16% / .7);color:var(--ink);font:600 13.5px Inter}
 }
 @media (min-width:821px){ #mtools,#mrfoot,#mtabbar,#msearchx,.mheb{display:none} }
 /* holographic collapse ✕ (close the verse study / menu) */
@@ -4076,9 +4081,19 @@ applySet(); boot(); loadCommandments();
   },true);
   if(x)x.onclick=function(){hd.classList.remove('msearch');};
 })();
-/* the SAME footer the pure phone app has — hidden when framed inside the app */
+/* the desktop-android footer: SAME five buttons as the pure app, but wired to the HYBRID
+   content — and its colors ride the desktop's shifting hue. Framed adds the exit row. */
 (function(){
   try{ if(window.self!==window.top){ document.body.classList.add('framed'); } }catch(e){ document.body.classList.add('framed'); }
+  // framed inside the app: '✕ Exit to app' pinned at the BOTTOM of the LEFT menu
+  if(document.body.classList.contains('framed')){
+    var left=document.querySelector('.col.left');
+    if(left){ var lf=document.createElement('div'); lf.id='mlfoot';
+      lf.innerHTML='<div class="mfrow" id="mexitapp">&#10005;&nbsp; Exit to app</div>';
+      left.appendChild(lf);
+      lf.querySelector('#mexitapp').onclick=function(){ try{ parent.postMessage('yb-exit','*'); }catch(e){} };
+    }
+  }
   var bar=document.createElement('nav'); bar.id='mtabbar';
   bar.innerHTML='<button data-t="home"><span class="mti">&#127968;</span>Home</button>'+
     '<button data-t="bible"><span class="mti">&#128214;</span>Bible</button>'+

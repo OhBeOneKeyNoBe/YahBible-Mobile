@@ -386,6 +386,7 @@ function nav(tab){ _tab=tab; try{ window.__tab=tab; }catch(e){}
   // a tab tap always leads OUT of the 1:1 desktop view — the menus are never dead ends
   const _df=$('#deskframe');
   if(_df&&!_df.hidden){ _df.hidden=true; _df.src='about:blank'; $('#view').style.visibility='';
+    document.body.classList.remove('deskfull');
     const _dx=$('#deskexit'); if(_dx)_dx.hidden=true; }
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab || (tab==='repentance'&&b.dataset.tab==='repent')));
   // the left/right menu buttons appear in the Bible section (sources + verse study), like desktop
@@ -1512,8 +1513,14 @@ function showDesktop(u){ u=normUrl(u||deskUrl()); if(!u) return;
   // so the map (or any page inside) can never trap you without a menu.
   // visibility (not display) keeps the layout, so the tab bar stays at the bottom.
   $('#view').style.visibility='hidden';
-  try{ window.__tab='desktop'; }catch(e){}   // the exit lives in the left menu, not floating
+  // FULL immersion: the hybrid carries its OWN header and footer — the app's chrome steps
+  // aside entirely; the way out is the ✕ at the bottom of the hybrid's left menu.
+  document.body.classList.add('deskfull');
+  try{ window.__tab='desktop'; }catch(e){}
 }
 function exitDesktop(){ const df=$('#deskframe'); if(df){df.hidden=true; df.src='about:blank';}
+  document.body.classList.remove('deskfull');
   $('#view').style.visibility='';
   $('#deskexit').hidden=true; nav('home'); }
+// the hybrid's left-menu ✕ speaks to us across the frame
+window.addEventListener('message',e=>{ if(e&&e.data==='yb-exit') exitDesktop(); });
