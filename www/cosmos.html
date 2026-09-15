@@ -2438,14 +2438,33 @@ view3dBtn.addEventListener("click", () => setViewMode("3d"));
  * handles the real resolution change so the disc/dome renders crisp and re-centered rather than
  * just CSS-stretched. */
 const fullscreenBtn = document.getElementById("fullscreenBtn");
+/* WebView-safe full screen: the real Fullscreen API where it works; otherwise a "fake"
+ * full screen — the disc panel pinned over the whole page (same button exits it). */
+document.head.insertAdjacentHTML("beforeend",
+  "<style>.fakefs{position:fixed !important;inset:0 !important;z-index:2147483000;background:#0b0812;overflow:auto;margin:0 !important;padding:8px;border-radius:0 !important}</style>");
+function setFakeFs(on) {
+  discPanel.classList.toggle("fakefs", on);
+  fullscreenBtn.textContent = on ? "⛶ exit full screen" : "⛶ full screen";
+  window.__camPanX = 0; window.__camPanY = 0;
+  camDist = on ? 900 : 620;
+  resizeCanvas();
+}
 fullscreenBtn.addEventListener("click", () => {
+  if (discPanel.classList.contains("fakefs")) { setFakeFs(false); return; }
   const isFullscreen = document.fullscreenElement === discPanel || document.webkitFullscreenElement === discPanel;
   if (isFullscreen) {
-    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-  } else {
-    const req = discPanel.requestFullscreen || discPanel.webkitRequestFullscreen;
-    req.call(discPanel);
+    try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {}
+    return;
   }
+  const req = discPanel.requestFullscreen || discPanel.webkitRequestFullscreen;
+  let p = null;
+  try { p = req && req.call(discPanel); } catch (e) {}
+  if (p && p.catch) p.catch(() => setFakeFs(true));
+  // some WebViews neither enter nor reject — verify shortly after, and fall back
+  setTimeout(() => {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !discPanel.classList.contains("fakefs"))
+      setFakeFs(true);
+  }, 350);
 });
 document.addEventListener("fullscreenchange", () => {
   var __fs = document.fullscreenElement === discPanel || document.webkitFullscreenElement === discPanel;
@@ -2462,14 +2481,47 @@ window.addEventListener("resize", resizeCanvas);
 
 let dragging = false, lastPointerX = 0, lastPointerY = 0;
 let z2d = 1, pan2dX = 0, pan2dY = 0;   // 2D disc zoom + pan
+canvas.style.touchAction = "none";     // touch: one finger orbits/pans, two fingers PINCH-ZOOM
+const activePtrs = new Map();          // pointerId -> {x,y}
+let pinchDist = 0;
+function zoomBy(deltaY) {              // the same math the mouse wheel uses
+  if (viewMode === "3d") {
+    if (deltaY < 0) {   // zoom IN: dolly to the safe minimum, then magnify the lens (telephoto)
+      if (camDist > CAM_DIST_MIN + 1) camDist = Math.max(CAM_DIST_MIN, camDist + deltaY * 0.6);
+      else camFocal = Math.min(CAM_FOCAL_MAX, camFocal - deltaY * 8);
+    } else {            // zoom OUT: unwind the lens first, then dolly the camera far back
+      if (camFocal > FOCAL_BASE + 1) camFocal = Math.max(FOCAL_BASE, camFocal - deltaY * 8);
+      else camDist = Math.min(CAM_DIST_MAX, camDist + deltaY * 0.6);
+    }
+  } else {              // 2D disc: zoom (far in and far out)
+    z2d = Math.max(0.35, Math.min(16, z2d * Math.exp(-deltaY * 0.0015)));
+  }
+  render();
+}
 canvas.addEventListener("pointerdown", (e) => {
+  activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activePtrs.size === 2) {         // second finger down: start a pinch, stop orbiting
+    const pts = [...activePtrs.values()];
+    pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    dragging = false;
+    canvas.classList.remove("dragging");
+    return;
+  }
   dragging = true;   // 3D: orbit/pan; 2D: pan
   window.__panDrag = e.shiftKey || e.button === 1 || e.button === 2;
   canvas.classList.add("dragging");
   lastPointerX = e.clientX; lastPointerY = e.clientY;
-  canvas.setPointerCapture(e.pointerId);
+  try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
 });
 canvas.addEventListener("pointermove", (e) => {
+  if (activePtrs.has(e.pointerId)) activePtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (activePtrs.size >= 2) {          // PINCH: two fingers zoom, in 2D and 3D alike
+    const pts = [...activePtrs.values()];
+    const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    if (pinchDist > 0 && Math.abs(d - pinchDist) > 1) zoomBy((pinchDist - d) * 2.2);
+    pinchDist = d;
+    return;
+  }
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
   const px = (e.clientX - rect.left) * scaleX, py = (e.clientY - rect.top) * scaleY;
@@ -2495,22 +2547,14 @@ canvas.addEventListener("pointermove", (e) => {
   const hit = hitTest(px, py);
   canvas.classList.toggle("hovering-hotspot", !!hit);
 });
-window.addEventListener("pointerup", () => { dragging = false; canvas.classList.remove("dragging"); });
-canvas.addEventListener("wheel", (e) => {
-  e.preventDefault();
-  if (viewMode === "3d") {
-    if (e.deltaY < 0) {   // zoom IN: dolly to the safe minimum, then magnify the lens (telephoto)
-      if (camDist > CAM_DIST_MIN + 1) camDist = Math.max(CAM_DIST_MIN, camDist + e.deltaY * 0.6);
-      else camFocal = Math.min(CAM_FOCAL_MAX, camFocal - e.deltaY * 8);
-    } else {              // zoom OUT: unwind the lens first, then dolly the camera far back
-      if (camFocal > FOCAL_BASE + 1) camFocal = Math.max(FOCAL_BASE, camFocal - e.deltaY * 8);
-      else camDist = Math.min(CAM_DIST_MAX, camDist + e.deltaY * 0.6);
-    }
-  } else {                // 2D disc: wheel zooms (far in and far out)
-    z2d = Math.max(0.35, Math.min(16, z2d * Math.exp(-e.deltaY * 0.0015)));
-  }
-  render();
-}, { passive: false });
+function endPointer(e) {
+  activePtrs.delete(e.pointerId);
+  if (activePtrs.size < 2) pinchDist = 0;
+  if (activePtrs.size === 0) { dragging = false; canvas.classList.remove("dragging"); }
+}
+window.addEventListener("pointerup", endPointer);
+window.addEventListener("pointercancel", endPointer);
+canvas.addEventListener("wheel", (e) => { e.preventDefault(); zoomBy(e.deltaY); }, { passive: false });
 
 canvas.addEventListener("click", (e) => {
   const rect = canvas.getBoundingClientRect();
