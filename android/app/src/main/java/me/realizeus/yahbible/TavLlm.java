@@ -14,6 +14,7 @@ public final class TavLlm {
     private static LlmInference llm;
     private static String loadedPath;
     private static Context appCtx;
+    private static volatile String lastError = "";
 
     private TavLlm() {}
 
@@ -33,13 +34,18 @@ public final class TavLlm {
                             .build();
             llm = LlmInference.createFromOptions(appCtx, opts);
             loadedPath = path;
+            lastError = "";
             return true;
         } catch (Throwable t) {
             llm = null;
             loadedPath = null;
+            lastError = String.valueOf(t);
             return false;
         }
     }
+
+    /** The exact reason the last load or generation failed — truth over silence. */
+    public static String lastError() { return lastError; }
 
     /** Blocking generation — called from a Python worker thread, never the UI. */
     public static synchronized String generate(String prompt, int maxTokens) {
@@ -47,6 +53,7 @@ public final class TavLlm {
         try {
             return llm.generateResponse(prompt);
         } catch (Throwable t) {
+            lastError = String.valueOf(t);
             return "";
         }
     }
