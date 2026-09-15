@@ -12,8 +12,8 @@ android {
         targetSdk = 34
         // versionCode rises every shipped build (yyMMddNN) so Android installs updates OVER
         // the old app — keeping settings & downloads — and the version is visible on-device.
-        versionCode = 26091426
-        versionName = "0.1.20260914260"
+        versionCode = 26091427
+        versionName = "0.1.20260914270"
     }
 
     buildTypes {
