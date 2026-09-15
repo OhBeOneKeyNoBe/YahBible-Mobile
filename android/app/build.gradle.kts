@@ -15,8 +15,8 @@ android {
         targetSdk = 34
         // versionCode rises every shipped build (yyMMddNN) so Android installs updates OVER
         // the old app — keeping settings & downloads — and the version is visible on-device.
-        versionCode = 26091508
-        versionName = "0.2.20260915100"
+        versionCode = 26091509
+        versionName = "0.2.20260915110"
         ndk { abiFilters += listOf("arm64-v8a") }   // phones; keeps the APK lean
     }
 
