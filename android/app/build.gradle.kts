@@ -1,5 +1,6 @@
 plugins {
     id("com.android.application")
+    id("com.chaquo.python") version "16.1.0"   // Python inside the APK: the FULL desktop engine
 }
 
 android {
@@ -12,8 +13,9 @@ android {
         targetSdk = 34
         // versionCode rises every shipped build (yyMMddNN) so Android installs updates OVER
         // the old app — keeping settings & downloads — and the version is visible on-device.
-        versionCode = 26091428
-        versionName = "0.1.20260914280"
+        versionCode = 26091501
+        versionName = "0.2.20260915010"
+        ndk { abiFilters += listOf("arm64-v8a") }   // phones; keeps the APK lean
     }
 
     buildTypes {
@@ -37,7 +39,18 @@ android {
     }
 }
 
+chaquopy {
+    defaultConfig {
+        version = "3.12"
+        buildPython("py", "-3.12")
+        pip {
+            // taviel_updates (Origin-signed updates) needs it; Chaquopy ships a native wheel.
+            install("cryptography")
+        }
+    }
+}
+
 dependencies {
-    // Intentionally dependency-free: a bare WebView on the framework Material theme,
-    // so the APK builds with only the Android Gradle Plugin (no AndroidX fetch needed).
+    // On-device AI: MediaPipe LLM inference (LiteRT .task models — Tav'iel reasons offline)
+    implementation("com.google.mediapipe:tasks-genai:0.10.35")
 }
