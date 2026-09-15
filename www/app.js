@@ -872,7 +872,8 @@ async function openSettings(){ clearInterval(_qTimer);
         const g=ghCfg(); return '<div class="camblbl" style="margin-top:16px">☁️ GitHub vault (works anywhere, no Wi-Fi pairing)</div>'+
       '<p class="setnote">A <b>private</b> repo carries your profile, settings &amp; reading progress between desktop and phone. Your token is stored only on this device — passwords are never synced. Use a fine-grained token limited to the one repo (Contents: read &amp; write).</p>'+
       '<input id="ghrepo" class="setinput" placeholder="owner/repo" value="'+esc(g.repo)+'" style="margin-bottom:8px">'+
-      '<input id="ghtok" class="setinput" type="password" placeholder="GitHub token (github_pat_… or ghp_…)" value="'+esc(g.token)+'" style="margin-bottom:10px">'+
+      '<input id="ghtok" class="setinput" type="password" placeholder="GitHub token (github_pat_… or ghp_…)" value="'+esc(g.token)+'" style="margin-bottom:8px">'+
+      '<input id="ghpass" class="setinput" type="password" placeholder="Vault passphrase (encrypts everything end-to-end)" value="'+esc(g.pass)+'" style="margin-bottom:10px">'+
       '<div class="setrow"><button id="ghpull" class="connectbtn" style="width:auto;padding:9px 14px">⬇ Load from GitHub</button>'+
       '<button id="ghpush" class="connectbtn" style="width:auto;padding:9px 14px">⬆ Save to GitHub</button></div>'; })())+
     '<div class="cmdsec"><div class="cmdeye" id="verline">Version</div><p class="setnote">'+
@@ -892,7 +893,8 @@ async function openSettings(){ clearInterval(_qTimer);
   const of=$('#openfull'); if(of) of.onclick=async()=>{ const u=normUrl(deskUrl()); if(!u){ toast('Enter your desktop address first'); return; }
     toast('Opening the full app…'); const ok=await pingDesktop(u); if(ok){ showDesktop(u); } else { toast('✗ Desktop not reachable — check Wi-Fi & the address'); } };
   const _ghSave=()=>{ const c=ghCfg(); c.repo=($('#ghrepo')?$('#ghrepo').value.trim():c.repo)||c.repo;
-    c.token=$('#ghtok')?$('#ghtok').value.trim():c.token; setGhCfg(c); };
+    c.token=$('#ghtok')?$('#ghtok').value.trim():c.token;
+    c.pass=$('#ghpass')?$('#ghpass').value.trim():c.pass; setGhCfg(c); };
   const gp=$('#ghpull'); if(gp) gp.onclick=async()=>{ _ghSave(); if(!ghCfg().token){ toast('Paste your GitHub token first'); return; }
     gp.disabled=true; toast('Loading from GitHub…'); await ghPull(false); gp.disabled=false; };
   const gq=$('#ghpush'); if(gq) gq.onclick=async()=>{ _ghSave(); if(!ghCfg().token){ toast('Paste your GitHub token first'); return; }
@@ -1053,7 +1055,24 @@ function openProfile(){ closeDrawers(); clearInterval(_qTimer);
 /* ---------- GitHub sync: a PRIVATE repo carries profile/settings/progress across devices.
    The token is entered on THIS device and stored only here — never bundled, never uploaded.
    Credentials (passwords) are NEVER written to the repo. ---------- */
-function ghCfg(){ try{ return Object.assign({repo:'OhBeOneKeyNoBe/YahBible-Sync',token:''}, JSON.parse(localStorage.getItem('yb_gh')||'{}')); }catch(e){ return {repo:'OhBeOneKeyNoBe/YahBible-Sync',token:''}; } }
+function ghCfg(){ try{ return Object.assign({repo:'OhBeOneKeyNoBe/YahBible-Sync',token:'',pass:''}, JSON.parse(localStorage.getItem('yb_gh')||'{}')); }catch(e){ return {repo:'OhBeOneKeyNoBe/YahBible-Sync',token:'',pass:''}; } }
+/* vault end-to-end encryption (AES-256-GCM, PBKDF2 200k) — same scheme as the desktop, so
+   even a leaked repo + token yields only ciphertext. The passphrase lives on this device. */
+function _buf2b64(b){ let s=''; new Uint8Array(b).forEach(x=>s+=String.fromCharCode(x)); return btoa(s); }
+function _b642buf(s){ return Uint8Array.from(atob(s),c=>c.charCodeAt(0)); }
+async function _vaultKey(pass,salt){ const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:200000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']); }
+async function vaultEncrypt(obj){ const p=ghCfg().pass; if(!p) return obj;
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await _vaultKey(p,salt);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv,additionalData:new TextEncoder().encode('yahbible-vault')},key,new TextEncoder().encode(JSON.stringify(obj)));
+  return {enc:1,kind:obj.kind||'yahbible-sync',salt:_buf2b64(salt),iv:_buf2b64(iv),ct:_buf2b64(ct)}; }
+async function vaultDecrypt(obj){ if(!obj||!obj.enc) return obj;
+  const p=ghCfg().pass; if(!p) throw new Error('the vault is encrypted — enter the vault passphrase');
+  const key=await _vaultKey(p,_b642buf(obj.salt));
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:_b642buf(obj.iv),additionalData:new TextEncoder().encode('yahbible-vault')},key,_b642buf(obj.ct))
+    .catch(()=>{ throw new Error('wrong vault passphrase'); });
+  return JSON.parse(new TextDecoder().decode(pt)); }
 /* the vault is MASTER-ONLY tooling: shown for the creator's identity, or on a device that
    already carries a token, or after the hidden unlock (7 taps on the Version line) */
 const MASTER_IDS=['yahwehtsidkenu','@yahwehtsidkenu','virtuousdeity@proton.me','virtuousdeity@gmail.com',"elan'iel",'elaniel'];
@@ -1089,7 +1108,8 @@ function refsToProg(refs){ const byName={}; KJV.books.forEach(b=>byName[b.n]=b.a
 async function ghPull(quiet){
   try{
     const f=await ghReq('GET'); if(!f){ if(!quiet) toast('Nothing in the vault yet — Save first'); return false; }
-    const d=JSON.parse(_b64d(f.content)); if(!d||d.kind!=='yahbible-sync') throw new Error('bad file');
+    let d=JSON.parse(_b64d(f.content)); d=await vaultDecrypt(d);
+    if(!d||d.kind!=='yahbible-sync') throw new Error('bad file');
     if(d.profile){ const pr=profileData();
       if(d.profile.bio!=null) pr.bio=d.profile.bio; setProfileData(pr);
       if(d.profile.avatar){ try{ localStorage.setItem('yb_avatar',d.profile.avatar); }catch(e){} }
@@ -1105,6 +1125,7 @@ async function ghPush(){
   try{
     const f=await ghReq('GET');                       // merge over what's there — never clobber
     let base={}; if(f){ try{ base=JSON.parse(_b64d(f.content))||{}; }catch(e){ base={}; } }
+    base=await vaultDecrypt(base);                    // throws on wrong passphrase — never clobber blind
     const a=getAccount(), pr=profileData();
     let av=''; try{ av=localStorage.getItem('yb_avatar')||''; }catch(e){}
     base.kind='yahbible-sync'; base.ts=Date.now();
@@ -1113,7 +1134,7 @@ async function ghPush(){
     base.settings=appSettings();
     base.favs=favVersions();
     base.progress=[...new Set((base.progress||[]).concat(progToRefs()))];
-    const body={message:'YahBible mobile sync',content:_b64e(JSON.stringify(base))};
+    const body={message:'YahBible mobile sync',content:_b64e(JSON.stringify(await vaultEncrypt(base)))};
     if(f&&f.sha) body.sha=f.sha;
     await ghReq('PUT',body);
     toast('✓ Saved to GitHub ('+base.progress.length+' progress refs)');
