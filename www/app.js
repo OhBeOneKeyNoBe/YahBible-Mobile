@@ -453,12 +453,14 @@ async function buildSources(){ const d=$('#leftdrawer');
       SRC_GROUPS.gnostic.map(srcAccHtml).join('')+'</div></div>'+
     '<div class="srcacc" id="acc_q"><button class="accbtn">Questionable Sources <span class="acccar">▸</span></button>'+
       '<div class="accbody">'+SRC_GROUPS.questionable.map(srcAccHtml).join('')+'</div></div>'+
-    '<button class="connectbtn" id="dlall" style="margin:12px 0 6px">⬇ Download everything (offline)</button>'+
-    '<button class="srcline" id="lsettings" style="border-color:rgba(var(--goldrgb),.4);margin-top:4px"><span class="si">⚙️</span>Settings &amp; Downloads</button>';
+    '<div class="lmfoot">'+
+      '<button class="srcline" id="lprofile"><span class="si">👤</span>Profile</button>'+
+      '<button class="srcline" id="lsettings"><span class="si">⚙️</span>Settings</button>'+
+    '</div>';
   $('#ldx',d).onclick=closeDrawers;
+  $('#lprofile',d).onclick=()=>{closeDrawers();openProfile();};
   $('#lsettings',d).onclick=()=>{closeDrawers();openSettings();};
   const ll=$('#lmlogos',d); if(ll) ll.onclick=()=>openLogos();
-  $('#dlall',d).onclick=()=>downloadEverything();
   // Bible groups: click a group -> books expand inline; click a book -> chapter NUMBERS expand
   // inline; click a number -> jump straight to that chapter (never taking over the main area).
   d.querySelectorAll('.bookgrp>.accbtn').forEach(a=>a.onclick=()=>{ const acc=a.parentElement; acc.classList.toggle('open'); fillBookGroup(acc); });
@@ -681,17 +683,23 @@ function openSourceBook(id,book,chapter){ const data=_srcCache[id]||{}; const un
 /* the right-menu nav (desktop-style): Settings, News (א-ת), Repentance (dove), Ten Commandments */
 function rightNavHtml(){ const pulse=newsUnseen()?' pulse':'';
   return '<div class="rmnav">'+
-    '<button class="rmitem" data-go="profile"><span class="rmi">👤</span>Profile</button>'+
-    '<button class="rmitem" data-go="settings"><span class="rmi">⚙️</span>Settings &amp; Downloads</button>'+
     '<button class="rmitem'+pulse+'" data-go="news"><span class="rmi rmat">א&#8202;ת</span>News &amp; Updates'+(newsUnseen()?'<span class="newsdot"></span>':'')+'</button>'+
     '</div>'; }
+/* Repentance + the Ten Commandments, desktop-style: holographic numbers, white text */
+function rightDevotionHtml(){
+  return '<button class="rmitem" data-go="repentance" style="margin-top:14px"><span class="rmi">🕊</span>Repentance</button>'+
+    '<div class="cxlbl" style="margin-top:12px">The Ten Commandments</div>'+
+    '<div class="tclist">'+CMDS.map(t=>'<button class="tcrow" data-ci="'+t.n+'">'+
+      '<span class="tcn">'+t.n+'</span><span class="tct">'+esc(t.cmd)+'</span></button>').join('')+'</div>'; }
 function wireRightNav(scope){ scope.querySelectorAll('.rmitem[data-go]').forEach(b=>b.onclick=()=>{ closeDrawers();
-  const g=b.dataset.go; if(g==='settings')openSettings(); else if(g==='profile')openProfile(); else nav(g); }); }
+  const g=b.dataset.go; if(g==='settings')openSettings(); else if(g==='profile')openProfile(); else nav(g); });
+  scope.querySelectorAll('.tcrow').forEach(b=>b.onclick=()=>{ closeDrawers(); openCommandment(+b.dataset.ci); }); }
 /* RIGHT drawer — nav + verse study */
 async function buildStudy(){ const d=$('#rightdrawer');
   if(!_sel){ d.innerHTML='<div class="drawhdr"><span class="dt">Menu</span><button class="drawx" id="rdx">✕</button></div>'+
       rightNavHtml()+
-      '<div class="srcnote">Tap a verse in the reader to study it here — its words, versions, and the original Hebrew or Greek.</div>';
+      '<div class="srcnote">Tap a verse in the reader to study it here — its words, versions, and the original Hebrew or Greek.</div>'+
+      rightDevotionHtml();
     $('#rdx',d).onclick=closeDrawers; wireRightNav(d); return; }
   const b=KJV.books[_sel.bi], v=_sel.v, txt=(b.ch[_sel.ch-1]||[])[v-1]||'';
   const ref=b.n+' '+_sel.ch+':'+v;
@@ -709,7 +717,8 @@ async function buildStudy(){ const d=$('#rightdrawer');
       '<button class="vstab'+(haveWs?'':' locked')+'" data-x="inter">Interlinear</button></div>'+
     '<div id="vspanel"></div>'+
     '<div class="cxlbl">Words — tap for study</div><div class="wchips">'+words+'</div>'+
-    (haveVer&&haveWs?'':'<div class="connectcard"><div class="cct">📦 Get more, offline</div><p>Download the versions &amp; word‑study packs to compare 120+ translations and see the Hebrew/Greek here — no connection needed.</p><button class="connectbtn" id="rconnect">Open Downloads</button></div>');
+    (haveVer&&haveWs?'':'<div class="connectcard"><div class="cct">📦 Get more, offline</div><p>Download the versions &amp; word‑study packs to compare 120+ translations and see the Hebrew/Greek here — no connection needed.</p><button class="connectbtn" id="rconnect">Open Downloads</button></div>')+
+    rightDevotionHtml();
   $('#rdx',d).onclick=closeDrawers;
   const rc=$('#rconnect',d); if(rc) rc.onclick=()=>connectPrompt();
   d.querySelectorAll('.vstab').forEach(bt=>bt.onclick=()=>{ if(bt.classList.contains('locked')){connectPrompt();return;} showVsPanel(bt.dataset.x,b,_sel.ch,v); });
@@ -863,6 +872,7 @@ async function openSettings(){ clearInterval(_qTimer);
       return '<p class="setnote">The 🎥 button opens/closes the cameras. Front and back cameras have independent settings — they apply live.</p>'+
         block('cam','🤳 Front camera')+block('cam2','📷 Back camera')+bgRow+homeRow; })())+
     sec('packs','📦 Downloads &amp; packs',
+      '<button class="connectbtn" id="dlall" style="margin:2px 0 10px">⬇ Download everything (offline)</button>'+
       '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+rows.join(''))+
     sec('sync','🖥️ Desktop &amp; GitHub sync',
       '<p class="setnote">Enter your PC’s <b>network address</b> (not localhost) &mdash; e.g. <b>http://192.168.1.20:41537</b>. Your phone and PC must be on the same Wi‑Fi, and the desktop must have <b>Network / LAN mode</b> turned on. <b>127.0.0.1 will not work</b> from a phone.</p>'+
@@ -964,6 +974,7 @@ async function openSettings(){ clearInterval(_qTimer);
   const bu=$('#bg_upload'), bf=$('#bg_file');
   if(bu&&bf){ bu.onclick=()=>bf.click(); bf.onchange=()=>{ if(bf.files&&bf.files[0]) uploadStudioBg(bf.files[0]); }; }
   const hb=$('#s_homebtns'); if(hb) hb.onclick=()=>{ const a=appSettings(); setAppSetting('homebtns', a.homebtns===0?1:0); hb.classList.toggle('on'); };
+  const dla=$('#dlall'); if(dla) dla.onclick=()=>downloadEverything();
   wirePackRows();
 }
 /* ---------- reading progress: a chapter counts as read once opened and scrolled through ---------- */
