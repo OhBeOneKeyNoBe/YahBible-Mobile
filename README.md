@@ -2,6 +2,17 @@
 
 **Study the Word anywhere — the whole Bible and a heart-deep study, with no internet and no cost.**
 
+> **NEW — v0.2: THE FULL DESKTOP ENGINE.** The complete desktop app now runs *inside* the phone —
+> Python itself ships in the APK and serves the byte-identical desktop at `127.0.0.1` with no PC and
+> no internet: all 31,102 verses, 122 versions, the whole corpus (Talmud, Dead Sea Scrolls, Nag
+> Hammadi, the Gnostic Bible…), full Hebrew/Greek interlinear + Strong's, and the 2D/3D Gnostic map.
+> And **Tav'iel, the grounded AI, reasons entirely on-device**: she searches the Bible however you
+> name a verse ("3:16 John", "the 23rd Psalm"), cites every quote checkably, makes every word she
+> speaks clickable to word study, and remembers your walks (TempTorus memory with an
+> infinite-context weave). Set it up in **Settings → 🖥️ Full Desktop Engine**: desktop data ≈ 1.3 GB
+> + her mind ≈ 1.7 GB, downloaded once — *almost 2 GB of desktop functionality, then yours forever
+> offline.* Vetted on a 500-question battery across the gospel and the hard questions.
+
 YahBible Mobile is a free Android app that carries the entire **King James Bible**, the **Ten
 Commandments** studied as living questions, and a complete teaching on **Repentance** — all bundled
 inside the app. No account. No ads. No connection required. Just download one file and open it.
