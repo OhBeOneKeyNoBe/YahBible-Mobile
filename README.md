@@ -26,7 +26,12 @@ inside the app. No account. No ads. No connection required. Just download one fi
 
 ## 📥 Get it — free in three taps
 
-**[⬇️ Download the latest APK](https://github.com/OhBeOneKeyNoBe/YahBible-Mobile/releases/latest)** &nbsp;·&nbsp; also on [Hugging Face](https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile)
+**Two editions, side by side** (separate apps — install both to compare):
+
+| Edition | Download | What it is |
+|---|---|---|
+| **YahBible** (lite, v0.1, 8 MB) | [GitHub release](https://github.com/OhBeOneKeyNoBe/YahBible-Mobile/releases/latest) · [HF direct](https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/YahBible-0.1.20260915030.apk?download=true) | the complete offline Bible & study app |
+| **YahBible Engine** (v0.2, 59 MB) | [GitHub release](https://github.com/OhBeOneKeyNoBe/YahBible-Mobile/releases/latest) · [HF direct](https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/YahBible-Engine-0.2.20260915020.apk?download=true) | the FULL desktop inside the phone + Tav'iel the AI, offline (data + mind download in-app) |
 
 1. On your Android phone, download **`YahBible-v0.1-debug.apk`** from the link above.
 2. **Tap the file.** If Android asks, allow **Install unknown apps** for your browser or Files app.
