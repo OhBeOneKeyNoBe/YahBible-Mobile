@@ -867,7 +867,11 @@ async function openSettings(){ clearInterval(_qTimer);
       '<p class="setnote">Enter your PC’s <b>network address</b> (not localhost) &mdash; e.g. <b>http://192.168.1.20:41537</b>. Your phone and PC must be on the same Wi‑Fi, and the desktop must have <b>Network / LAN mode</b> turned on. <b>127.0.0.1 will not work</b> from a phone.</p>'+
       '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://192.168.x.x:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Test &amp; save</button></div>'+
       '<button id="openfull" class="connectbtn" style="margin-top:10px">🖥️ Open the full desktop app (1:1) →</button>')+
-    '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">Study content v'+APP_CONTENT_VER+' · <button id="chkupd" class="miniupd">Check for updates</button> · <button id="s_reset" class="miniupd">Reset to defaults</button></p></div>'+
+    '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">'+
+      (function(){ const bv=window.__bundledVer||0; let ov=0; try{ ov=parseInt(localStorage.getItem('yb_ota_ver')||'0',10)||0; }catch(e){}
+        const run=ov>bv?ov:bv;
+        return '<b>App build '+(run||'unknown')+'</b>'+(ov>bv?' (self-updated over APK '+bv+')':'')+' · Study content v'+APP_CONTENT_VER; })()+
+      ' · <button id="chkupd" class="miniupd">Check for updates</button> · <button id="s_reset" class="miniupd">Reset to defaults</button></p></div>'+
     '<button class="cmdback" id="cmdback">◀ back</button></div>');
   // section accordions remember their open state across re-renders
   $('#view').querySelectorAll('.setsec>.accbtn').forEach(ab=>ab.onclick=()=>{ const p=ab.parentElement;
