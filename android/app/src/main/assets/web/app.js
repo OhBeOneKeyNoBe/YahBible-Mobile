@@ -131,7 +131,8 @@ function renderRepentanceSection(t){ if(!t.repentance) return ''; const g=REPENT
     '<div class="prayacts"><button class="seekcounsel">🕊 Seek Counsel in Prayer</button><button class="lordsprayer'+(_lordsSeen?'':' pulse')+'">📖 Read the Full Lord\'s Prayer — KJV</button></div></div>'; }
 
 /* ---------- screens ---------- */
-function setView(html){ const v=$('#view'); v.innerHTML=html; v.scrollTop=0; }
+function setView(html){ const v=$('#view'); v.innerHTML=html; v.scrollTop=0;
+  document.body.classList.remove('seethru'); }   // chrome ALWAYS returns on a screen change
 function wireStudy(scope){ if(!scope) return;
   scope.querySelectorAll('.dimacc .dimhdr').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
   scope.querySelectorAll('.repdim .repdimhdr').forEach(h=>h.onclick=e=>{e.stopPropagation();h.parentElement.classList.toggle('open');});
@@ -382,6 +383,10 @@ function markNewsSeen(){ try{ localStorage.setItem('yb_news_seen',NEWS.version);
 
 /* ---------- tab navigation ---------- */
 function nav(tab){ _tab=tab; try{ window.__tab=tab; }catch(e){}
+  // a tab tap always leads OUT of the 1:1 desktop view — the menus are never dead ends
+  const _df=$('#deskframe');
+  if(_df&&!_df.hidden){ _df.hidden=true; _df.src='about:blank'; $('#view').style.visibility='';
+    const _dx=$('#deskexit'); if(_dx)_dx.hidden=true; }
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab || (tab==='repentance'&&b.dataset.tab==='repent')));
   // the left/right menu buttons appear in the Bible section (sources + verse study), like desktop
   const inBible=(tab==='bible');
@@ -1492,10 +1497,13 @@ async function autoLoadDesktop(){
 function showDesktop(u){ u=normUrl(u||deskUrl()); if(!u) return;
   const df=$('#deskframe'); if(!df) return;
   df.src=u+'/'; df.hidden=false;
-  $('#view').style.display='none'; const tb=$('#tabbar'); if(tb)tb.style.display='none'; const top=$('#topbar'); if(top)top.style.display='none';
+  // the app's header and tab bar NEVER disappear: the desktop lives between them,
+  // so the map (or any page inside) can never trap you without a menu.
+  // visibility (not display) keeps the layout, so the tab bar stays at the bottom.
+  $('#view').style.visibility='hidden';
   const dx=$('#deskexit'); if(dx)dx.hidden=false;
   try{ window.__tab='desktop'; }catch(e){}
 }
 function exitDesktop(){ const df=$('#deskframe'); if(df){df.hidden=true; df.src='about:blank';}
-  $('#view').style.display=''; const tb=$('#tabbar'); if(tb)tb.style.display=''; const top=$('#topbar'); if(top)top.style.display='';
+  $('#view').style.visibility='';
   $('#deskexit').hidden=true; nav('home'); }

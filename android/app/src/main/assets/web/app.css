@@ -471,7 +471,11 @@ body.seethru .drawer{box-shadow:none}
 .ild{font:10px var(--fital);color:var(--dim);text-align:center;max-width:80px;line-height:1.2}
 @media (prefers-reduced-motion:reduce){#fishbg *,.lordsprayer.pulse{animation:none!important}}
 /* full 1:1 desktop app frame + floating studio controls */
-#deskframe{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:30;background:var(--bg)}
+/* the 1:1 desktop view sits BETWEEN the app's header and tab bar — the chrome never leaves */
+#deskframe{position:fixed;left:0;right:0;top:calc(52px + var(--safe-top));
+  width:100%;height:calc(100vh - 112px - var(--safe-top) - var(--safe-bot));
+  border:0;z-index:30;background:var(--bg)}
+#deskexit{bottom:calc(72px + var(--safe-bot))}   /* the exit pill rides above the tab bar */
 #camfab{position:fixed;right:14px;top:calc(10px + var(--safe-top));z-index:72;width:44px;height:44px}
 /* the way OUT of the 1:1 desktop view: a clear, labeled pill (bottom-right, above the safe area) */
 #deskexit{position:fixed;right:12px;bottom:calc(16px + var(--safe-bot));z-index:72;
