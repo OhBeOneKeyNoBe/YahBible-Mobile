@@ -361,13 +361,30 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
   #notesplus{order:1} #splitplus{order:2}
   #tavielbtn{order:3;margin-left:auto}
   #mrightbtn{order:99}
-  /* pressing Tav'iel turns the header INTO the search bar (mic · Find · Ask) */
+  /* pressing Tav'iel opens the ask bar UNDER the header — the header never leaves */
   header .searchwrap{display:none}
-  header.msearch>*{display:none!important}
-  header.msearch .searchwrap{display:flex!important;flex:1;order:0;align-items:center;gap:6px}
-  header.msearch #msearchx{display:inline-flex!important;order:1;width:38px;height:38px;border-radius:50%;
-    border:1px solid var(--line);background:hsl(var(--hue) 24% 20% / .6);color:var(--ink);font-size:16px;
-    align-items:center;justify-content:center;cursor:pointer;flex:none}
+  #msearchbar{display:none;position:sticky;top:0;z-index:69;background:var(--bg);
+    padding:8px 10px;border-bottom:1px solid var(--line)}
+  #msearchbar.on{display:block}
+  #msearchbar .searchwrap{display:flex!important;gap:6px;width:100%;align-items:center}
+  #msearchbar #msearchx{display:inline-flex!important;width:36px;height:36px;border-radius:50%;flex:none;
+    border:1px solid var(--line);background:hsl(var(--hue) 24% 20% / .6);color:var(--ink);font-size:15px;
+    align-items:center;justify-content:center;cursor:pointer}
+  /* the CHAT fits the phone: messages in the centre, the input pinned just above the footer */
+  .chatview .chatbar{position:fixed;left:0;right:0;bottom:58px;z-index:73;background:var(--bg);
+    border-top:1px solid var(--line);padding:8px 10px;display:flex;gap:8px}
+  .chatview .chatbar textarea{flex:1}
+  .chatview .chatmsgs{padding-bottom:160px}   /* clears the pinned input + footer */
+  /* while chatting, your reading parks in the LEFT menu — readable there the whole time */
+  #mpark{border:1px solid var(--line);border-radius:11px;margin:0 0 10px;overflow:hidden;
+    background:hsl(var(--hue) 24% 12% / .6)}
+  #mpark>summary{cursor:pointer;padding:10px 12px;font:800 10.5px Inter;letter-spacing:.12em;
+    text-transform:uppercase;color:#e9c877;list-style:none}
+  #mpark>summary::-webkit-details-marker{display:none}
+  #mparkbody{max-height:46vh;overflow:auto;padding:8px 12px;font-size:14px;background:var(--paper,#fff);
+    color:var(--paperink,#222)}
+  #mparkback{display:block;width:100%;padding:8px;border:0;border-top:1px solid var(--line);cursor:pointer;
+    background:hsl(var(--hue) 24% 18% / .7);color:var(--ink);font:700 12px Inter}
   .frame{grid-template-columns:1fr!important;height:auto;min-height:calc(100vh - 39px)}
   /* drawers like the desktop panels: OPAQUE (page content never shows through the menu),
      but narrower than the screen so the page's edge stays visible beside it */
@@ -416,6 +433,21 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
   /* RealizeUS lives WITHIN the header/footer bounds */
   #mrealize{position:fixed;left:0;right:0;bottom:58px;z-index:60;border:0;width:100%;background:#fff;display:none}
   #mrealize.on{display:block}
+  /* right-menu Tav'iel history rows */
+  .tlike{padding:7px 9px;margin:3px 0;border:1px solid var(--line);border-radius:9px;cursor:pointer;
+    font:12.5px/1.4 Inter;color:var(--ink);background:hsl(var(--hue) 24% 14% / .5)}
+  .tlike:active{border-color:#e9c877}
+}
+/* Tav'iel history (right menu) — on every ground */
+#mtavhist{border:1px solid var(--line);border-radius:11px;margin:8px 0;overflow:hidden;
+  background:hsl(var(--hue) 24% 14% / .5)}
+#mtavhist>summary{cursor:pointer;padding:10px 12px;font:800 10.5px Inter;letter-spacing:.12em;
+  text-transform:uppercase;color:#e9c877;list-style:none}
+#mtavhist>summary::-webkit-details-marker{display:none}
+#mtavhist .msecbody{padding:2px 10px 10px}
+#mtavhist .tlike{display:block;padding:7px 9px;margin:3px 0;border:1px solid var(--line);border-radius:9px;
+  cursor:pointer;font:12.5px/1.4 Inter;color:var(--ink);background:hsl(var(--hue) 24% 12% / .5)}
+@media (max-width:821px){ .mzz{display:none}
   /* the SAME footer tab bar the pure phone app has (hidden when framed inside the app) */
   #mtabbar{position:fixed;left:0;right:0;bottom:0;z-index:74;display:flex;height:58px;
     background:linear-gradient(0deg,hsl(var(--hue) 26% 12%),hsl(var(--hue) 26% 10% / .92));border-top:1px solid var(--line)}
@@ -1236,6 +1268,10 @@ html.guest .conclbtn{display:none}  /* conclusions are for signed-in users, not 
   border-radius:4px 14px 14px 14px;padding:12px 15px;color:var(--paperink)}
 .msg.tav .tbody.think{white-space:pre-wrap}
 .msg.tav .tbody p{margin:0 0 10px} .msg.tav .tbody p:last-child{margin-bottom:0}
+/* the like-heart on each of Tav'iel's paragraphs -> saved to the right-menu history */
+.plike{margin-left:6px;padding:0 3px;border:0;background:transparent;cursor:pointer;
+  font-size:13px;color:#c0246a;opacity:.5;vertical-align:baseline}
+.plike:hover{opacity:1} .plike.on{opacity:1}
 /* the council: the fast primary + the deeper tiers' voices converging (chakra-coloured) */
 .council{margin-top:12px;border-top:1px dashed var(--paperrule);padding-top:8px;display:flex;flex-direction:column;gap:8px}
 .cvoice{border-left:4px solid var(--ck,var(--gold));background:var(--ckbg,transparent);border-radius:0 8px 8px 0;padding:6px 11px}
@@ -3540,9 +3576,24 @@ async function sendChat(msg){
 function fmtAnswer(s){
   // EVERY word Tav'iel speaks is clickable (word study popup); every scripture
   // reference and Strong's number is a live link — her answers are checkable.
+  // And every paragraph carries a heart: like it, and it lives in your history.
   const linked=hebLinkify(String(s||''),null)
-    .replace(/\n\n+/g,'</p><p>').replace(/\n/g,'<br>');
-  return '<p>'+linked+'</p>';}
+    .replace(/\n\n+/g,'<button class="plike" title="save to your history">&#9825;</button></p><p>')
+    .replace(/\n/g,'<br>');
+  return '<p>'+linked+'<button class="plike" title="save to your history">&#9825;</button></p>';}
+/* liked words of Tav'iel — kept on this device, listed in the right menu */
+function tavLikes(){try{return JSON.parse(localStorage.getItem('tav_likes')||'[]');}catch(e){return[];}}
+document.addEventListener('click',function(e){
+  const b=e.target.closest&&e.target.closest('.plike'); if(!b)return;
+  e.stopPropagation();
+  const p=b.closest('p'); if(!p)return;
+  const txt=p.textContent.replace(/♡|♥/g,'').trim(); if(!txt)return;
+  const likes=tavLikes();
+  likes.unshift({t:txt.slice(0,600),ts:Date.now(),chat:(typeof CHATID!=='undefined'&&CHATID)||''});
+  try{localStorage.setItem('tav_likes',JSON.stringify(likes.slice(0,200)));}catch(err){}
+  b.innerHTML='&#9829;';b.classList.add('on');
+  if(typeof renderTopNav==='function')renderTopNav();
+},true);
 /* wire the clickable words + refs inside any freshly-rendered Tav'iel answer */
 function wireAnswer(scope){try{wireHebLinks(scope||document.querySelector('#chatbox')||document);}catch(e){}}
 /* one delegated wiring: any .dwx/.hebcite that appears in chat later still works */
@@ -3685,7 +3736,28 @@ function renderTopNav(){const n=$('#ybtopnav');if(!n)return;
     '<button class="tcnavbtn tcrep" id="tc_rep">'+HOLO_DOVE+'<span class="tcnavtxt">Repentance <span class="tcnavsub">turn toward the Father</span></span></button>'+
     '</div>';
   const rb=$('#tc_rep');if(rb)rb.onclick=()=>openRepentance();
-  const nb=$('#tc_news');if(nb)nb.onclick=()=>openNews();}
+  const nb=$('#tc_news');if(nb)nb.onclick=()=>openNews();
+  // 🕊 Tav'iel history: the words you loved + every AI chat, kept in the right menu
+  const likes=(typeof tavLikes==='function')?tavLikes():[];
+  let hh='<details class="msec" id="mtavhist"><summary>&#128330; Tav&#39;iel history</summary><div class="msecbody">';
+  hh+=likes.length?('<div class="cxlbl" style="margin:4px 0">Loved words</div>'+
+      likes.slice(0,12).map((l,i)=>'<div class="tlike" data-i="'+i+'">&#9829; '+esc(l.t.slice(0,90))+(l.t.length>90?'&hellip;':'')+'</div>').join('')):
+    '<div class="ruhint">Tap the &#9825; beside any of Tav&#39;iel&#39;s words to keep them here.</div>';
+  hh+='<div class="cxlbl" style="margin:8px 0 4px">AI chats</div><div id="mtavchats"><div class="ruhint">loading&hellip;</div></div>';
+  hh+='</div></details>';
+  n.insertAdjacentHTML('beforeend',hh);
+  n.querySelectorAll('.tlike').forEach(el=>el.onclick=()=>{const l=likes[+el.dataset.i];if(!l)return;
+    const card=$('#studycard');if(card)card.innerHTML='<div class="gdetail"><h3 class="gdname">&#9829; Kept from Tav&#39;iel</h3><p style="font:15px/1.6 \'EB Garamond\',Georgia,serif">'+fmtAnswer(l.t)+'</p></div>';});
+  fetch('/api/notes').then(r=>r.json()).then(d=>{const box=$('#mtavchats');if(!box)return;
+    const notes=(d&&d.notes)||{};const chats=[];
+    Object.keys(notes).forEach(k=>{if(k.indexOf('~chat~')===0){try{const c=JSON.parse(notes[k]);c.key=k;chats.push(c);}catch(e){}}});
+    chats.sort((a,b)=>(b.key>a.key?1:-1));
+    box.innerHTML=chats.length?chats.slice(0,10).map((c,i)=>{
+      const first=((c.msgs||[])[0]||{}).text||'(conversation)';
+      return '<div class="tlike tchat" data-k="'+i+'">&#1514; '+esc(String(first).slice(0,70))+'</div>';}).join('')
+      :'<div class="ruhint">No chats kept yet &mdash; ask Tav&#39;iel anything.</div>';
+    box.querySelectorAll('.tchat').forEach(el=>el.onclick=()=>{const c=chats[+el.dataset.k];if(c)reopenChat(c);});
+  }).catch(()=>{const box=$('#mtavchats');if(box)box.innerHTML='<div class="ruhint">sign in to keep chats</div>';});}
 function renderTenCmd(){renderTopNav();const c=$('#studycard');if(!c)return;
   c.innerHTML='<div class="tclist">'+
     '<div class="tclhdr holo">The Ten Commandments</div>'+
@@ -4122,6 +4194,14 @@ applySet(); boot(); loadCommandments();
     var back=document.createElement('div'); back.id='msetback'; back.innerHTML='&#8592;&nbsp; Back to Verse Study';
     back.onclick=function(){ toggleSettingsPanel(false); };
     sp.insertBefore(back, sp.firstChild);
+    // framed inside the app: Settings carries the way OUT of the desktop version
+    if(document.body.classList.contains('framed')){
+      var xd=document.createElement('div'); xd.id='msetexit'; xd.className='mfrow';
+      xd.style.cssText='margin-top:10px;justify-content:center;font:700 13px Inter;padding:11px';
+      xd.innerHTML='&#10005;&nbsp; Close the desktop version';
+      xd.onclick=function(){ try{ parent.postMessage('yb-exit','*'); }catch(e){} };
+      sp.appendChild(xd);
+    }
   }
   var _cog=document.getElementById('cog');
   if(_cog)_cog.addEventListener('click',function(){
@@ -4130,17 +4210,52 @@ applySet(); boot(); loadCommandments();
       if(sp&&sp.classList.contains('inpanel-open')) group(sp); },50);
   },true);
 })();
-/* Tav'iel morphs the header into the search bar (mic · Find · Ask) on phones */
+/* Tav'iel opens the ask bar UNDER the header (the header never leaves) on phones */
 (function(){
   var hd=document.querySelector('header'); if(!hd)return;
+  var bar=document.createElement('div'); bar.id='msearchbar';
+  hd.parentNode.insertBefore(bar, hd.nextSibling);
+  var swMark=null, inBar=false;
+  function toBar(){ if(inBar)return; var sw=document.getElementById('searchwrap'); if(!sw)return;
+    if(!swMark){ swMark=document.createComment('mt:sw'); sw.parentNode.insertBefore(swMark,sw); }
+    bar.appendChild(sw); inBar=true; }
+  function toHead(){ if(!inBar)return; var sw=document.getElementById('searchwrap');
+    if(sw&&swMark&&swMark.parentNode)swMark.parentNode.insertBefore(sw,swMark.nextSibling); inBar=false; }
+  function apply(){ if(window.matchMedia('(max-width:820px)').matches) toBar(); else { bar.classList.remove('on'); toHead(); } }
+  apply(); window.addEventListener('resize',apply);
   var tb=document.getElementById('tavielbtn'), x=document.getElementById('msearchx');
   if(tb)tb.addEventListener('click',function(e){
     if(window.innerWidth>820)return;                      // desktop keeps its own behavior
     e.stopPropagation(); e.preventDefault();
-    hd.classList.add('msearch');
-    var q=document.getElementById('q'); if(q)setTimeout(function(){q.focus();},60);
+    bar.classList.toggle('on');
+    if(bar.classList.contains('on')){ var q=document.getElementById('q'); if(q)setTimeout(function(){q.focus();},60); }
   },true);
-  if(x)x.onclick=function(){hd.classList.remove('msearch');};
+  if(x)x.onclick=function(){bar.classList.remove('on');};
+})();
+/* WHILE CHATTING, the reading parks in the LEFT menu — still readable, one tap returns it */
+(function(){
+  function park(){
+    if(window.innerWidth>820)return;
+    var rd=document.getElementById('reader'), left=document.querySelector('.col.left');
+    if(!rd||!left)return;
+    if(rd.querySelector('.chatview'))return;              // already chatting
+    var txt=(rd.textContent||'').trim();
+    if(!txt||rd.querySelector('.homepane'))return;        // nothing worth parking
+    var old=document.getElementById('mpark'); if(old)old.remove();
+    var d=document.createElement('details'); d.id='mpark'; d.open=true;
+    d.innerHTML='<summary>&#128214; Your reading (parked here while you chat)</summary>'+
+      '<div id="mparkbody"></div><button id="mparkback">&#8617; Return this to the centre</button>';
+    left.insertBefore(d,left.firstChild);
+    document.getElementById('mparkbody').innerHTML=rd.innerHTML;   // a readable copy
+    d.querySelector('#mparkback').onclick=function(){ unpark(); backToReading();
+      var f=document.querySelector('.frame'); if(f)f.classList.remove('mleft'); };
+  }
+  function unpark(){ var d=document.getElementById('mpark'); if(d)d.remove(); }
+  window.mparkClear=unpark;
+  var _open=openTavielChat;
+  openTavielChat=function(){ park(); _open.apply(this,arguments); };
+  var _back=backToReading;
+  backToReading=function(){ unpark(); return _back.apply(this,arguments); };
 })();
 /* the desktop-android footer: SAME five buttons as the pure app, but wired to the HYBRID
    content — and its colors ride the desktop's shifting hue. Framed adds the exit row. */
