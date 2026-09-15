@@ -351,15 +351,23 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
 #mnav{display:none}
 .mscrim{display:none;position:fixed;inset:0;z-index:75;background:#000a}   /* hidden + out of the grid on desktop */
 @media (max-width:820px){
-  header{position:sticky;top:0;z-index:70;flex-wrap:nowrap;gap:6px}
-  /* CONDENSED HEADER: only ☰ left · YahBible · Tav'iel · ☰ right — every other control
-     is relocated by script into #mtools at the top of the right menu */
+  header{position:sticky;top:0;z-index:70;flex-wrap:nowrap;gap:5px;padding:8px 10px}
+  /* CONDENSED HEADER: ☰ · א YahBible ת (left) · + ✛ (centre) · ת Tav'iel · ☰ (right) */
   #mnav{display:contents}
-  #mnav button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:hsl(var(--hue) 24% 20% / .6);color:var(--ink);font-size:18px;cursor:pointer}
+  #mnav button{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:hsl(var(--hue) 24% 20% / .6);color:var(--ink);font-size:18px;cursor:pointer;flex:none}
   #mleftbtn{order:-2}
-  #homebtn{order:1;margin-left:auto}
-  #tavielbtn{order:2;margin-right:auto}
+  #homebtn{order:-1;margin-right:auto}
+  .mheb{display:inline;font-family:"Noto Serif Hebrew",serif;font-weight:700;font-size:15px;color:#e9c877;margin:0 3px}
+  #notesplus{order:1} #splitplus{order:2}
+  #tavielbtn{order:3;margin-left:auto}
   #mrightbtn{order:99}
+  /* pressing Tav'iel turns the header INTO the search bar (mic · Find · Ask) */
+  header .searchwrap{display:none}
+  header.msearch>*{display:none!important}
+  header.msearch .searchwrap{display:flex!important;flex:1;order:0;align-items:center;gap:6px}
+  header.msearch #msearchx{display:inline-flex!important;order:1;width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--line);background:hsl(var(--hue) 24% 20% / .6);color:var(--ink);font-size:16px;
+    align-items:center;justify-content:center;cursor:pointer;flex:none}
   .frame{grid-template-columns:1fr!important;height:auto;min-height:calc(100vh - 39px)}
   /* drawers like the desktop panels: OPAQUE (page content never shows through the menu),
      but narrower than the screen so the page's edge stays visible beside it */
@@ -373,12 +381,34 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
   .mid{padding-bottom:40px}
   /* the relocated tools, organized at the top of the right menu */
   #mtools{display:flex;flex-direction:column;gap:9px;padding:2px 0 12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
-  #mtools .searchwrap{display:flex;width:100%}
   #mtools .mtrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
   #mtools .mtrow .ctplus,#mtools .mtrow .ctbtn,#mtools .mtrow .cog{width:38px;height:38px;border-radius:50%;
     border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center}
+  /* right menu: nothing cut off — everything contained, aligned to ITS panel */
+  .col.right{overflow-x:hidden}
+  .col.right>*,.col.right #studywrap,.col.right #studycard,.col.right #verswrap,.col.right #sideextra
+    {max-width:100%;box-sizing:border-box}
+  .col.right img,.col.right table{max-width:100%}
+  /* Profile · Settings · Studio Mode pinned at the BOTTOM of the right menu */
+  .col.right{display:flex;flex-direction:column}
+  .col.right>*{flex:none}
+  #mrfoot{margin-top:auto;position:sticky;bottom:0;padding:10px 0 6px;border-top:1px solid var(--line);
+    background:var(--bg);display:flex;flex-direction:column;gap:6px}
+  #mrfoot .mfrow{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--line);
+    border-radius:11px;cursor:pointer;background:hsl(var(--hue) 24% 16% / .6);color:var(--ink);font:600 13.5px Inter}
+  #mrfoot .mfrow .ctplus,#mrfoot .mfrow .cog,#mrfoot .mfrow .holoplus{width:34px;height:34px;border-radius:50%;
+    border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:none;pointer-events:none}
+  /* the SAME footer tab bar the pure phone app has (hidden when framed inside the app) */
+  #mtabbar{position:fixed;left:0;right:0;bottom:0;z-index:74;display:flex;height:58px;
+    background:linear-gradient(0deg,hsl(var(--hue) 26% 12%),hsl(var(--hue) 26% 10% / .92));border-top:1px solid var(--line)}
+  #mtabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    background:transparent;border:0;color:var(--ink);font:600 10px Inter;cursor:pointer}
+  #mtabbar button .mti{font-size:17px;line-height:1}
+  body.framed #mtabbar{display:none}
+  .mid{padding-bottom:74px}
+  body.framed .mid{padding-bottom:40px}
 }
-@media (min-width:821px){ #mtools{display:none} }
+@media (min-width:821px){ #mtools,#mrfoot,#mtabbar,#msearchx,.mheb{display:none} }
 /* holographic collapse ✕ (close the verse study / menu) */
 .holocollapse{background:transparent;border:0;cursor:pointer;font:800 15px Inter;line-height:1;
   background-image:linear-gradient(92deg,#ff5b8a,#ffb14e,#ffe14e,#5fd3a2,#59b8ff,#a58cff,#ff5b8a);background-size:280% 100%;
@@ -1260,16 +1290,17 @@ html.guest .conclbtn{display:none}  /* conclusions are for signed-in users, not 
   </div>
 </div>
 <header id="topbar">
-  <span id="mnav"><button id="mleftbtn" title="Sources">&#9776;</button><button id="mrightbtn" title="Verse study">&#128065;</button></span>
+  <span id="mnav"><button id="mleftbtn" title="Sources">&#9776;</button><button id="mrightbtn" title="Menu &amp; verse study">&#9776;</button></span>
   <button class="ctbtn lefttoggle" id="lefttoggle" title="Menu / Chats &amp; Notes history">&#9776;</button>
   <button class="ctplus holoplus" id="studiobtn" title="Studio: critique video content against the words of Christ">&#128247;</button>
-  <button class="brandbtn" id="homebtn" title="Home -- back to the start"><span class="yahbible holo">YahBible</span></button>
+  <button class="brandbtn" id="homebtn" title="Home -- back to the start"><span class="mheb">&#1488;</span><span class="yahbible holo">YahBible</span><span class="mheb">&#1514;</span></button>
   <button class="brandbtn" id="tavielbtn" title="Ask Tav'iel -- the AI chat"><span class="mark" title="Tav -- the mark/seal of truth">&#1514;</span><span class="brand">Tav<em>'iel</em></span></button>
   <div class="searchwrap" id="searchwrap">
     <input id="q" placeholder="Search scripture -- verse, phrase, or word&hellip;" autocomplete="off">
     <button class="mic" id="mic" title="Speak your search">&#127908;</button>
     <button class="go" id="gobtn" title="Find in the scriptures">Find</button>
     <button class="ask" id="askbtn" title="Ask Tav'iel the grounded AI (answers from the roots, not the search index)">Ask Tav&#39;iel</button>
+    <button id="msearchx" title="Close search" style="display:none">&#10005;</button>
   </div>
   <span class="ctspacer"></span>
   <button class="ctplus holoplus" id="splitplus" title="Split into study panes">&#10022;</button>
@@ -3997,33 +4028,73 @@ applySet(); boot(); loadCommandments();
     if(e.target.closest('.w,.vn,.origtok')) { f.classList.add('mright'); }
   });
 })();
-/* CONDENSED MOBILE HEADER: relocate every header control except ☰/YahBible/Tav'iel/☰
-   into #mtools at the top of the right menu — and restore them on desktop widths. */
+/* CONDENSED MOBILE HEADER + right-menu tools/footer + the phone footer tab bar.
+   Header keeps ☰ · א YahBible ת · + ✛ · Tav'iel · ☰; verpick/history/sync go to the
+   right menu's top tools; Profile/Settings/Studio Mode pin to its bottom. Everything
+   restores on desktop widths. */
 (function(){
-  var IDS=['searchwrap','lefttoggle','studiobtn','splitplus','notesplus','mobsync','profilebtn','cog'];
+  var TOP=['lefttoggle','mobsync'];                       // -> #mtools row (with verpick)
+  var FOOT=[['profilebtn','Profile'],['cog','Settings'],['studiobtn','Studio Mode']];
   var marks={}, moved=false;
-  function el(id){return document.getElementById(id)||document.querySelector('.'+id);}
+  function el(id){return document.getElementById(id);}
   function verpick(){return document.querySelector('.verpick');}
-  function ensureMarks(){ if(marks.done)return;
-    IDS.forEach(function(id){var n=el(id); if(n){var m=document.createComment('mt:'+id);
-      n.parentNode.insertBefore(m,n); marks[id]=m;}});
-    var v=verpick(); if(v){var m=document.createComment('mt:verpick'); v.parentNode.insertBefore(m,v); marks.verpick=m;}
-    marks.done=true; }
-  function toMenu(){ if(moved)return; ensureMarks();
+  function mark(n,key){ if(!marks[key]){var m=document.createComment('mt:'+key); n.parentNode.insertBefore(m,n); marks[key]=m;} }
+  function toMenu(){ if(moved)return;
     var side=document.getElementById('side'); if(!side)return;
-    var t=document.getElementById('mtools');
+    var t=el('mtools');
     if(!t){ t=document.createElement('div'); t.id='mtools'; side.insertBefore(t,side.firstChild); }
-    var sw=el('searchwrap'); if(sw)t.appendChild(sw);
     var row=t.querySelector('.mtrow');
     if(!row){ row=document.createElement('div'); row.className='mtrow'; t.appendChild(row); }
-    var v=verpick(); if(v)row.appendChild(v);
-    IDS.slice(1).forEach(function(id){var n=el(id); if(n)row.appendChild(n);});
+    var v=verpick(); if(v){ mark(v,'verpick'); row.appendChild(v); }
+    TOP.forEach(function(id){var n=el(id); if(n){ mark(n,id); row.appendChild(n); }});
+    var f=el('mrfoot');
+    if(!f){ f=document.createElement('div'); f.id='mrfoot'; side.appendChild(f); }
+    FOOT.forEach(function(p){ var n=el(p[0]); if(!n)return; mark(n,p[0]);
+      var r=document.createElement('div'); r.className='mfrow';
+      r.appendChild(n); var s=document.createElement('span'); s.textContent=p[1]; r.appendChild(s);
+      r.onclick=function(ev){ if(ev.target!==n) n.click(); };
+      f.appendChild(r); });
     moved=true; }
   function toHeader(){ if(!moved)return;
-    IDS.forEach(function(id){var n=el(id),m=marks[id]; if(n&&m&&m.parentNode)m.parentNode.insertBefore(n,m.nextSibling);});
-    var v=verpick(); if(v&&marks.verpick&&marks.verpick.parentNode)marks.verpick.parentNode.insertBefore(v,marks.verpick.nextSibling);
+    ['verpick'].concat(TOP).concat(FOOT.map(function(p){return p[0];})).forEach(function(key){
+      var n=(key==='verpick')?verpick():el(key), m=marks[key];
+      if(n&&m&&m.parentNode)m.parentNode.insertBefore(n,m.nextSibling); });
+    var f=el('mrfoot'); if(f)f.innerHTML='';
     moved=false; }
   function apply(){ if(window.matchMedia('(max-width:820px)').matches) toMenu(); else toHeader(); }
   apply(); window.addEventListener('resize',apply);
+})();
+/* Tav'iel morphs the header into the search bar (mic · Find · Ask) on phones */
+(function(){
+  var hd=document.querySelector('header'); if(!hd)return;
+  var tb=document.getElementById('tavielbtn'), x=document.getElementById('msearchx');
+  if(tb)tb.addEventListener('click',function(e){
+    if(window.innerWidth>820)return;                      // desktop keeps its own behavior
+    e.stopPropagation(); e.preventDefault();
+    hd.classList.add('msearch');
+    var q=document.getElementById('q'); if(q)setTimeout(function(){q.focus();},60);
+  },true);
+  if(x)x.onclick=function(){hd.classList.remove('msearch');};
+})();
+/* the SAME footer the pure phone app has — hidden when framed inside the app */
+(function(){
+  try{ if(window.self!==window.top){ document.body.classList.add('framed'); } }catch(e){ document.body.classList.add('framed'); }
+  var bar=document.createElement('nav'); bar.id='mtabbar';
+  bar.innerHTML='<button data-t="home"><span class="mti">&#127968;</span>Home</button>'+
+    '<button data-t="bible"><span class="mti">&#128214;</span>Bible</button>'+
+    '<button data-t="study"><span class="mti">&#128220;</span>Study</button>'+
+    '<button data-t="repent"><span class="mti">&#128330;</span>Repent</button>'+
+    '<button data-t="realizeus"><span class="mti">&#128081;</span>RealizeUS</button>';
+  document.body.appendChild(bar);
+  var f=document.querySelector('.frame');
+  bar.querySelectorAll('button').forEach(function(b){ b.onclick=function(){
+    var t=b.dataset.t;
+    if(f)f.classList.remove('mleft','mright');
+    if(t==='home'){ goHome(); }
+    else if(t==='bible'){ if(f)f.classList.add('mleft'); }
+    else if(t==='study'){ if(typeof renderTenCmd==='function')renderTenCmd(); if(f)f.classList.add('mright'); }
+    else if(t==='repent'){ if(typeof openRepentance==='function')openRepentance(); }
+    else if(t==='realizeus'){ window.open('https://www.RealizeUS.me/@yahwehtsidkenu','_blank'); }
+  };});
 })();
 </script></body></html>"""

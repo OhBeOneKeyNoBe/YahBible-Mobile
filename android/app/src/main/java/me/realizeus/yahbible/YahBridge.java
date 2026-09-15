@@ -125,6 +125,7 @@ public final class YahBridge {
                     Os.setenv("YAHBIBLE_NO_D", "1", true);
                     Os.setenv("YAHBIBLE_ANDROID", "1", true);
                     Os.setenv("YAHBIBLE_SHIPPED", "1", true);
+                    Os.setenv("YAHBIBLE_LAN", "1", true);   // 📡 a computer on this phone's Wi-Fi/hotspot can mirror the app
                     Os.setenv("HOME", act.getFilesDir().getAbsolutePath(), true);
                 } catch (Throwable ignored) {}
                 if (!Python.isStarted()) Python.start(new AndroidPlatform(act));
@@ -155,4 +156,24 @@ public final class YahBridge {
 
     @JavascriptInterface
     public boolean aiLoaded() { return TavLlm.isLoaded(); }
+
+    /** This phone's LAN/hotspot IPv4 — a computer on the same network mirrors the app there. */
+    @JavascriptInterface
+    public String lanAddress() {
+        try {
+            java.util.Enumeration<java.net.NetworkInterface> ifs =
+                    java.net.NetworkInterface.getNetworkInterfaces();
+            while (ifs.hasMoreElements()) {
+                java.net.NetworkInterface ni = ifs.nextElement();
+                if (!ni.isUp() || ni.isLoopback()) continue;
+                java.util.Enumeration<java.net.InetAddress> as = ni.getInetAddresses();
+                while (as.hasMoreElements()) {
+                    java.net.InetAddress a = as.nextElement();
+                    if (a instanceof java.net.Inet4Address && a.isSiteLocalAddress())
+                        return a.getHostAddress();
+                }
+            }
+        } catch (Throwable ignored) {}
+        return "";
+    }
 }

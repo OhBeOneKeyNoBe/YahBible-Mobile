@@ -459,10 +459,13 @@ async function buildSources(){ const d=$('#leftdrawer');
     '<div class="srcacc" id="acc_q"><button class="accbtn">Questionable Sources <span class="acccar">▸</span></button>'+
       '<div class="accbody">'+SRC_GROUPS.questionable.map(srcAccHtml).join('')+'</div></div>'+
     '<div class="lmfoot">'+
+      ((function(){const df=$('#deskframe');return df&&!df.hidden;})()
+        ? '<button class="srcline" id="lexitdesk"><span class="si">✕</span>Exit desktop view</button>' : '')+
       '<button class="srcline" id="lprofile"><span class="si">👤</span>Profile</button>'+
       '<button class="srcline" id="lsettings"><span class="si">⚙️</span>Settings</button>'+
     '</div>';
   $('#ldx',d).onclick=closeDrawers;
+  const lx=$('#lexitdesk',d); if(lx) lx.onclick=()=>{closeDrawers();exitDesktop();};
   $('#lprofile',d).onclick=()=>{closeDrawers();openProfile();};
   $('#lsettings',d).onclick=()=>{closeDrawers();openSettings();};
   const ll=$('#lmlogos',d); if(ll) ll.onclick=()=>openLogos();
@@ -797,14 +800,17 @@ async function engineDownloadData(){ if(_engDl&&_engDl.running){ toast('Already 
 }
 function _engNext(){ const d=_engDl; if(!d||d.i>=d.files.length){ if(d)d.running=false; refreshEngineUI(); toast('✓ Desktop data installed'); return; }
   const f=d.files[d.i];
+  f._try=(f._try||0)+1;
   YahNative.download(ENGINE_BASE+f.gz, f.rel, true);
   const bar=$('#engbar'), lbl=$('#englbl');
   const poll=setInterval(()=>{
     let st={}; try{ st=JSON.parse(YahNative.dlStatus(f.rel)); }catch(e){}
-    if(lbl) lbl.textContent='('+(d.i+1)+'/'+d.files.length+') '+f.rel.split('/').pop()+' — '+Math.round((st.done||0)/1048576)+' MB';
+    if(lbl) lbl.textContent='('+(d.i+1)+'/'+d.files.length+') '+f.rel.split('/').pop()+' — '+Math.round((st.done||0)/1048576)+' MB'+(f._try>1?' (retry '+(f._try-1)+')':'');
     if(bar&&f.size) bar.firstChild.style.width=Math.min(100,Math.round(100*(st.done||0)/f.size))+'%';
     if(st.state==='done'){ clearInterval(poll); d.i++; _engNext(); }
-    else if(st.state==='error'){ clearInterval(poll); d.running=false; toast('✗ download failed: '+f.rel+' — tap again to resume'); refreshEngineUI(); }
+    else if(st.state==='error'){ clearInterval(poll);
+      if(f._try<4){ toast('↻ retrying '+f.rel.split('/').pop()+'…'); setTimeout(_engNext, 2500); }   // auto-retry, 3 attempts
+      else { d.running=false; toast('✗ '+f.rel.split('/').pop()+' failed 3 times — tap Download again to resume'); refreshEngineUI(); } }
   }, 600);
 }
 function engineDownloadAI(mi){ const mdl=AI_MODELS[mi]; if(!mdl) return;
@@ -843,8 +849,13 @@ async function buildEngineSec(el){
       '<div class="packbar" id="aibar'+x.i+'"><span></span></div><div class="setnote" id="ailbl'+x.i+'"></div></div>').join('')+
     '<div class="camblbl" style="margin-top:14px">3 · The engine</div>'+
     (st==='up'
-      ? '<button class="connectbtn" id="engenter">🖥️ ENTER THE FULL DESKTOP (offline) →</button>'
-      : '<button class="connectbtn" id="engstart"'+(ds.have?'':' disabled')+'>'+(st==='starting'?'⏳ starting…':'▶ Start the Full Engine')+'</button>')+
+      ? '<button class="connectbtn" id="engenter">🖥️ ENTER THE FULL DESKTOP (offline) →</button>'+
+        (function(){ let ip=''; try{ ip=YahNative.lanAddress&&YahNative.lanAddress()||''; }catch(e){}
+          return ip?('<p class="setnote">📡 <b>Mirror to a computer:</b> share your phone’s Wi-Fi/hotspot and open '+
+            '<b>http://'+esc(ip)+':41537</b> in the computer’s browser — your desktop app, served live FROM this phone.</p>'):''; })()
+      : (ds.total&&ds.have>=ds.total
+          ? '<button class="connectbtn" id="engstart">'+(st==='starting'?'⏳ starting…':'▶ Start the Full Engine')+'</button>'
+          : '<button class="connectbtn" id="engstart" disabled>▶ Start (needs all '+(ds.total||33)+' data files — '+ds.have+' installed)</button>'))+
     '<p class="setnote">Tav\'iel inside it is grounded in Scripture and settled truth, searches the Bible however you name a verse, cites every quote checkably, and remembers your walks (TempTorus memory).</p>';
   const dl=$('#engdl',el); if(dl) dl.onclick=engineDownloadData;
   el.querySelectorAll('.aidl').forEach(b=>b.onclick=()=>engineDownloadAI(+b.dataset.i));
@@ -1501,8 +1512,7 @@ function showDesktop(u){ u=normUrl(u||deskUrl()); if(!u) return;
   // so the map (or any page inside) can never trap you without a menu.
   // visibility (not display) keeps the layout, so the tab bar stays at the bottom.
   $('#view').style.visibility='hidden';
-  const dx=$('#deskexit'); if(dx)dx.hidden=false;
-  try{ window.__tab='desktop'; }catch(e){}
+  try{ window.__tab='desktop'; }catch(e){}   // the exit lives in the left menu, not floating
 }
 function exitDesktop(){ const df=$('#deskframe'); if(df){df.hidden=true; df.src='about:blank';}
   $('#view').style.visibility='';
