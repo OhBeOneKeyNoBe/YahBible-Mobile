@@ -162,7 +162,8 @@ function showHome(){ _qi=Math.floor(Math.random()*QUOTES.length);
     '<div class="quote" id="homeq"></div><div class="qref" id="homeqr"></div>'+
     cta+'</div>');
   $('#view').querySelectorAll('.homebtn').forEach(b=>b.onclick=()=>nav(b.dataset.go));
-  rotQuote(); clearInterval(_qTimer); _qTimer=setInterval(rotQuote,7000); }
+  rotQuote(); clearInterval(_qTimer);
+  _qTimer=setInterval(rotQuote, Math.max(5,+appSettings().quotesecs||7)*1000); }
 function rotQuote(){ const q=$('#homeq'), r=$('#homeqr'); if(!q) return; const [txt,ref]=QUOTES[_qi%QUOTES.length];
   q.style.opacity=0; setTimeout(()=>{ q.textContent='“'+txt+'”'; r.textContent=ref; q.style.transition='opacity .5s'; q.style.opacity=1; },250); _qi++; }
 
@@ -256,11 +257,13 @@ function openReader(bi,ch,verse){ const b=KJV.books[bi]; if(!b) return; _tab='bi
   $('#view').querySelectorAll('.rvn').forEach((n)=>n.onclick=e=>{e.stopPropagation();selectVerse(bi,ch,+n.parentElement.id.slice(2));});
   $('#view').querySelectorAll('.rw').forEach((w)=>w.onclick=e=>{e.stopPropagation();tapWord(b,ch,+w.dataset.v,w.textContent,w);});
   $('#ilbtn').onclick=()=>toggleChapterInterlinear(b,ch);
+  if(appSettings().olc==='off'){ const e=$('#ilbtn'); if(e)e.style.display='none'; }   // eye set to English-only
   $('#verbtn').onclick=()=>toggleChapterVersions(b,ch);
   initSwipe($('#rdbody'),go);
   _rd={bi:bi,ch:ch}; _ilOn=false; _verOn=false;
   colorOriginals(b,ch);   // highlight which words have an original (desktop-style), if the pack is here
   watchReadThrough(bi,ch);   // profile progress: read-through marks the chapter
+  watchContinuous(bi);       // continuous scroll (if enabled): bottom auto-loads the next chapter
   if(verse){ const el=$('#rv'+verse); if(el) setTimeout(()=>el.scrollIntoView({block:'center'}),60); }
 }
 function wordize(tx,v){ return tx.split(/(\s+)/).map(t=>/[A-Za-z]/.test(t)
@@ -298,6 +301,7 @@ async function toggleChapterInterlinear(b,ch){
   if(!(window.YBPacks && await YBPacks.have('ws:'+b.a).catch(()=>false))){
     toast('Download the word‑study pack to see the original here'); connectPrompt(); return; }
   _ilOn=true; if(btn){btn.classList.add('on','loading');}
+  const rb=$('#rdbody'); if(rb) rb.classList.toggle('hebonly', appSettings().olc==='heb');   // OLC: pure Hebrew
   try{
     const ws=await YBPacks.ensureBookWords(b.a); const S=await YBPacks.ensureStrongs().catch(()=>({}));
     const verses=b.ch[ch-1]||[];
@@ -323,6 +327,17 @@ function showStrongDefToast(sid,glyph,S){ const def=strongLook(S,sid); toast(gly
 /* chapter-level version comparison: stack the user's favourite versions under each verse (tree, desktop-style) */
 let _verOn=false;
 function favVersions(){ try{ return JSON.parse(localStorage.getItem('yb_fav_versions')||'null')||['akjv','asv','BSB','basicenglish']; }catch(e){ return ['akjv','asv','BSB','basicenglish']; } }
+/* version code -> language / display name (data/verlang.js, from the desktop versions DB) */
+function verLang(c){ const m=(window.YB_VERLANG||{})[c]; return m?m.l:'Other'; }
+function verName(c){ const m=(window.YB_VERLANG||{})[c]; return m?m.n:c; }
+function allLangs(){ const s=new Set(['English']); Object.values(window.YB_VERLANG||{}).forEach(m=>s.add(m.l||'Other')); return [...s].sort((a,b)=>a==='English'?-1:b==='English'?1:a.localeCompare(b)); }
+/* the comparison list: filtered by the chosen languages (English always on), minus the
+   eye-hidden versions, in the user's chosen order */
+function orderedVisibleVersions(codes){ const s=appSettings();
+  let list=codes.filter(c=>verLang(c)==='English'||s.langs.indexOf(verLang(c))>=0);
+  list=list.filter(c=>s.hidden.indexOf(c)<0);
+  const inx=c=>{ const i=s.verorder.indexOf(c); return i<0?999:i; };
+  return list.sort((a,b)=>inx(a)-inx(b)||a.localeCompare(b)); }
 async function toggleChapterVersions(b,ch){
   const btn=$('#verbtn');
   if(_verOn){ _verOn=false; document.querySelectorAll('.ilslot').forEach(s=>s.innerHTML=''); if(btn)btn.classList.remove('on'); return; }
@@ -389,9 +404,12 @@ function showRealizeUS(){ clearInterval(_qTimer);
 /* ================= DRAWERS (left = sources, right = verse study) — mirrors desktop ================= */
 const DESK_KEY='yb_desktop_url';
 function deskUrl(){ try{ return localStorage.getItem(DESK_KEY)||''; }catch(e){ return ''; } }
-function closeDrawers(){ ['#leftdrawer','#rightdrawer','#scrim'].forEach(s=>{const e=$(s);if(e)e.hidden=true;}); }
+function closeDrawers(){ ['#leftdrawer','#rightdrawer','#scrim'].forEach(s=>{const e=$(s);if(e)e.hidden=true;});
+  document.body.classList.remove('seethru'); }
 function openDrawer(side){ const d=$(side==='left'?'#leftdrawer':'#rightdrawer'); const other=$(side==='left'?'#rightdrawer':'#leftdrawer');
   if(other)other.hidden=true; $('#scrim').hidden=false;
+  // menu transparency reveals the FISH, not the page: the main view steps aside while a menu is open
+  document.body.classList.toggle('seethru', (+appSettings().menutrans||0)>0);
   if(side==='left') buildSources(); else buildStudy();
   d.hidden=false; }
 /* LEFT drawer — the sources menu (all the sacred books), grouped like the desktop left menu */
@@ -415,24 +433,28 @@ const SRC_LABEL={ethiopian_apocrypha:'Ethiopian Apocrypha',redletter:'Red Letter
   mishnah:'Mishnah',tosefta:'Tosefta',kabbalah:'Kabbalah',josephus:'Josephus',torah:'Torah (Hebrew)',yahweh_tsidkenu_full:'Yahweh Tsidkenu'};
 async function srcItemHtml(id){ const got=window.YBPacks && await YBPacks.have('src:'+id).catch(()=>false);
   return '<button class="srcline'+(got?'':' dl')+'" data-src="'+esc(id)+'"><span class="si">'+(got?'📖':'⬇')+'</span>'+esc(SRC_LABEL[id]||id)+'</button>'; }
+/* every non-Bible source is the SAME kind of accordion as the Torah: source -> books -> chapters */
+function srcAccHtml(id){ return '<div class="srcacc srcnest" data-srcacc="'+esc(id)+'">'+
+  '<button class="accbtn"><span class="si">⬇</span>'+esc(SRC_LABEL[id]||id)+' <span class="acccar">▸</span></button>'+
+  '<div class="accbody sbody"></div></div>'; }
 async function buildSources(){ const d=$('#leftdrawer');
   d.innerHTML='<div class="drawhdr"><span class="dt holo-gold">Holy Bible</span><button class="drawx" id="ldx">✕</button></div>'+
-    '<button class="lmlogos" id="lmlogos"><span class="lmyhwh">יהוה</span> The Logos</button>'+
+    '<button class="accbtn lmlogosrow" id="lmlogos"><span><span class="lmyhwh">יהוה</span> The Logos</span></button>'+
     '<div class="srcgroup">'+
       '<div class="srcacc bookgrp" data-grp="torah"><button class="accbtn">The Torah <span class="acccar">▸</span></button><div class="accbody bglist"></div></div>'+
       '<div class="srcacc bookgrp" data-grp="ot"><button class="accbtn">Old Testament <span class="acccar">▸</span></button><div class="accbody bglist"></div></div>'+
       '<div class="srcacc bookgrp" data-grp="nt"><button class="accbtn">New Testament <span class="acccar">▸</span></button><div class="accbody bglist"></div></div>'+
-      '<button class="srcline dl" data-src="ethiopian_apocrypha"><span class="si">⬇</span>Ethiopian Apocrypha</button>'+
-      '<button class="srcline dl" data-src="redletter"><span class="si">⬇</span>Red Letter Words</button>'+
+      srcAccHtml('ethiopian_apocrypha')+
+      srcAccHtml('redletter')+
     '</div>'+
     '<div class="srcacc" id="acc_gn"><button class="accbtn">Gnostic Scriptures <span class="acccar">▸</span></button>'+
       '<div class="accbody"><button class="srcline gnmap" data-map="1"><span class="si">🗺</span>Gnostic Map (2D/3D)</button>'+
       '<button class="srcline gnmap" data-lineage="1"><span class="si">✶</span>Gnostic Lineage</button>'+
-      SRC_GROUPS.gnostic.map(id=>'<button class="srcline dl" data-src="'+id+'"><span class="si">⬇</span>'+esc(SRC_LABEL[id]||id)+'</button>').join('')+'</div></div>'+
+      SRC_GROUPS.gnostic.map(srcAccHtml).join('')+'</div></div>'+
     '<div class="srcacc" id="acc_q"><button class="accbtn">Questionable Sources <span class="acccar">▸</span></button>'+
-      '<div class="accbody">'+SRC_GROUPS.questionable.map(id=>'<button class="srcline dl" data-src="'+id+'"><span class="si">⬇</span>'+esc(SRC_LABEL[id]||id)+'</button>').join('')+'</div></div>'+
+      '<div class="accbody">'+SRC_GROUPS.questionable.map(srcAccHtml).join('')+'</div></div>'+
     '<button class="connectbtn" id="dlall" style="margin:12px 0 6px">⬇ Download everything (offline)</button>'+
-    '<button class="srcline" id="lsettings" style="border-color:rgba(233,200,119,.4);margin-top:4px"><span class="si">⚙️</span>Settings &amp; Downloads</button>';
+    '<button class="srcline" id="lsettings" style="border-color:rgba(var(--goldrgb),.4);margin-top:4px"><span class="si">⚙️</span>Settings &amp; Downloads</button>';
   $('#ldx',d).onclick=closeDrawers;
   $('#lsettings',d).onclick=()=>{closeDrawers();openSettings();};
   const ll=$('#lmlogos',d); if(ll) ll.onclick=()=>openLogos();
@@ -440,11 +462,31 @@ async function buildSources(){ const d=$('#leftdrawer');
   // Bible groups: click a group -> books expand inline; click a book -> chapter NUMBERS expand
   // inline; click a number -> jump straight to that chapter (never taking over the main area).
   d.querySelectorAll('.bookgrp>.accbtn').forEach(a=>a.onclick=()=>{ const acc=a.parentElement; acc.classList.toggle('open'); fillBookGroup(acc); });
-  d.querySelectorAll('.srcline[data-src]').forEach(b=>b.onclick=()=>openSource(b.dataset.src,b));
+  // every other source unfolds the same way: books, then chapters, inline in the menu
+  d.querySelectorAll('.srcnest>.accbtn').forEach(a=>a.onclick=()=>{ const acc=a.parentElement; acc.classList.toggle('open'); fillSourceAcc(acc); });
   d.querySelectorAll('.gnmap').forEach(b=>b.onclick=()=>{ if(b.dataset.lineage) openGnosticLineage(); else openGnosticMap(); });
-  d.querySelectorAll('.srcacc:not(.bookgrp)>.accbtn').forEach(a=>a.onclick=()=>a.parentElement.classList.toggle('open'));
+  d.querySelectorAll('.srcacc:not(.bookgrp):not(.srcnest)>.accbtn').forEach(a=>a.onclick=()=>a.parentElement.classList.toggle('open'));
   // mark installed sources with the book icon
-  d.querySelectorAll('.srcline[data-src]').forEach(async b=>{ if(window.YBPacks && await YBPacks.have('src:'+b.dataset.src).catch(()=>false)){ b.classList.remove('dl'); const si=b.querySelector('.si'); if(si)si.textContent='📖'; } });
+  d.querySelectorAll('.srcnest').forEach(async n=>{ if(window.YBPacks && await YBPacks.have('src:'+n.dataset.srcacc).catch(()=>false)){ const si=n.querySelector('.si'); if(si)si.textContent='📖'; } });
+}
+/* fill a source accordion: download if needed, then books -> chapter numbers, inline */
+async function fillSourceAcc(acc){ const id=acc.dataset.srcacc, body=acc.querySelector('.sbody');
+  if(!body||body.dataset.done) return;
+  body.innerHTML='<div class="srcnote">loading…</div>';
+  let data=_srcCache[id];
+  try{ if(!data){ data=await YBPacks.ensureSource(id); _srcCache[id]=data; } }
+  catch(e){ body.innerHTML='<div class="srcnote">needs internet to download — tap again to retry</div>'; return; }
+  body.dataset.done='1';
+  const si=acc.querySelector('.si'); if(si)si.textContent='📖';
+  const books=Object.keys(data||{});
+  body.innerHTML=books.map((bk,i)=>'<div class="bookacc" data-sb="'+i+'"><button class="bkbtn">'+esc(bk)+' <span class="acccar">▸</span></button><div class="chwrap"></div></div>').join('')||'<div class="srcnote">no books</div>';
+  body.querySelectorAll('.bookacc').forEach(ba=>{ const bk=books[+ba.dataset.sb];
+    ba.querySelector('.bkbtn').onclick=()=>{
+      const groups=srcChapters(data[bk]||[]);
+      if(groups.length<=1){ closeDrawers(); openSourceBook(id,bk); return; }   // one chapter: open it
+      ba.classList.toggle('open'); const w=ba.querySelector('.chwrap'); if(w.childElementCount) return;
+      w.innerHTML=groups.map(g=>'<button class="chnum" data-ch="'+esc(g.ch)+'">'+esc(g.ch)+'</button>').join('');
+      w.querySelectorAll('.chnum').forEach(cb=>cb.onclick=()=>{ closeDrawers(); openSourceBook(id,bk,cb.dataset.ch); }); }; });
 }
 /* Left-menu accordions: a Bible group expands to its books; a book expands to its chapter numbers. */
 function fillBookGroup(acc){ const body=acc.querySelector('.bglist'); if(!body||body.childElementCount) return;
@@ -618,20 +660,23 @@ async function openSource(id, btn){
   $('#srcback').onclick=()=>{nav('bible');};
   $('#view').querySelectorAll('.srcbook').forEach(r=>r.onclick=()=>openSourceBook(id,books[+r.dataset.b]));
 }
-function openSourceBook(id,book){ const data=_srcCache[id]||{}; const units=data[book]||[];
-  // organize into chapters by the ref (e.g. "3:14" -> chapter 3), like the desktop reader
-  const groups=[]; let cur=null;
-  units.forEach(u=>{ const ref=String(u[0]||''); const m=ref.match(/(\d+)\s*[:.·]\s*\d+/);
+/* organize a source book's units into chapters by their ref ("3:14" -> chapter 3) */
+function srcChapters(units){ const groups=[]; let cur=null;
+  (units||[]).forEach(u=>{ const ref=String(u[0]||''); const m=ref.match(/(\d+)\s*[:.·]\s*\d+/);
     const ch=m?m[1]:((ref.match(/^\s*(\d+)\s*$/)||[])[1]||'');
     if(!cur||cur.ch!==ch){ cur={ch:ch,rows:[]}; groups.push(cur); } cur.rows.push(u); });
+  return groups; }
+function openSourceBook(id,book,chapter){ const data=_srcCache[id]||{}; const units=data[book]||[];
+  const groups=srcChapters(units);
   const multi=groups.length>1;
-  const body=groups.map(g=>{ const head=(multi&&g.ch)?'<div class="rchap">Chapter '+esc(g.ch)+'</div>':'';
+  const body=groups.map(g=>{ const head=(multi&&g.ch)?'<div class="rchap" id="sch'+esc(g.ch)+'">Chapter '+esc(g.ch)+'</div>':'';
     return head+g.rows.map(u=>{ const ref=String(u[0]||''); const vn=(ref.match(/[:.·]\s*(\d+)\s*$/)||[])[1]||ref;
       return '<p class="rv"><span class="rvn">'+esc(vn)+'</span>'+esc(u[1]||'')+'</p>'; }).join(''); }).join('');
   setView('<div class="screen reader"><div class="rdbar"><button class="backbtn" id="sbk">◀ '+esc(SRC_LABEL[id]||id.replace(/_/g,' '))+'</button>'+
     '<div class="rdttl">'+esc(book)+'</div><div></div></div>'+
     '<div class="rdbody"><div class="srcbookttl holo-gold">'+esc(book)+'</div>'+(body||'<div class="srcnote">no text</div>')+'</div></div>');
   $('#sbk').onclick=()=>openSource(id);
+  if(chapter){ const el=document.getElementById('sch'+chapter); if(el) setTimeout(()=>el.scrollIntoView({block:'start'}),80); }
 }
 /* the right-menu nav (desktop-style): Settings, News (א-ת), Repentance (dove), Ten Commandments */
 function rightNavHtml(){ const pulse=newsUnseen()?' pulse':'';
@@ -675,9 +720,10 @@ async function showVsPanel(kind,b,ch,v){ const el=$('#vspanel'); if(!el) return;
   try{
     if(kind==='versions'){
       const data=await YBPacks.ensureBookVersions(b.a);
-      const rows=Object.keys(data||{}).sort().map(vc=>{ const t=(((data[vc]||{})[ch]||{})[v])||''; if(!t) return '';
-        return '<div class="vrow"><span class="vcode">'+esc(vc)+'</span><span class="vtxt">'+esc(t)+'</span></div>'; }).filter(Boolean).join('');
-      el.innerHTML='<div class="cxlbl">Across '+ (rows?Object.keys(data).length:0) +' versions</div><div class="vlist">'+(rows||'<div class="srcnote">no data for this verse</div>')+'</div>';
+      const codes=orderedVisibleVersions(Object.keys(data||{}));
+      const rows=codes.map(vc=>{ const t=(((data[vc]||{})[ch]||{})[v])||''; if(!t) return '';
+        return '<div class="vrow"><span class="vcode" title="'+esc(verName(vc))+'">'+esc(vc)+'</span><span class="vtxt">'+esc(t)+'</span></div>'; }).filter(Boolean).join('');
+      el.innerHTML='<div class="cxlbl">Across '+codes.length+' versions (your languages, order &amp; eyes — Settings)</div><div class="vlist">'+(rows||'<div class="srcnote">no data for this verse</div>')+'</div>';
     }else{
       const ws=await YBPacks.ensureBookWords(b.a);
       const toks=(((ws||{})[ch]||{})[v])||[];
@@ -747,47 +793,85 @@ async function openSettings(){ clearInterval(_qTimer);
       '<input id="lg_pw" class="setinput" type="password" placeholder="Password" style="margin-bottom:10px">'+
       '<div class="setrow"><button id="dosignin" class="connectbtn" style="width:auto;padding:10px 16px">Sign in</button>'+
       '<button id="doguest" class="miniupd">Continue as guest</button></div></div>';
+  const a=appSettings();
+  const OPEN=window._setOpen=(window._setOpen||{eye:false,appear:true});
+  const sec=(id,ttl,inner)=>'<div class="srcacc setsec'+(OPEN[id]?' open':'')+'" data-sec="'+id+'">'+
+    '<button class="accbtn">'+ttl+' <span class="acccar">▸</span></button><div class="accbody">'+inner+'</div></div>';
+  const chip=(cls,on,data,label,title)=>'<button class="favchip '+cls+(on?' on':'')+'" '+data+(title?' title="'+esc(title)+'"':'')+'>'+label+'</button>';
+  /* 👁 eye settings — OLC + the version-comparison picker (desktop parity) */
+  const favs=favVersions();
+  const olcSeg='<div class="camblbl">👁 Original Language — what the chapter eye shows</div><div class="setrow" style="flex-wrap:wrap;gap:8px">'+
+    [['heb','Pure Hebrew'],['both','Hebrew + English'],['off','English only']].map(m=>chip('s_olc',a.olc===m[0],'data-m="'+m[0]+'"',m[1])).join('')+'</div>';
+  const byl={}; Object.keys(window.YB_VERLANG||{}).forEach(c=>{ const l=verLang(c); (byl[l]=byl[l]||[]).push(c); });
+  const vlcLangs=['English'].concat(a.langs.filter(l=>l!=='English')).filter(l=>byl[l]);
+  const vlcPick='<div class="camblbl" style="margin-top:12px">🌳 Version comparison — stacks under each verse (up to 7)</div>'+
+    vlcLangs.map(l=>'<div class="langgrp">'+esc(l)+'</div><div class="favver">'+byl[l].sort().map(c=>
+      chip('vlcv',favs.indexOf(c)>=0,'data-v="'+esc(c)+'"',esc(c),verName(c))).join('')+'</div>').join('')+
+    '<p class="setnote">'+favs.length+'/7 selected · more languages under 🌐 below</p>';
+  /* 🌐 languages + version order & eyes */
+  const langChips='<div class="camblbl">Comparison languages (English always on)</div><div class="favver">'+
+    allLangs().map(l=>chip('s_lang'+(l==='English'?' lock':''),l==='English'||a.langs.indexOf(l)>=0,'data-l="'+esc(l)+'"',esc(l))).join('')+'</div>';
+  const ordCodes=(function(){ let list=Object.keys(window.YB_VERLANG||{}).filter(c=>verLang(c)==='English'||a.langs.indexOf(verLang(c))>=0);
+    const inx=c=>{ const i=a.verorder.indexOf(c); return i<0?999:i; };
+    return list.sort((x,y)=>inx(x)-inx(y)||x.localeCompare(y)); })();
+  const ordList='<div class="camblbl" style="margin-top:12px">Version order &amp; eyes (the compare list)</div>'+
+    '<p class="setnote">The 👁 hides a version from comparisons; ↑ ↓ set the order they stack in.</p>'+
+    '<div id="vorder">'+ordCodes.map(c=>'<div class="vorow" data-v="'+esc(c)+'">'+
+      '<button class="voeye'+(a.hidden.indexOf(c)>=0?' off':'')+'" title="show / hide">👁</button>'+
+      '<span class="voname"><b>'+esc(c)+'</b> '+esc(verName(c))+'</span>'+
+      '<button class="vomv" data-d="-1">↑</button><button class="vomv" data-d="1">↓</button></div>').join('')+'</div>';
   setView('<div class="screen study"><button class="backbtn" data-back="bible">◀ back</button>'+
     '<div class="cmdno">App</div><h2 class="cmdttl">Settings</h2>'+
     acctCard+
     (upd&&upd>APP_CONTENT_VER?'<div class="updbanner">✨ New study content available (v'+esc(upd)+'). <button id="applyupd" class="miniupd">Update now</button></div>':'')+
-    '<div class="cmdsec"><div class="cmdeye">Add to the app</div><h3>Expanded, downloadable packs</h3>'+
-    '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+
-    rows.join('')+'</div>'+
-    (function(){ const a=appSettings(); return '<div class="cmdsec"><div class="cmdeye">Appearance</div><h3>Look &amp; feel</h3>'+
+    sec('eye','👁 Eye settings', olcSeg+vlcPick)+
+    sec('appear','🎨 Appearance &amp; theme',
+      '<div class="camblbl">Theme</div><div class="setrow" style="flex-wrap:wrap;gap:8px">'+
+      [['parchment','Parchment'],['sepia','Sepia'],['night','Night']].map(t=>chip('s_theme',a.theme===t[0],'data-t="'+t[0]+'"',t[1])).join('')+'</div>'+
+      '<div class="setctl"><label>Reader text size</label><input type="range" id="s_reader" min="14" max="26" value="'+a.reader+'"></div>'+
+      '<div class="setctl"><label>Hebrew / original text size</label><input type="range" id="s_heb" min="16" max="40" value="'+a.hebsize+'"></div>'+
       '<div class="setctl"><label>Accent hue</label><input type="range" id="s_hue" min="0" max="360" value="'+a.hue+'"></div>'+
-      '<div class="setctl"><label>Background visibility</label><input type="range" id="s_fish" min="0" max="70" value="'+a.fishvis+'"></div>'+
-      '<div class="setctl"><label>Reading text size</label><input type="range" id="s_reader" min="14" max="24" value="'+a.reader+'"></div>'+
-      '<div class="setrow"><button id="s_hrand" class="favchip'+(+a.huerand>0?' on':'')+'">🎨 Auto-shift hue</button></div></div>'; })()+
-    (function(){ const colnames=['Red','Orange','Yellow','Green','Blue','Indigo','Violet','Pink','White','🌈 Holographic'];
+      '<div class="setrow"><label class="setnote" style="margin:0">Auto-randomize hue</label><select id="s_hrandsel" class="setinput" style="width:auto">'+
+        [[0,'Off'],[15,'Every 15s'],[30,'Every 30s'],[60,'Every minute'],[300,'Every 5 min']].map(o=>'<option value="'+o[0]+'"'+(+a.huerand===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select></div>'+
+      '<div class="setrow"><label class="setnote" style="margin:0">Christ-quote change interval (seconds)</label>'+
+      '<input type="number" id="s_qsecs" class="setinput" style="width:80px" min="5" max="3600" step="5" value="'+a.quotesecs+'"></div>')+
+    sec('bgfish','🐟 Background &amp; the fish',
+      '<div class="setrow"><button class="favchip'+(a.showbg?' on':'')+'" id="s_showbg">🐟 Holy-fish background</button></div>'+
+      '<div class="setctl"><label>Background &amp; fish visibility</label><input type="range" id="s_fish" min="0" max="70" value="'+a.fishvis+'"></div>'+
+      '<div class="setctl"><label>Content transparency (reveal the fish)</label><input type="range" id="s_centerop" min="20" max="100" value="'+a.centerop+'"></div>'+
+      '<div class="setctl"><label>Menu transparency (reveal the fish)</label><input type="range" id="s_menutrans" min="0" max="100" value="'+a.menutrans+'"></div>'+
+      '<p class="setnote">With menu transparency on, an open menu reveals the fish behind it — never the page you were reading.</p>')+
+    sec('reading','📖 Reading',
+      '<div class="setrow"><button class="favchip'+(+a.contscroll?' on':'')+'" id="s_cont">📜 Continuous scroll (auto-load next chapter)</button></div>')+
+    sec('langs','🌐 Languages &amp; version order', langChips+ordList)+
+    sec('studio','🎥 Studio', (function(){ const colnames=['Red','Orange','Yellow','Green','Blue','Indigo','Violet','Pink','White','🌈 Holographic'];
       const block=(id,label)=>{ const p=camPrefs(id); return '<div class="camblock"><div class="camblbl">'+label+'</div><div class="setrow" style="flex-wrap:wrap;gap:8px">'+
         '<button class="favchip cam_color" data-cam="'+id+'">Border: '+colnames[p.color%10]+'</button>'+
         '<button class="favchip cam_form" data-cam="'+id+'">Shape: '+({round:'Round',land:'Landscape',port:'Portrait'}[p.form])+'</button>'+
         '<button class="favchip cam_mirror'+(p.mirror?' on':'')+'" data-cam="'+id+'">🪞 Mirror</button>'+
         '<button class="favchip cam_green'+(p.green?' on':'')+'" data-cam="'+id+'">🟩 Green-screen</button></div></div>'; };
-      const a2=appSettings();
       const bgRow='<div class="camblock"><div class="camblbl">🖼 Stream background</div>'+
         '<p class="setnote">Replaces the swimming fish behind the app while you stream — the header, verse and buttons stay visible. Pick one, or upload your own from your gallery.</p>'+
         '<div class="setrow" style="flex-wrap:wrap;gap:8px">'+
-        '<button class="bgthumb fish bg_pick'+(a2.studiobg===''?' on':'')+'" data-bg="" title="Holy fish">🐟</button>'+
-        STUDIO_BGS.map(b=>'<button class="bgthumb bg_pick'+(a2.studiobg===b[0]?' on':'')+'" data-bg="'+b[0]+'" title="'+b[1]+'" style="background-image:url(\''+b[0]+'\')"></button>').join('')+
-        '<button class="bgthumb up'+(a2.studiobg==='custom'?' on':'')+'" id="bg_upload" title="Upload your own">⬆</button>'+
+        '<button class="bgthumb fish bg_pick'+(a.studiobg===''?' on':'')+'" data-bg="" title="Holy fish">🐟</button>'+
+        STUDIO_BGS.map(b=>'<button class="bgthumb bg_pick'+(a.studiobg===b[0]?' on':'')+'" data-bg="'+b[0]+'" title="'+b[1]+'" style="background-image:url(\''+b[0]+'\')"></button>').join('')+
+        '<button class="bgthumb up'+(a.studiobg==='custom'?' on':'')+'" id="bg_upload" title="Upload your own">⬆</button>'+
         '<input type="file" id="bg_file" accept="image/*" style="display:none"></div></div>';
-      const homeRow='<div class="setrow" style="margin-top:8px"><button class="favchip'+(a2.homebtns===0?'':' on')+'" id="s_homebtns">🏠 Home-screen buttons</button>'+
+      const homeRow='<div class="setrow" style="margin-top:8px"><button class="favchip'+(a.homebtns===0?'':' on')+'" id="s_homebtns">🏠 Home-screen buttons</button>'+
         '<span class="setnote" style="margin:0">turn off for a clean screen while streaming</span></div>';
-      return '<div class="cmdsec"><div class="cmdeye">Studio</div><h3>Camera &amp; studio</h3>'+
-      '<p class="setnote">The 🎥 button opens/closes the cameras. Front and back cameras have independent settings — they apply live.</p>'+
-      block('cam','🤳 Front camera')+block('cam2','📷 Back camera')+bgRow+homeRow+'</div>'; })()+
-    '<div class="cmdsec"><div class="cmdeye">Reading</div><h3>Favourite versions</h3>'+
-    '<p class="setnote">Pick the translations to stack under each verse when you tap the tree 🌳 in a chapter.</p>'+
-    '<div class="favver" id="favver">'+[['akjv','KJV'],['asv','ASV'],['BSB','BSB'],['basicenglish','BBE'],['ERV','ERV'],['GNV','Geneva'],['ylt','YLT'],['web','WEB'],['darby','Darby'],['aleppo','Aleppo (Heb)']].map(v=>'<button class="favchip'+(favVersions().indexOf(v[0])>=0?' on':'')+'" data-v="'+v[0]+'">'+v[1]+'</button>').join('')+'</div></div>'+
-    '<div class="cmdsec"><div class="cmdeye">Beyond the packs</div><h3>Sync with your desktop</h3>'+
-    '<p class="setnote">Enter your PC’s <b>network address</b> (not localhost) &mdash; e.g. <b>http://192.168.1.20:41537</b>. Your phone and PC must be on the same Wi‑Fi, and the desktop must have <b>Network / LAN mode</b> turned on (in the desktop app’s settings). <b>127.0.0.1 will not work</b> from a phone.</p>'+
-    '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://192.168.x.x:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Test &amp; save</button></div>'+
-    '<button id="openfull" class="connectbtn" style="margin-top:10px">🖥️ Open the full desktop app (1:1) →</button>'+
-    '<p class="setnote">When your desktop is reachable, this loads the complete YahBible &mdash; every book, all 120+ versions, the deep word study, the 2D/3D Gnostic map &mdash; exactly as on desktop.</p></div>'+
-    '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">Study content v'+APP_CONTENT_VER+' · <button id="chkupd" class="miniupd">Check for updates</button></p></div>'+
+      return '<p class="setnote">The 🎥 button opens/closes the cameras. Front and back cameras have independent settings — they apply live.</p>'+
+        block('cam','🤳 Front camera')+block('cam2','📷 Back camera')+bgRow+homeRow; })())+
+    sec('packs','📦 Downloads &amp; packs',
+      '<p class="setnote">These download once and then work offline. Big packs (like all 120+ versions) can be a couple of gigabytes — about the size of one mobile game.</p>'+rows.join(''))+
+    sec('sync','🖥️ Desktop sync',
+      '<p class="setnote">Enter your PC’s <b>network address</b> (not localhost) &mdash; e.g. <b>http://192.168.1.20:41537</b>. Your phone and PC must be on the same Wi‑Fi, and the desktop must have <b>Network / LAN mode</b> turned on. <b>127.0.0.1 will not work</b> from a phone.</p>'+
+      '<div class="setrow"><input id="deskurl" class="setinput" placeholder="http://192.168.x.x:41537" value="'+esc(deskUrl())+'"><button id="savedesk" class="connectbtn" style="width:auto;padding:9px 14px">Test &amp; save</button></div>'+
+      '<button id="openfull" class="connectbtn" style="margin-top:10px">🖥️ Open the full desktop app (1:1) →</button>')+
+    '<div class="cmdsec"><div class="cmdeye">Version</div><p class="setnote">Study content v'+APP_CONTENT_VER+' · <button id="chkupd" class="miniupd">Check for updates</button> · <button id="s_reset" class="miniupd">Reset to defaults</button></p></div>'+
     '<button class="cmdback" id="cmdback">◀ back</button></div>');
+  // section accordions remember their open state across re-renders
+  $('#view').querySelectorAll('.setsec>.accbtn').forEach(ab=>ab.onclick=()=>{ const p=ab.parentElement;
+    p.classList.toggle('open'); OPEN[p.dataset.sec]=p.classList.contains('open'); });
   $('#view').querySelectorAll('.backbtn,#cmdback').forEach(b=>b.onclick=()=>nav('bible'));
   const cu=$('#chkupd'); if(cu) cu.onclick=()=>checkUpdates(false).then(()=>openSettings());
   const au=$('#applyupd'); if(au) au.onclick=()=>applyContentUpdate();
@@ -806,7 +890,32 @@ async function openSettings(){ clearInterval(_qTimer);
   const sh=$('#s_hue'); if(sh) sh.oninput=()=>setAppSetting('hue',+sh.value);
   const sf=$('#s_fish'); if(sf) sf.oninput=()=>setAppSetting('fishvis',+sf.value);
   const sr=$('#s_reader'); if(sr) sr.oninput=()=>setAppSetting('reader',+sr.value);
-  const shr=$('#s_hrand'); if(shr) shr.onclick=()=>{ const a=appSettings(); setAppSetting('huerand', a.huerand>0?0:15); shr.classList.toggle('on'); };
+  const shb=$('#s_heb'); if(shb) shb.oninput=()=>setAppSetting('hebsize',+shb.value);
+  const sco=$('#s_centerop'); if(sco) sco.oninput=()=>setAppSetting('centerop',+sco.value);
+  const smt=$('#s_menutrans'); if(smt) smt.oninput=()=>setAppSetting('menutrans',+smt.value);
+  const shr=$('#s_hrandsel'); if(shr) shr.onchange=()=>setAppSetting('huerand',+shr.value);
+  const sqs=$('#s_qsecs'); if(sqs) sqs.onchange=()=>setAppSetting('quotesecs',Math.max(5,+sqs.value||7));
+  const sbg=$('#s_showbg'); if(sbg) sbg.onclick=()=>{ setAppSetting('showbg', appSettings().showbg?0:1); sbg.classList.toggle('on'); };
+  const sct=$('#s_cont'); if(sct) sct.onclick=()=>{ setAppSetting('contscroll', +appSettings().contscroll?0:1); sct.classList.toggle('on'); };
+  const srs=$('#s_reset'); if(srs) srs.onclick=()=>{ try{localStorage.removeItem('yb_app_settings');}catch(e){} applyAppSettings(); toast('Settings reset'); openSettings(); };
+  $('#view').querySelectorAll('.s_theme').forEach(bt=>bt.onclick=()=>{ setAppSetting('theme',bt.dataset.t);
+    $('#view').querySelectorAll('.s_theme.on').forEach(x=>x.classList.remove('on')); bt.classList.add('on'); });
+  $('#view').querySelectorAll('.s_olc').forEach(bt=>bt.onclick=()=>{ setAppSetting('olc',bt.dataset.m);
+    $('#view').querySelectorAll('.s_olc.on').forEach(x=>x.classList.remove('on')); bt.classList.add('on'); });
+  $('#view').querySelectorAll('.s_lang').forEach(bt=>bt.onclick=()=>{ const l=bt.dataset.l; if(l==='English') return;
+    const s=appSettings(); const i=s.langs.indexOf(l); if(i>=0)s.langs.splice(i,1); else s.langs.push(l);
+    setAppSetting('langs',s.langs); openSettings(); });
+  $('#view').querySelectorAll('.vlcv').forEach(bt=>bt.onclick=()=>{ let f=favVersions(); const v=bt.dataset.v;
+    const i=f.indexOf(v); if(i>=0)f.splice(i,1); else { if(f.length>=7){ toast('Up to 7 versions in the stack'); return; } f.push(v); }
+    try{localStorage.setItem('yb_fav_versions',JSON.stringify(f));}catch(e){} bt.classList.toggle('on'); });
+  $('#view').querySelectorAll('.voeye').forEach(bt=>bt.onclick=()=>{ const c=bt.parentElement.dataset.v; const s=appSettings();
+    const i=s.hidden.indexOf(c); if(i>=0)s.hidden.splice(i,1); else s.hidden.push(c);
+    setAppSetting('hidden',s.hidden); bt.classList.toggle('off'); });
+  $('#view').querySelectorAll('.vomv').forEach(bt=>bt.onclick=()=>{ const row=bt.parentElement, c=row.dataset.v, d=+bt.dataset.d;
+    const box=$('#vorder'); const rowsEls=[...box.querySelectorAll('.vorow')]; const i=rowsEls.indexOf(row); const j=i+d;
+    if(j<0||j>=rowsEls.length) return;
+    if(d<0) box.insertBefore(row,rowsEls[j]); else box.insertBefore(rowsEls[j],row);
+    setAppSetting('verorder',[...box.querySelectorAll('.vorow')].map(r=>r.dataset.v)); });
   $('#view').querySelectorAll('.cam_color').forEach(bt=>bt.onclick=()=>{ const id=bt.dataset.cam; const p=camPrefs(id); p.color=(p.color+1)%CAMCOLORS.length; setCamPrefs(id,p); openSettings(); });
   $('#view').querySelectorAll('.cam_form').forEach(bt=>bt.onclick=()=>{ const id=bt.dataset.cam; const p=camPrefs(id); const o=['round','land','port']; p.form=o[(o.indexOf(p.form)+1)%3]; setCamPrefs(id,p); openSettings(); });
   $('#view').querySelectorAll('.cam_mirror').forEach(bt=>bt.onclick=()=>{ const id=bt.dataset.cam; const p=camPrefs(id); p.mirror=!p.mirror; setCamPrefs(id,p); bt.classList.toggle('on'); });
@@ -816,8 +925,6 @@ async function openSettings(){ clearInterval(_qTimer);
   const bu=$('#bg_upload'), bf=$('#bg_file');
   if(bu&&bf){ bu.onclick=()=>bf.click(); bf.onchange=()=>{ if(bf.files&&bf.files[0]) uploadStudioBg(bf.files[0]); }; }
   const hb=$('#s_homebtns'); if(hb) hb.onclick=()=>{ const a=appSettings(); setAppSetting('homebtns', a.homebtns===0?1:0); hb.classList.toggle('on'); };
-  $('#view').querySelectorAll('#favver .favchip').forEach(ch=>ch.onclick=()=>{ let f=favVersions(); const v=ch.dataset.v;
-    const i=f.indexOf(v); if(i>=0)f.splice(i,1); else f.push(v); try{localStorage.setItem('yb_fav_versions',JSON.stringify(f));}catch(e){} ch.classList.toggle('on'); });
   wirePackRows();
 }
 /* ---------- reading progress: a chapter counts as read once opened and scrolled through ---------- */
@@ -832,6 +939,30 @@ function watchReadThrough(bi,ch){ const v=$('#view'); if(!v) return;
     if(v.scrollHeight<=v.clientHeight+40){ done(); return; }        // fits on one screen = read on open
     _readWatchFn=()=>{ if(v.scrollTop+v.clientHeight>=v.scrollHeight-60) done(); };
     v.addEventListener('scroll',_readWatchFn,{passive:true}); },400); }
+/* continuous scroll (desktop parity): reaching the bottom auto-loads the next chapter in place */
+let _contFn=null,_contBusy=false;
+function watchContinuous(bi){ const v=$('#view'); if(!v) return;
+  if(_contFn){ v.removeEventListener('scroll',_contFn); _contFn=null; }
+  if(!+appSettings().contscroll) return;
+  _contFn=()=>{ if(_contBusy) return;
+    if(v.scrollTop+v.clientHeight>=v.scrollHeight-140) appendNextChapter(bi); };
+  v.addEventListener('scroll',_contFn,{passive:true}); }
+function appendNextChapter(bi){ const b=KJV.books[bi]; if(!b||!_rd||_rd.bi!==bi) return;
+  const nch=_rd.ch+1; if(nch>b.ch.length) return;
+  _contBusy=true;
+  markRead(bi,_rd.ch);                                  // the current chapter was scrolled through
+  const verses=b.ch[nch-1]||[];
+  const rb=$('#rdbody'); if(!rb){ _contBusy=false; return; }
+  const wrap=document.createElement('div');
+  wrap.innerHTML='<div class="rchap">'+esc(b.n)+' '+nch+'</div>'+
+    verses.map((tx,i)=>'<p class="rv" id="rvc'+nch+'_'+(i+1)+'"><span class="rvn">'+(i+1)+'</span>'+wordize(tx,i+1)+'</p>').join('');
+  rb.appendChild(wrap);
+  wrap.querySelectorAll('.rvn').forEach(n=>n.onclick=e=>{ e.stopPropagation();
+    selectVerse(bi,nch,+n.parentElement.id.split('_')[1]); });
+  wrap.querySelectorAll('.rw').forEach(w=>w.onclick=e=>{ e.stopPropagation(); tapWord(b,nch,+w.dataset.v,w.textContent,w); });
+  _rd.ch=nch; const t=document.querySelector('#view .rdttl'); if(t)t.textContent=b.n+' '+nch;
+  watchReadThrough(bi,nch);
+  setTimeout(()=>{ _contBusy=false; },300); }
 function progressStats(){ const p=readProg(); const g={torah:[0,0],ot:[0,0],nt:[0,0],all:[0,0]};
   KJV.books.forEach((b,i)=>{ const read=Object.keys(p[b.a]||{}).length, tot=b.ch.length;
     const grp=i<5?'torah':(b.t==='OT'?'ot':'nt');
@@ -1013,15 +1144,26 @@ function camPrefs(id){ id=id||'cam'; const all=_camAll();
   const dflt=(id==='cam')?{color:6,form:'round',mirror:false,green:false}:{color:4,form:'round',mirror:true,green:false};
   return Object.assign(dflt, all[id]||{}); }
 /* app appearance settings (parity with desktop: accent hue, background/fish visibility, reader size, hue randomize) */
-function appSettings(){ const d={hue:270,fishvis:22,reader:17,huerand:0,studiobg:'',homebtns:1};
-  try{ return Object.assign(d, JSON.parse(localStorage.getItem('yb_app_settings')||'{}')); }catch(e){ return d; } }
+function appSettings(){ const d={hue:270,fishvis:22,reader:17,huerand:0,studiobg:'',homebtns:1,
+    theme:'night',hebsize:19,quotesecs:7,menutrans:0,centerop:100,showbg:1,contscroll:0,olc:'both',
+    langs:['English'],verorder:[],hidden:[]};
+  try{ const s=Object.assign(d, JSON.parse(localStorage.getItem('yb_app_settings')||'{}'));
+    if(!Array.isArray(s.langs)||!s.langs.length)s.langs=['English'];
+    if(!Array.isArray(s.verorder))s.verorder=[]; if(!Array.isArray(s.hidden))s.hidden=[];
+    return s; }catch(e){ return d; } }
 let _hueTimer=null;
 function applyAppSettings(){ const s=appSettings(); const r=document.documentElement;
   r.style.setProperty('--hue', s.hue);
+  // theme (desktop parity): night is the base; parchment/sepia swap the whole palette
+  if(s.theme&&s.theme!=='night') document.body.dataset.theme=s.theme; else delete document.body.dataset.theme;
   // fishvis (0..70 in the slider) maps to --bgvis (0..~2.3): the whole school + flowers scale together
-  const fbg=$('#fishbg'); if(fbg) fbg.style.setProperty('--bgvis', (s.fishvis/30).toFixed(3));
+  const fbg=$('#fishbg'); if(fbg){ fbg.style.setProperty('--bgvis', (s.fishvis/30).toFixed(3));
+    fbg.style.display = s.showbg?'':'none'; }
   applyStudioBg(s);
   r.style.setProperty('--reader', s.reader+'px');
+  r.style.setProperty('--hebsize', s.hebsize+'px');
+  r.style.setProperty('--menuop', (1-(+s.menutrans||0)/100).toFixed(3));
+  r.style.setProperty('--veil', ((100-(+s.centerop||100))/100).toFixed(3));
   clearInterval(_hueTimer);
   if(+s.huerand>0){ _hueTimer=setInterval(()=>{ const cur=appSettings(); cur.hue=(cur.hue+37)%360; try{localStorage.setItem('yb_app_settings',JSON.stringify(cur));}catch(e){} document.documentElement.style.setProperty('--hue',cur.hue); }, +s.huerand*1000); } }
 function setAppSetting(k,v){ const s=appSettings(); s[k]=v; try{localStorage.setItem('yb_app_settings',JSON.stringify(s));}catch(e){} applyAppSettings(); }
