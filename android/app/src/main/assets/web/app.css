@@ -634,8 +634,12 @@ body.seethru .drawer{box-shadow:none}
 .syncdot{flex:none;width:10px;height:10px;border-radius:50%;background:#5a5470;box-shadow:0 0 0 3px rgba(90,84,112,.25)}
 .syncdot.on{background:#38c172;box-shadow:0 0 0 3px rgba(56,193,114,.25)}
 .syncdot.off{background:#d05252;box-shadow:0 0 0 3px rgba(208,82,82,.22)}
-/* left-menu footer: Profile above Settings, set apart at the bottom */
-.lmfoot{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+/* left-menu footer: Profile above Settings, PINNED to the very bottom of the drawer —
+   when the list is short it sits at the drawer's foot; when long it stays in view */
+#leftdrawer{display:flex;flex-direction:column}
+#leftdrawer>*{flex:none}
+.lmfoot{margin-top:auto;position:sticky;bottom:0;padding:12px 0 4px;border-top:1px solid var(--line);
+  background:linear-gradient(0deg,rgba(var(--bgrgb),var(--menuop)) 70%,rgba(var(--bgrgb),0))}
 .lmfoot .srcline{border-color:rgba(var(--goldrgb),.35)}
 /* the Ten Commandments in the right menu — desktop style: holographic numbers, white text */
 .tclist{display:flex;flex-direction:column;gap:4px;margin-top:6px}
