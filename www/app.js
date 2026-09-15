@@ -1088,7 +1088,12 @@ async function ghReq(method,body){ const c=ghCfg(); if(!c.token) throw new Error
   const r=await fetch(url,{method:method,headers:{'Authorization':'Bearer '+c.token,'Accept':'application/vnd.github+json'},
     body:body?JSON.stringify(body):undefined});
   if(r.status===404) return null;
-  if(!r.ok) throw new Error('GitHub '+r.status);
+  if(!r.ok){ let msg=''; try{ msg=(await r.json()).message||''; }catch(e){}
+    // say WHY, in plain words, instead of a bare status number
+    if(r.status===401) msg='bad or expired token — paste it again';
+    else if(r.status===403&&/rate limit/i.test(msg)) msg='GitHub rate limit — wait a minute';
+    else if(r.status===403) msg=(msg||'forbidden')+' — the token needs Contents: Read & write on '+c.repo;
+    throw new Error('GitHub '+r.status+(msg?(': '+msg):'')); }
   return r.json(); }
 function _b64e(s){ return btoa(unescape(encodeURIComponent(s))); }
 function _b64d(s){ return decodeURIComponent(escape(atob((s||'').replace(/\n/g,'')))); }
