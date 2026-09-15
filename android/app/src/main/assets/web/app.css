@@ -57,7 +57,9 @@ body[data-theme="parchment"] .gnode.angelic .gnname,body[data-theme="sepia"] .gn
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
   font-family:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
 body{display:flex;flex-direction:column;overflow:hidden}
-button{font-family:inherit;color:inherit}
+/* base reset: a button with no style of its own must NEVER fall back to the native
+   white chrome — it inherits the app's ink on a transparent ground */
+button{font-family:inherit;color:inherit;background:transparent;border:none;cursor:pointer}
 h1,h2,h3{margin:0}
 
 /* holy-fish backdrop: a school of swimming fish + rotating Flower-of-Life (seeds of life),
@@ -95,7 +97,7 @@ h1,h2,h3{margin:0}
 .wordmark{font:700 19px "Cormorant Garamond",Georgia,serif;letter-spacing:.02em;display:flex;align-items:center;gap:7px}
 .wordmark .heb{color:var(--gold);font-size:17px}
 .wordmark .yb{background:linear-gradient(92deg,#e9c877,#f0d9a0,#caa24e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;font-weight:700}
-.topbtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:rgba(40,30,55,.5);
+.topbtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:rgba(var(--actrgb),.5);
   display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer}
 .topbtn:active{transform:scale(.94)}
 .topbtn.on{border-color:var(--vio);color:#e8c4f5}
@@ -121,7 +123,7 @@ body.seethru .drawer{box-shadow:none}
 @keyframes slideL{to{transform:translateX(0)}} @keyframes slideR{to{transform:translateX(0)}}
 .drawhdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}
 .drawhdr .dt{font:800 11px Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--gold2)}
-.drawx{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--dim);font-size:15px;cursor:pointer}
+.drawx{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:rgba(var(--actrgb),.5);color:var(--dim);font-size:15px;cursor:pointer}
 .srcgroup{margin-bottom:14px}
 .srclbl{font:800 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--gold2);margin:10px 0 6px;opacity:.9}
 .srcitem{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:10px 11px;margin-bottom:5px;border-radius:10px;cursor:pointer;
@@ -141,7 +143,7 @@ body.seethru .drawer{box-shadow:none}
 .vsref{font:700 20px "Cormorant Garamond",Georgia,serif;margin:2px 0 6px}
 .vstext{font:17px/1.6 var(--fital);color:var(--ink);margin:0 0 12px;padding-left:11px;border-left:2px solid var(--gold2)}
 .vstabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
-.vstab{padding:6px 11px;border-radius:16px;border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--ink2);font:600 12px Inter;cursor:pointer}
+.vstab{padding:6px 11px;border-radius:16px;border:1px solid var(--line);background:rgba(var(--actrgb),.5);color:var(--ink2);font:600 12px Inter;cursor:pointer}
 .vstab.locked{opacity:.7}
 .wchips{display:flex;flex-wrap:wrap;gap:6px;margin:5px 0 14px}
 .wchip{padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:rgba(var(--cardrgb),.5);color:var(--ink);font:500 13px var(--fital);cursor:pointer}
@@ -179,7 +181,7 @@ body.seethru .drawer{box-shadow:none}
 .packbtn.done{border-color:var(--grn);color:var(--grn)}
 .packbtn:disabled{opacity:.6}
 .setrow{display:flex;gap:8px;align-items:center}
-.setinput{width:100%;flex:1;background:rgba(20,14,30,.6);border:1px solid var(--line);border-radius:9px;padding:11px 12px;color:var(--ink);font:15px Inter}
+.setinput{width:100%;flex:1;background:rgba(var(--bgrgb),.6);border:1px solid var(--line);border-radius:9px;padding:11px 12px;color:var(--ink);font:15px Inter}
 .cmdlogin .setrow{gap:10px}
 .acctrow{display:flex;align-items:center;gap:12px}
 .acctav{width:44px;height:44px;border-radius:50%;background:linear-gradient(140deg,#c07ad9,#8a7be8);color:#fff;font:800 20px "Cormorant Garamond",serif;display:flex;align-items:center;justify-content:center;flex:none}
@@ -215,7 +217,7 @@ body.seethru .drawer{box-shadow:none}
 .home .qref{font:700 11px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--gold2);margin-top:6px}
 .home .cta{margin-top:26px;display:flex;flex-direction:column;gap:10px;width:min(320px,86vw)}
 .homebtn{display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;border-radius:14px;cursor:pointer;
-  border:1px solid var(--line);background:linear-gradient(120deg,rgba(42,32,56,.7),rgba(30,22,40,.5));color:var(--ink);font:700 15px Inter}
+  border:1px solid var(--line);background:linear-gradient(120deg,rgba(var(--card2rgb),.7),rgba(var(--card3rgb),.5));color:var(--ink);font:700 15px Inter}
 .homebtn .hi{font-size:22px}
 .homebtn .hs{display:block;font:400 12px "EB Garamond",serif;color:var(--dim);margin-top:1px}
 .homebtn:active{transform:scale(.98)}
@@ -223,7 +225,7 @@ body.seethru .drawer{box-shadow:none}
 /* ---- list (commandments) ---- */
 .listhdr{font:800 11px Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--gold2);margin:4px 0 12px;text-align:center}
 .cmdrow{display:flex;align-items:center;gap:13px;width:100%;text-align:left;padding:14px 15px;margin-bottom:9px;border-radius:13px;cursor:pointer;
-  border:1px solid var(--line);background:linear-gradient(120deg,rgba(42,32,56,.55),rgba(28,20,38,.4));color:var(--ink)}
+  border:1px solid var(--line);background:linear-gradient(120deg,rgba(var(--card2rgb),.55),rgba(var(--card3rgb),.4));color:var(--ink)}
 .cmdrow:active{transform:scale(.99)}
 .cmdrow .num{font:700 20px "Cormorant Garamond",serif;background:linear-gradient(92deg,#e9c877,#caa24e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;min-width:26px;text-align:center}
 .cmdrow .ct{font:600 15px Inter}
@@ -237,7 +239,11 @@ body.seethru .drawer{box-shadow:none}
 /* ---- study page (reused from desktop, mobile-tuned) ---- */
 .study{padding-bottom:10px}
 .backbtn{display:inline-flex;align-items:center;gap:6px;margin-bottom:8px;padding:7px 12px;border-radius:20px;cursor:pointer;
-  border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--ink2);font:600 12px Inter}
+  border:1px solid var(--line);background:rgba(var(--actrgb),.45);color:var(--ink2);font:600 12px Inter}
+/* the '◀ back' pill at the foot of long pages (Logos, commandments, settings, profile) */
+.cmdback{display:block;margin:22px auto 8px;padding:9px 22px;border-radius:22px;cursor:pointer;
+  border:1px solid var(--line);background:rgba(var(--actrgb),.45);color:var(--ink2);font:600 13px Inter}
+.cmdback:active{border-color:var(--gold2);color:var(--gold)}
 .cmdno{font:800 10px Inter;letter-spacing:.18em;text-transform:uppercase;color:var(--gold2);text-align:center;margin-top:4px}
 .cmdttl{font:700 clamp(26px,7vw,34px) "Cormorant Garamond",Georgia,serif;text-align:center;line-height:1.08;margin:3px 0;
   background:linear-gradient(92deg,#e9c877,#f6e6bd,#caa24e);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-wrap:balance}
@@ -348,7 +354,7 @@ body.seethru .drawer{box-shadow:none}
 
 /* prayer buttons */
 .prayacts{display:flex;flex-direction:column;gap:9px;margin-top:14px}
-.seekcounsel,.lordsprayer{cursor:pointer;border-radius:12px;padding:12px 14px;font:700 13.5px Inter;border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--ink);text-align:center}
+.seekcounsel,.lordsprayer{cursor:pointer;border-radius:12px;padding:12px 14px;font:700 13.5px Inter;border:1px solid var(--line);background:rgba(var(--actrgb),.5);color:var(--ink);text-align:center}
 .seekcounsel{border-color:rgba(192,122,217,.5);color:#d3a9e8}
 .lordsprayer{border-color:rgba(var(--goldrgb),.5);color:var(--gold)}
 .lordsprayer.pulse{animation:lppulse 2.6s ease-in-out infinite}
@@ -377,7 +383,7 @@ body.seethru .drawer{box-shadow:none}
 
 /* toast */
 #toast{position:fixed;left:50%;bottom:calc(84px + var(--safe-bot));transform:translateX(-50%) translateY(20px);z-index:80;
-  background:rgba(20,14,30,.95);border:1px solid var(--gold2);color:var(--ink);padding:10px 16px;border-radius:22px;font:600 13px Inter;
+  background:rgba(var(--bgrgb),.95);border:1px solid var(--gold2);color:var(--ink);padding:10px 16px;border-radius:22px;font:600 13px Inter;
   opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:82vw;text-align:center}
 #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -438,7 +444,7 @@ body.seethru .drawer{box-shadow:none}
 .rvn{font:700 10px Inter;color:var(--gold2);vertical-align:super;margin-right:5px}
 .rv.hl{background:rgba(var(--goldrgb),.13);box-shadow:inset 3px 0 0 var(--gold)}
 .rdfoot{display:flex;justify-content:space-between;gap:8px;margin-top:14px}
-.rdmore{padding:10px 14px;border-radius:11px;border:1px solid var(--line);background:rgba(40,30,55,.5);color:var(--gold);font:600 13px Inter;cursor:pointer}
+.rdmore{padding:10px 14px;border-radius:11px;border:1px solid var(--line);background:rgba(var(--actrgb),.5);color:var(--gold);font:600 13px Inter;cursor:pointer}
 /* chapter sub-header: title + holographic eye + white tree (desktop-style) */
 .rdttlwrap{flex:1;display:flex;align-items:center;justify-content:center;gap:9px;min-width:0}
 .ileye{cursor:pointer;font-size:19px;line-height:1;flex:none;opacity:.9;
@@ -646,7 +652,7 @@ body.seethru .drawer{box-shadow:none}
 .rmnav{display:flex;flex-direction:column;gap:7px;margin:0 0 14px}
 .rmitem{position:relative;display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;
   border:1px solid var(--line);border-radius:11px;padding:11px 12px;color:var(--ink);font:700 14px Inter;
-  background:linear-gradient(120deg,rgba(42,32,56,.6),rgba(30,22,40,.35))}
+  background:linear-gradient(120deg,rgba(var(--card2rgb),.6),rgba(var(--card3rgb),.35))}
 .rmitem:active{border-color:var(--gold)}
 .rmi{flex:none;font-size:17px}
 .rmat{font:800 17px "Cormorant Garamond","Noto Serif Hebrew",serif;
