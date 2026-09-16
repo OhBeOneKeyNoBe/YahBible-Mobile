@@ -24,7 +24,7 @@ Grab it first, then keep reading while it downloads.
 
 ## ▶️ See it in action
 
-<video src="https://raw.githubusercontent.com/OhBeOneKeyNoBe/YahBible-Mobile/main/screenshots/tour_mobile.mp4" controls muted loop width="100%"></video>
+<video poster="https://raw.githubusercontent.com/OhBeOneKeyNoBe/YahBible-Mobile/main/screenshots/tour_mobile_poster.jpg" src="https://raw.githubusercontent.com/OhBeOneKeyNoBe/YahBible-Mobile/main/screenshots/tour_mobile.mp4" controls muted loop width="100%"></video>
 
 > A quick tour: reading, tapping a word for its Hebrew/Greek/Aramaic, a commandment, and Uriel’s Heavenly Design.
 
