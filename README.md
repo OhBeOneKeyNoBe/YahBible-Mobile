@@ -34,20 +34,20 @@ Grab it first, then keep reading while it downloads.
 
 | What you get | **YahBible** | YouVersion | Logos / paid suites | Blue Letter Bible |
 | --- | :---: | :---: | :---: | :---: |
-| Free for life — never pay to read, study or research | ✅ | ✅ | 💲 | ✅ |
-| Fully offline — every feature, no signal | ✅ | ◑ | ◑ | ◑ |
+| Free forever — no trial, no subscription | ✅ | 💲 | 💲 | ✅ |
+| Fully offline — every feature, no signal | ✅ | ❌ | ❌ | ❌ |
+| Offline AI search & reasoning — answers with no connection | ✅ | ❌ | ❌ | ❌ |
 | No account required | ✅ | ❌ | ❌ | ✅ |
-| No ads, never sells your data | ✅ | ◑ | ✅ | ✅ |
-| Hebrew, Greek & Aramaic word study — free | ✅ | ❌ | 💲 | ◑ |
+| No ads, never sells your data | ✅ | ❌ | ✅ | ✅ |
+| Hebrew, Greek & Aramaic word study — free | ✅ | ❌ | 💲 | ✅ |
 | Interlinear + Strong's for every word — free | ✅ | ❌ | 💲 | ✅ |
 | The apocrypha — Enoch, Nag Hammadi, Dead Sea Scrolls, Torah in Hebrew | ✅ | ❌ | 💲 | ❌ |
 | Scriptural cosmology — Uriel's Heavenly Design (2D & 3D) | ✅ | ❌ | ❌ | ❌ |
-| An AI guide that answers from Scripture, citing chapter & verse | ✅ | ❌ | ◑ | ❌ |
+| An AI guide that answers from Scripture, citing chapter & verse | ✅ | ❌ | ❌ | ❌ |
 | Studio Mode + greenscreen camera for teaching & streaming | ✅ | ❌ | ❌ | ❌ |
-| One account across web, desktop & phone | ✅ | ✅ | ✅ | ◑ |
-| Study & research never behind a paywall | ✅ | ◑ | 💲 | ✅ |
+| Study & research never behind a paywall | ✅ | ❌ | 💲 | ✅ |
 
-✅ yes · ◑ partial/limited · 💲 paywalled · ❌ no. Comparisons reflect each app's free tier; other apps' names belong to their owners.
+✅ yes · 💲 requires payment or subscription · ❌ no. Only YahBible is fully offline — including its AI search and reasoning — and stays free with no trial or subscription. Other apps' names belong to their owners.
 
 ---
 
