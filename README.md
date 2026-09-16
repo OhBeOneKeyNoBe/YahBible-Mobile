@@ -21,6 +21,13 @@ Grab it first, then keep reading while it downloads.
 > *"Buy the truth, and sell it not; also wisdom, and instruction, and understanding."* — Proverbs 23:23
 > *"Freely ye have received, freely give."* — Matthew 10:8
 
+
+## ▶️ See it in action
+
+<video src="https://raw.githubusercontent.com/OhBeOneKeyNoBe/YahBible-Mobile/main/screenshots/tour.mp4" controls muted loop width="100%"></video>
+
+> A quick tour: reading, tapping a word for its Hebrew/Greek/Aramaic, a commandment, and Uriel’s Heavenly Design.
+
 ---
 
 ## YahBible vs. other Bible apps
@@ -54,7 +61,7 @@ The King James Bible with 120+ translations, verse for verse. Search however you
 ### The Ten Commandments, taught in full
 Open any commandment in the centre: its Scripture, what it forbids, how to keep it inwardly, and the cross-references — the words of Christ in scarlet, every other quote in violet — with Repentance and the way of prayer one tap away.
 
-![The Ten Commandments](screenshots/commandments.png)
+![The Ten Commandments](screenshots/commandments_all.png)
 
 ### Hebrew, Greek & Aramaic word study — for anyone
 Tap any word for its original language, Strong's number, transliteration and letter-by-letter meaning, and every place it is used across Scripture. A lexicon, an interlinear and a concordance in one tap — offline.
