@@ -8,15 +8,19 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        // v0.2 ENGINE line: its OWN app id, so it installs BESIDE the v0.1 lite app
-        // ("YahBible") for side-by-side comparison. The lite line keeps me.realizeus.yahbible.
-        applicationId = "me.realizeus.yahbible.engine"
+        // YahBible v.2 — the ONE app. The full desktop engine + on-device AI are baked in;
+        // this is the canonical id (me.realizeus.yahbible), so it installs OVER the retired
+        // v1 "lite" app and the old side-by-side engine build, replacing them with a single
+        // "YahBible" on the phone.
+        applicationId = "me.realizeus.yahbible"
         minSdk = 26
         targetSdk = 34
         // versionCode rises every shipped build (yyMMddNN) so Android installs updates OVER
         // the old app — keeping settings & downloads — and the version is visible on-device.
-        versionCode = 26091509
-        versionName = "0.2.20260915110"
+        // 26091701 is higher than every prior lite (…26091427) and engine (26091509) build,
+        // so v.2 lands as an update over whichever one is installed.
+        versionCode = 26091701
+        versionName = "2.0"
         ndk { abiFilters += listOf("arm64-v8a") }   // phones; keeps the APK lean
     }
 

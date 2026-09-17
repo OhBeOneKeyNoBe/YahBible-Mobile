@@ -10,13 +10,18 @@ reasons through a **LiteRT `.task` model served by MediaPipe** — the exact sam
 grounded ask-pipeline as the desktop (`tav_llm.py` just swaps the model backend
 to `tav_llm_mobile.py`). No cloud, no signal needed after the downloads.
 
-## Why AI may not have appeared yet
+## One app now: YahBible v.2
 
-The AI lives ONLY in the **v0.2 ENGINE build**, whose application id is
-`me.realizeus.yahbible.engine`. It installs **beside** the older v0.1 "lite"
-app (`me.realizeus.yahbible`), which has **no** Python engine and **no** AI. If
-the app you opened was the lite one, that is why Tav'iel could not think. Open
-the **engine** build (its own icon), not the lite app.
+As of v.2 there is a **single** app. The full desktop engine + on-device AI are
+**baked into** "YahBible" (application id `me.realizeus.yahbible`, versionName
+`2.0`). The old v0.1 "lite" app and the separate side-by-side "YahBible Engine"
+build are **retired** — v.2 carries the canonical id with a higher versionCode
+(`26091701`), so installing it lands as an **update over** whichever old build is
+on the phone, leaving just one "YahBible".
+
+Note on the update: an in-place update only works when the signing key matches
+the installed app. If Android refuses with a signature-mismatch error, uninstall
+the old app once, then install v.2 (you'll re-run the two Settings downloads).
 
 ## What is already in place (audited)
 
@@ -27,7 +32,8 @@ the **engine** build (its own icon), not the lite app.
 - `app/src/main/python/*` — the full engine (o_taviel_server, gen_at_depth,
   taviel_agent, grounding, scripture, …).
 - `app/build.gradle.kts` — Chaquopy 16.1.0 / Python 3.12, MediaPipe
-  `com.google.mediapipe:tasks-genai:0.10.35`, arm64-v8a, minSdk 26.
+  `com.google.mediapipe:tasks-genai:0.10.35`, arm64-v8a, minSdk 26,
+  applicationId `me.realizeus.yahbible` (the one app), versionName `2.0`.
 - Download sources (all confirmed to resolve on Hugging Face):
   - AI model: `litert-community/Qwen2.5-1.5B-Instruct` →
     `Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task` (~1.7 GB). A
@@ -40,9 +46,10 @@ the **engine** build (its own icon), not the lite app.
 From `android/` (needs Android SDK 34, NDK, JDK 17; Gradle is wrapped):
 
 ```bash
-./gradlew :app:assembleRelease        # or assembleDebug for quick device testing
-# APK: app/build/outputs/apk/release/app-release.apk  (arm64, ~50–60 MB;
+./gradlew :app:assembleDebug          # debug-signed, installs directly on a device
+# APK: app/build/outputs/apk/debug/app-debug.apk  (arm64, ~50–60 MB;
 # the model + engine data are downloaded in-app, not bundled)
+# Ship it as YahBible-v2.apk (the landing + HF download point at that name).
 ```
 
 Chaquopy downloads the Python runtime + `cryptography` wheel on the first build,
