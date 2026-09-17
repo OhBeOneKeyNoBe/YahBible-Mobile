@@ -1293,6 +1293,21 @@ html.guest .conclbtn{display:none}  /* conclusions are for signed-in users, not 
 .chatbar textarea::placeholder{color:#8fb4dd}
 .chatbar .csend{background:linear-gradient(115deg,#8fe3ff,#5aa0ff,#8fd4ff);border:none;color:#0a1730;border-radius:12px;padding:0 22px;
   font:700 14px Inter;cursor:pointer;white-space:nowrap;box-shadow:0 0 18px hsl(205 90% 60% / .3)} .chatbar .csend:disabled{opacity:.55;cursor:progress}
+.chatbar{align-items:flex-end}
+.chatbar .cseek{background:linear-gradient(115deg,#8fe3ff,#5aa0ff,#8fd4ff);border:none;color:#0a1730;border-radius:12px;padding:0 16px;min-height:46px;
+  font:700 14px Inter;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 0 18px hsl(205 90% 60% / .3)}
+.chatbar .cseek:hover,.chatbar .csend:hover{filter:brightness(1.07)}
+.chatbar .cthink{min-height:46px;min-width:46px;justify-content:center;border-radius:12px;background:hsl(212 45% 16% / .55);color:#7fa8d6;
+  border:1px solid hsl(205 60% 60% / .3);font-size:18px;cursor:pointer;display:inline-flex;align-items:center;padding:0}
+.chatbar .cthink.on{background:hsl(265 55% 30% / .9);color:#e6d8ff;border-color:#b79cff;box-shadow:0 0 16px hsl(265 70% 55% / .45)}
+.msg.you.seekq{opacity:.92;font-size:14px}
+.msg.tav .seekcite{font:700 11px Inter;letter-spacing:.06em;text-transform:uppercase;color:#8fb4dd;margin-bottom:8px}
+.msg.tav .seekhits{display:flex;flex-direction:column;gap:6px}
+.msg.tav .seekhit{text-align:left;background:hsl(212 45% 16% / .62);border:1px solid hsl(205 80% 66% / .28);border-radius:10px;padding:8px 11px;
+  color:#eaf3ff;cursor:pointer;display:block;width:100%}
+.msg.tav .seekhit:hover{background:hsl(212 52% 22% / .82);border-color:#5aa0ff}
+.msg.tav .seekhit .ref{display:block;font:700 13px Inter;color:#8fd4ff;margin-bottom:2px}
+.msg.tav .seekhit .txt{font-size:14px;line-height:1.45;color:#dbe8f7}
 
 /* chapter nav (continuous-scroll off) */
 .chapnav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0;padding:9px 0;border-top:1px solid var(--paperrule);border-bottom:1px solid var(--paperrule)}
@@ -3508,18 +3523,41 @@ function openTavielChat(){
   const _cq=$('#christquote');if(_cq)_cq.style.display='none';
   saveReader();STATE.apoc=null;CHAT=[];CHATID='~chat~'+Date.now();
   $('#reader').innerHTML=`<div class="chatview">`+
-    `<div class="chatmsgs" id="chatmsgs"><div class="empty">Begin a conversation with Tav'iel &mdash; ask anything.</div></div>`+
-    `<div class="chatbar"><textarea id="chatq" rows="1" placeholder="Ask Tav'iel&hellip;  (Enter to send, Shift+Enter for a new line)"></textarea>`+
+    `<div class="chatmsgs" id="chatmsgs"><div class="empty">Ask Tav'iel anything &mdash; or tap <b>Seek</b> to look up a verse or search Scripture first, right here in the chat.</div></div>`+
+    `<div class="chatbar"><button class="cthink${window.YB_THINK?' on':''}" id="cthink" title="Think deeper — a slower, more thorough and reasoned answer">&#129504;</button>`+
+    `<textarea id="chatq" rows="1" placeholder="Ask Tav'iel&hellip;  &middot;  or a reference / words to Seek"></textarea>`+
+    `<button class="cseek" id="cseek" title="Search Scripture (John 3:16, matt 6 11, love&hellip;) without leaving the chat">&#128269; Seek</button>`+
     `<button class="csend" id="csend">Ask</button></div></div>`;
   $('#mid').scrollTop=0;
-  const ta=$('#chatq'),send=$('#csend');
+  const ta=$('#chatq'),send=$('#csend'),seekb=$('#cseek'),think=$('#cthink');
+  if(think)think.onclick=()=>{window.YB_THINK=!window.YB_THINK;think.classList.toggle('on',!!window.YB_THINK);
+    if(window.toast)toast(window.YB_THINK?'🧠 Think deeper: on — slower, more thorough':'Think deeper: off');};
   const go=()=>{const m=ta.value.trim();if(m){ta.value='';ta.style.height='auto';sendChat(m);}};
-  send.onclick=go;
+  const goSeek=()=>{const m=ta.value.trim();if(m){seekInChat(m);}};
+  send.onclick=go; if(seekb)seekb.onclick=goSeek;
   ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();go();}});
   ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(130,ta.scrollHeight)+'px';});
   setTimeout(()=>ta.focus(),60);
 }
 function chatToBottom(){$('#mid').scrollTop=$('#mid').scrollHeight;}
+/* SEEK INSIDE THE CHAT: search Scripture without leaving the conversation -- the
+   results appear as a Tav'iel message; tap any to open it, then keep chatting. */
+async function seekInChat(q){
+  const box=$('#chatmsgs'); if(!box||!q) return;
+  const emp=box.querySelector('.empty'); if(emp)emp.remove();
+  box.insertAdjacentHTML('beforeend',`<div class="msg you seekq">&#128269; ${esc(q)}</div>`);
+  const qbub=box.lastElementChild;
+  const wrap=document.createElement('div'); wrap.className='msg tav';
+  wrap.innerHTML=`<span class="tmark">&#1514;</span><div class="tbody"><div class="empty">searching Scripture&hellip;</div></div>`;
+  box.appendChild(wrap); chatToBottom();
+  let d; try{d=await api('/api/search?q='+encodeURIComponent(q));}catch(e){d={hits:[],cite:''};}
+  const tb=wrap.querySelector('.tbody');
+  if(!d.hits||!d.hits.length){ tb.innerHTML=`<div class="empty">No matches for &ldquo;${esc(q)}&rdquo;. Try a reference (John 3:16) or a word.</div>`; chatToBottom(); return; }
+  tb.innerHTML=`<div class="seekcite">${esc(d.cite||'')} &middot; ${d.hits.length} result${d.hits.length!==1?'s':''}</div>`+
+    '<div class="seekhits">'+d.hits.slice(0,15).map(x=>`<button class="seekhit" data-b="${esc(x.book)}" data-c="${x.chapter}" data-v="${x.verse||1}"><span class="ref">${esc(x.ref)}</span><span class="txt">${typeof hlTerms==='function'?hlTerms(x.text,q):esc(x.text)}</span></button>`).join('')+'</div>';
+  tb.querySelectorAll('.seekhit').forEach(el=>el.onclick=()=>openChapter(el.dataset.b,+el.dataset.c,+el.dataset.v));
+  if(qbub&&qbub.scrollIntoView) qbub.scrollIntoView({block:'start',behavior:'smooth'}); else chatToBottom();
+}
 async function sendChat(msg){
   const box=$('#chatmsgs');if(!box)return;
   const emp=box.querySelector('.empty');if(emp)emp.remove();
@@ -3542,7 +3580,8 @@ async function sendChat(msg){
     voicesEl.insertAdjacentHTML('beforeend',`<div class="cvoice ck${t.c}"><div class="cvlabel">&#9670; ${esc(t.n)} adds</div>${fmtAnswer(text)}</div>`);chatToBottom();};
   try{
     const resp=await fetch('/api/ask_council_stream',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({q:msg,history:hist})});
+        body:JSON.stringify({q:msg,history:hist,think:!!window.YB_THINK,
+          user:(typeof ME!=='undefined'&&ME&&!ME.guest&&ME.user)?ME.user:''})});
     if(!resp.ok||!resp.body)throw new Error('http '+resp.status);
     const reader=resp.body.getReader();const dec=new TextDecoder();let buf='';
     if(th)th.classList.remove('think');
