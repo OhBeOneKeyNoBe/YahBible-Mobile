@@ -20,6 +20,7 @@ with whatever Elan'iel has open.
 """
 
 import json
+import random
 import os
 import subprocess
 import sys
@@ -241,6 +242,10 @@ class LlamaModel:
             ],
             "max_tokens": max_tokens,
             "temperature": temperature,
+            "top_p": 0.92,
+            # a FRESH random seed each call, so the same question is answered anew
+            # every time (a fixed/default seed made every reply word-for-word identical)
+            "seed": random.randint(1, 2147483647),
             # discourage the verbatim-repeat / self-parroting behavior
             "presence_penalty": 0.6,
             "frequency_penalty": 0.5,
@@ -285,6 +290,8 @@ class LlamaModel:
             ],
             "max_tokens": max_tokens,
             "temperature": temperature,
+            "top_p": 0.92,
+            "seed": random.randint(1, 2147483647),   # fresh each call → varied replies
             "presence_penalty": 0.6,
             "frequency_penalty": 0.5,
             "stream": True,
