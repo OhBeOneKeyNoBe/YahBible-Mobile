@@ -126,11 +126,17 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap
 .tcitem .tct{flex:1}
 .tcfoot{text-align:center;font:11px Inter;color:var(--dim);margin-top:8px;font-style:italic}
 .cmdstudy{max-width:760px;margin:0 auto;padding:8px 8px 48px;text-align:left}
-.cmdno{font:800 11px Inter;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);text-align:center}
-.cmdttl{font-family:"Cormorant Garamond","EB Garamond",serif;font-weight:700;font-size:clamp(28px,4.5vw,44px);text-align:center;display:block;width:100%;margin:4px auto 2px;line-height:1.05}
-.cmdstudy .cmdttl{text-align:center;width:100%;display:block;margin-left:auto;margin-right:auto}
+.cmdno{font:800 13px Inter;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);text-align:center;opacity:.92}
+.cmdttl{font-family:"Cormorant Garamond","EB Garamond",serif;font-weight:700;font-size:clamp(34px,5.6vw,58px);text-align:center;display:block;width:100%;margin:6px auto 4px;line-height:1.03}
+/* words of Christ -> holographic scarlet (like the red-letter words); every other
+   scripture quote -> holographic violet. Both bright + weighted to stay readable. */
+.q-christ,.q-violet{-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;background-size:260% 100%;font-weight:600}
+.q-christ{background-image:linear-gradient(115deg,#ff7a7a,#ffa0b2,#ff5f6f,#ffc4c4,#ff7a7a)}
+.q-violet{background-image:linear-gradient(115deg,#cdb8ff,#b79cff,#e2d5ff,#ac93ff,#cdb8ff)}
+.cscr.q-christ{border-left-color:hsl(2 80% 66% / .6)!important}
+.cmdstudy .cmdttl{text-align:center;width:100%;display:block;margin-left:auto;margin-right:auto;font-size:clamp(36px,5.6vw,58px)}
 .cmdstudy .cmdno,.cmdstudy .cmdfull{text-align:center}
-.cmdfull{font-family:"EB Garamond",serif;font-style:italic;font-size:19px;text-align:center;color:var(--gold);max-width:620px;margin:10px auto 6px;line-height:1.4}
+.cmdfull{font-family:"EB Garamond",serif;font-style:italic;font-size:22px;text-align:center;max-width:640px;margin:12px auto 8px;line-height:1.42}
 .cmdfull .cmdref{display:block;font-style:normal;font:700 11px Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-top:8px}
 .cmdsec{border-top:1px solid var(--line);padding:16px 0 2px;margin-top:14px}
 .cmdeye{font:800 10.5px Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--gold2);margin-bottom:3px;opacity:.85}
@@ -160,7 +166,7 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap
 .cxlbl{font:800 10px Inter;letter-spacing:.14em;text-transform:uppercase;color:var(--vtitle);margin:10px 0 5px}
 .cxlist{margin:0;padding:0;list-style:none}
 .cxlist li{font:14px/1.5 "EB Garamond",serif;color:var(--ink);padding:4px 0 4px 14px;border-left:2px solid hsl(2 60% 48% / .5);margin-bottom:5px}
-.cscr{font:italic 14.5px/1.5 "EB Garamond",serif;color:var(--gold);margin:8px 0;padding-left:12px;border-left:2px solid var(--gold2)}
+.cscr{font:italic 16.5px/1.55 "EB Garamond",serif;margin:10px 0;padding-left:12px;border-left:2px solid hsl(258 70% 72% / .55)}
 .keepbox{margin-top:10px;padding:10px 12px;background:hsl(140 40% 40% / .08);border-left:3px solid #5fd39a;border-radius:0 8px 8px 0;font:15px/1.55 "EB Garamond",serif}
 .cmdinsight h3{color:var(--sky)}
 .cmdinsight .cmdeye{color:var(--sky);opacity:.7}
@@ -241,7 +247,7 @@ header{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap
 /* creed + prayer + reference-line blocks */
 .beliefbox{margin:10px 0;padding:12px 14px;border-radius:10px;border:1px solid hsl(205 60% 55% / .4);background:hsl(205 55% 40% / .08);font:16px/1.55 "EB Garamond",serif;color:var(--ink)}
 .beliefbox .bblbl{display:block;font:800 9.5px Inter;letter-spacing:.16em;text-transform:uppercase;color:var(--sky);margin-bottom:4px}
-.prayerbox{margin:10px 0;padding:12px 16px;border-radius:0 10px 10px 0;border-left:3px solid var(--gold);background:hsl(45 55% 45% / .08);font:italic 16px/1.6 "EB Garamond",serif;color:var(--gold)}
+.prayerbox{margin:10px 0;padding:12px 16px;border-radius:0 10px 10px 0;border-left:3px solid hsl(258 70% 72% / .6);background:hsl(258 55% 55% / .08);font:italic 17px/1.6 "EB Garamond",serif}
 .prayerbox .cscrref{font-style:normal}
 .refline{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline;font:14px/1.5 "EB Garamond",serif;color:var(--ink);padding:3px 0 3px 12px;border-left:2px solid hsl(140 40% 50% / .4);margin:5px 0}
 .refline .rlt{color:var(--ink2)}
@@ -1251,41 +1257,42 @@ html.guest .conclbtn{display:none}  /* conclusions are for signed-in users, not 
 .sview .big{font-family:"Noto Serif Hebrew","GFS Neohellenic",serif;font-size:40px;color:var(--vtitle)}
 .sview .field{margin:10px 0;font:15px Inter} .sview .field b{color:var(--vn);text-transform:uppercase;font:700 11px Inter;letter-spacing:.08em}
 /* Ask Tav'iel -- the grounded AI CHAT (center chat area with a pinned input) */
-.chatview{display:flex;flex-direction:column;min-height:calc(100vh - 66px);max-width:720px;margin:0 auto}
-.chathead{display:flex;align-items:center;gap:10px;padding:6px 0 12px;border-bottom:1px solid var(--line);
-  position:sticky;top:0;background:var(--bg);z-index:3}
-.chathead .avmark{font-family:"Noto Serif Hebrew",serif;font-size:26px;line-height:1;
-  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
-.chathead .avname{color:var(--vtitle);font:700 15px Inter} .chathead .cback{margin-left:auto}
+/* The Tav'iel chat blends into the centre reading area — no header bar, holographic
+   BLUE boards and buttons, translucent so the site background shows through. */
+.chatview{display:flex;flex-direction:column;min-height:calc(100vh - 96px);max-width:860px;margin:0 auto;padding-top:8px}
 .chatmsgs{flex:1;display:flex;flex-direction:column;gap:14px;padding:20px 0 26px}
 .chatmsgs .empty{color:var(--dim);font-style:italic;text-align:center;margin:24px 0}
 .msg{max-width:88%;font:16px/1.62 "EB Garamond",Georgia,serif}
-.msg.you{align-self:flex-end;background:var(--panel2);border:1px solid var(--line);
-  border-radius:14px 14px 4px 14px;padding:10px 14px;color:var(--ink)}
+.msg.you{align-self:flex-end;background:hsl(212 45% 18% / .70);border:1px solid hsl(205 80% 68% / .35);
+  border-radius:14px 14px 4px 14px;padding:10px 14px;color:#eaf3ff;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .msg.tav{align-self:flex-start;display:flex;gap:10px}
-.msg.tav .tmark{font-family:"Noto Serif Hebrew",serif;font-size:20px;color:var(--vtitle);flex:none;line-height:1.7}
-.msg.tav .tbody{background:hsl(262 40% 96%);border:1px solid var(--paperrule);border-left:3px solid var(--vtitle);
-  border-radius:4px 14px 14px 14px;padding:12px 15px;color:var(--paperink)}
+.msg.tav .tmark{font-family:"Noto Serif Hebrew",serif;font-size:20px;flex:none;line-height:1.7;
+  background:linear-gradient(115deg,#8fe3ff,#5aa0ff,#b7e6ff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.msg.tav .tbody{background:hsl(212 45% 14% / .64);border:1px solid hsl(205 80% 66% / .32);border-left:3px solid #5aa0ff;
+  box-shadow:0 0 22px hsl(205 90% 60% / .12);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+  border-radius:4px 14px 14px 14px;padding:12px 15px;color:#eaf3ff}
 .msg.tav .tbody.think{white-space:pre-wrap}
 .msg.tav .tbody p{margin:0 0 10px} .msg.tav .tbody p:last-child{margin-bottom:0}
 /* the like-heart on each of Tav'iel's paragraphs -> saved to the right-menu history */
 .plike{margin-left:6px;padding:0 3px;border:0;background:transparent;cursor:pointer;
-  font-size:13px;color:#c0246a;opacity:.5;vertical-align:baseline}
+  font-size:13px;color:#5aa0ff;opacity:.5;vertical-align:baseline}
 .plike:hover{opacity:1} .plike.on{opacity:1}
 /* the council: the fast primary + the deeper tiers' voices converging (chakra-coloured) */
-.council{margin-top:12px;border-top:1px dashed var(--paperrule);padding-top:8px;display:flex;flex-direction:column;gap:8px}
-.cvoice{border-left:4px solid var(--ck,var(--gold));background:var(--ckbg,transparent);border-radius:0 8px 8px 0;padding:6px 11px}
-.cvoice .cvlabel{font:800 10.5px Inter;letter-spacing:.04em;color:var(--ck,var(--vtitle));text-transform:uppercase;margin-bottom:3px}
+.council{margin-top:12px;border-top:1px dashed hsl(205 60% 60% / .3);padding-top:8px;display:flex;flex-direction:column;gap:8px}
+.cvoice{border-left:4px solid var(--ck,#5aa0ff);background:var(--ckbg,transparent);border-radius:0 8px 8px 0;padding:6px 11px}
+.cvoice .cvlabel{font:800 10.5px Inter;letter-spacing:.04em;color:var(--ck,#8fd4ff);text-transform:uppercase;margin-bottom:3px}
 .cvoice p{margin:0 0 6px;font:13.5px/1.5 "EB Garamond",serif} .cvoice p:last-child{margin-bottom:0}
-:root[data-theme="night"] .msg.tav .tbody{background:hsl(262 22% 16%);color:var(--ink)}
-.msg.tav .tbody.think{color:var(--dim);font-style:italic}
-.asknote{margin-top:9px;font:12px Inter;color:var(--dim)} .asknote b{color:var(--gold)}
-.chatbar{position:sticky;bottom:0;display:flex;gap:8px;padding:12px 0 16px;background:var(--bg);border-top:1px solid var(--line)}
-.chatbar textarea{flex:1;resize:none;background:var(--panelsolid);border:1px solid var(--line);color:var(--ink);
-  border-radius:12px;padding:11px 14px;font:16px "EB Garamond",Georgia,serif;min-height:46px;max-height:130px}
-.chatbar textarea:focus{outline:none;border-color:var(--vtitle);box-shadow:0 0 0 3px hsl(262 60% 60%/.16)}
-.chatbar .csend{background:var(--vtitle);border:none;color:#fff;border-radius:12px;padding:0 20px;
-  font:600 14px Inter;cursor:pointer;white-space:nowrap} .chatbar .csend:disabled{opacity:.55;cursor:progress}
+:root[data-theme="night"] .msg.tav .tbody{background:hsl(212 45% 14% / .64);color:#eaf3ff}
+.msg.tav .tbody.think{color:#a9c7e8;font-style:italic}
+.asknote{margin-top:9px;font:12px Inter;color:var(--dim)} .asknote b{color:#8fd4ff}
+.chatbar{position:sticky;bottom:0;display:flex;gap:8px;padding:12px 0 16px;background:transparent}
+.chatbar textarea{flex:1;resize:none;background:hsl(212 45% 12% / .60);border:1px solid hsl(205 80% 66% / .38);color:#eaf3ff;
+  border-radius:12px;padding:11px 14px;font:16px "EB Garamond",Georgia,serif;min-height:46px;max-height:130px;
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.chatbar textarea:focus{outline:none;border-color:#5aa0ff;box-shadow:0 0 0 3px hsl(205 85% 60%/.22)}
+.chatbar textarea::placeholder{color:#8fb4dd}
+.chatbar .csend{background:linear-gradient(115deg,#8fe3ff,#5aa0ff,#8fd4ff);border:none;color:#0a1730;border-radius:12px;padding:0 22px;
+  font:700 14px Inter;cursor:pointer;white-space:nowrap;box-shadow:0 0 18px hsl(205 90% 60% / .3)} .chatbar .csend:disabled{opacity:.55;cursor:progress}
 
 /* chapter nav (continuous-scroll off) */
 .chapnav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0;padding:9px 0;border-top:1px solid var(--paperrule);border-bottom:1px solid var(--paperrule)}
@@ -1352,7 +1359,7 @@ html.guest .conclbtn{display:none}  /* conclusions are for signed-in users, not 
   <span id="mnav"><button id="mleftbtn" title="Sources">&#9776;</button><button id="mrightbtn" title="Menu &amp; verse study">&#9776;</button></span>
   <button class="ctbtn lefttoggle" id="lefttoggle" title="Menu / Chats &amp; Notes history">&#9776;</button>
   <button class="ctplus holoplus" id="studiobtn" title="Studio: critique video content against the words of Christ">&#128247;</button>
-  <button class="brandbtn" id="homebtn" title="Home -- back to the start"><span class="mheb">&#1488;</span><span class="yahbible holo">YahBible</span><span class="mheb">&#1514;</span></button>
+  <button class="brandbtn" id="homebtn" title="Home -- back to the start"><span class="mheb">&#1488;</span><span class="mheb">&#1514;</span><span class="yahbible holo">YahBible</span></button>
   <button class="brandbtn" id="tavielbtn" title="Ask Tav'iel -- the AI chat"><span class="mark" title="Tav -- the mark/seal of truth">&#1514;</span><span class="brand">Tav<em>'iel</em></span></button>
   <div class="searchwrap" id="searchwrap">
     <input id="q" placeholder="Search scripture -- verse, phrase, or word&hellip;" autocomplete="off">
@@ -3501,13 +3508,10 @@ function openTavielChat(){
   const _cq=$('#christquote');if(_cq)_cq.style.display='none';
   saveReader();STATE.apoc=null;CHAT=[];CHATID='~chat~'+Date.now();
   $('#reader').innerHTML=`<div class="chatview">`+
-    `<div class="chathead"><span class="avmark">&#1514;</span><span class="avname">Tav'iel</span>`+
-    `<button class="navb cback" id="cback">&#9664; back to reading</button></div>`+
     `<div class="chatmsgs" id="chatmsgs"><div class="empty">Begin a conversation with Tav'iel &mdash; ask anything.</div></div>`+
-    `<div class="chatbar"><textarea id="chatq" rows="1" placeholder="Ask Tav'iel&hellip;"></textarea>`+
-    `<button class="csend" id="csend">Send</button></div></div>`;
+    `<div class="chatbar"><textarea id="chatq" rows="1" placeholder="Ask Tav'iel&hellip;  (Enter to send, Shift+Enter for a new line)"></textarea>`+
+    `<button class="csend" id="csend">Ask</button></div></div>`;
   $('#mid').scrollTop=0;
-  $('#cback').onclick=backToReading;
   const ta=$('#chatq'),send=$('#csend');
   const go=()=>{const m=ta.value.trim();if(m){ta.value='';ta.style.height='auto';sendChat(m);}};
   send.onclick=go;
@@ -3778,7 +3782,7 @@ const DIMLAYERS=[
 /* a single man-shaped silhouette (head + robe), nested to form the layers of the person */
 const MAN_PATH='M50 8 C57 8 62 14 62 22 C62 28 58 33 52 34 C66 37 74 52 76 78 C76 100 62 112 50 112 C38 112 24 100 24 78 C26 52 34 37 48 34 C42 33 38 28 38 22 C38 14 43 8 50 8 Z';
 const HOLO_GRAD='<defs><linearGradient id="ybholoG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c07ad9"/><stop offset=".18" stop-color="#8a7be8"/><stop offset=".36" stop-color="#59b8ff"/><stop offset=".54" stop-color="#5fd39a"/><stop offset=".72" stop-color="#e7c94e"/><stop offset=".86" stop-color="#e8912e"/><stop offset="1" stop-color="#e0563b"/></linearGradient></defs>';
-const HOLO_DOVE='<svg class="tcdove" viewBox="0 0 64 64" aria-hidden="true">'+HOLO_GRAD+'<path fill="url(#ybholoG)" fill-rule="nonzero" d="M32 20 C35.3 20 38 22.7 38 26 C38 27 37.8 28 37.4 29 C46 27 55 21 60 11 C58 24 50 32 40 35 C38 45 35 55 32 62 C29 55 26 45 24 35 C14 32 6 24 4 11 C9 21 18 27 26.6 29 C26.2 28 26 27 26 26 C26 22.7 28.7 20 32 20 Z"/></svg>';
+const HOLO_DOVE='<svg class="tcdove" viewBox="0 0 64 64" aria-hidden="true">'+HOLO_GRAD+'<path fill="url(#ybholoG)" fill-rule="evenodd" d="M6 44 C16 42 26 41 33 39 C34 30 39 20 52 16 L60 12 L54 20 C52 26 51 30 50 33 C46 42 40 46 34 47 C24 49 13 49 6 44 Z M52 22 a1.5 1.5 0 1 0 .1 0 Z"/></svg>';
 /* Alpha & Tav (aleph = the first, tav = the last -- the Hebrew Alpha & Omega) */
 const HOLO_AT='<span class="holo tcat" aria-hidden="true">&#1488;&#8202;&#1514;</span>';
 /* make every scripture reference in a block clickable (opens the verse) */
@@ -3787,13 +3791,15 @@ function linkifyScripture(text){ if(!text)return '';
     function(mm,b,c,v){ return '<span class="scref" data-ref="'+esc(b+' '+c+':'+v)+'">'+mm+'</span>'; }); }
 function wireScref(scope){ (scope||document).querySelectorAll('.scref').forEach(el=>el.onclick=e=>{e.stopPropagation();const m=/^(.+?)\s+(\d+):(\d+)/.exec(el.dataset.ref);if(m&&typeof openChapter==='function')openChapter(m[1],+m[2],+m[3]);}); }
 /* render an ordered block list: prose (p), scripture quote (s + ref), reference list (ref) */
+/* words of Christ (a Gospel reference) -> holographic scarlet; all other quotes -> violet */
+function quoteCls(ref){ return /^(?:the\s)?(?:gospel\s(?:of|according\sto)\s)?(Matthew|Mark|Luke|John)\b/i.test((ref||'').trim())?'q-christ':'q-violet'; }
 function renderBlocks(blocks){ if(!blocks||!blocks.length)return '';
   return blocks.map(function(b){
-    if(b.t==='s'){ return '<div class="cscr">&ldquo;'+linkifyScripture(b.text||'')+'&rdquo;'+
+    if(b.t==='s'){ return '<div class="cscr '+quoteCls(b.ref)+'">&ldquo;'+linkifyScripture(b.text||'')+'&rdquo;'+
         (b.ref?'<span class="cscrref">'+linkifyScripture(b.ref)+'</span>':'')+'</div>'; }
     if(b.t==='ref'){ return '<div class="cxrefs"><span class="cxrl">Scriptures</span>'+linkifyScripture(b.text||'')+'</div>'; }
     if(b.t==='belief'){ return '<div class="beliefbox"><span class="bblbl">Believe</span>'+allowBold(linkifyScripture(b.text||''))+'</div>'; }
-    if(b.t==='prayer'){ return '<div class="prayerbox">&ldquo;'+linkifyScripture(b.text||'')+'&rdquo;'+(b.ref?'<span class="cscrref">'+linkifyScripture(b.ref)+'</span>':'')+'</div>'; }
+    if(b.t==='prayer'){ return '<div class="prayerbox q-violet">&ldquo;'+linkifyScripture(b.text||'')+'&rdquo;'+(b.ref?'<span class="cscrref">'+linkifyScripture(b.ref)+'</span>':'')+'</div>'; }
     if(b.t==='refline'){ return '<div class="refline"><span class="rlt">'+esc(b.text||'')+'</span>'+(b.ref?'<span class="scref" data-ref="'+esc(b.ref)+'">'+linkifyScripture(b.ref)+'</span>':'')+'</div>'; }
     return '<p>'+allowBold(linkifyScripture(b.text||''))+'</p>';
   }).join(''); }
@@ -3910,9 +3916,9 @@ function openCommandment(n){const t=TENC.find(x=>x.n===n);if(!t)return;
     secs+=renderSection(s); });
   if(!injected) secs+=renderRepentanceSection(t);
   $('#reader').innerHTML='<div class="cmdstudy">'+
-    '<div class="cmdno">Commandment '+t.n+' of Ten</div>'+
+    '<div class="cmdno">Commandment '+t.n+' of 10</div>'+
     '<h2 class="cmdttl holo">'+esc(t.cmd)+'</h2>'+
-    ((t.verse||t.full)?'<blockquote class="cmdfull">&ldquo;'+esc(t.verse||t.full)+'&rdquo;<span class="cmdref">'+esc(t.ref||'')+'</span></blockquote>':'')+
+    ((t.verse||t.full)?'<blockquote class="cmdfull q-violet">&ldquo;'+esc(t.verse||t.full)+'&rdquo;<span class="cmdref">'+esc(t.ref||'')+'</span></blockquote>':'')+
     secs+
     '<button class="cmdback" id="cmdback">&#9664; the ten commandments</button></div>';
   $('#mid').scrollTop=0;
@@ -4299,4 +4305,173 @@ applySet(); boot(); loadCommandments();
     else if(t==='realizeus'){ realize(true); }             // WITHIN the header/footer bounds
   };});
 })();
-</script></body></html>"""
+</script><style id="yblook">
+/* YahBible unified look (folded from the web shim so O'Tav'iel renders like the
+   Lovable edition across desktop / tablet / phone). Additive + guarded. */
+#comingsoon{display:none!important;}
+/* right-menu order — all widths: Verse Study -> Repentance -> Commandments ->
+   Profile/Settings/Studio -> News+KJV (bottom) */
+.col.right #studywrap{display:flex;flex-direction:column;}
+.col.right #studywrap>#ybtopnav{display:contents;}
+#ybtopnav .tcnav:not(.tctools){display:contents;}
+.col.right #studywrap>.lbl{order:1;}
+.col.right #studywrap #tc_rep{order:2;}
+.col.right #studywrap>#studycard{order:3;}
+#ybtopnav .tcnav.tctools{order:4;margin-top:auto;display:flex;flex-direction:row;gap:8px;}
+.col.right #mrfoot{order:4;margin-top:auto;}
+.col.right #studywrap #tc_news{order:5;display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.col.right #studywrap #tc_news .verpick{margin-left:auto;}
+/* tablet: keep three columns but tighter */
+@media (min-width:821px) and (max-width:1100px){
+  .frame{grid-template-columns:248px 1fr 300px;}
+}
+/* phone hybrid chrome */
+@media (max-width:820px){
+  body.framed #topbar{display:flex;align-items:center;gap:0;flex-wrap:nowrap;padding:1px 12px!important;min-height:0;overflow:hidden;}
+  body.framed #topbar #notesplus,body.framed #topbar #splitplus,body.framed #topbar #verbtn,
+  body.framed #topbar #verpick,body.framed #topbar #cog,body.framed #topbar #profilebtn,
+  body.framed #topbar #studiobtn,body.framed #topbar .ctspacer,body.framed #topbar #mobsync{display:none!important;}
+  body.framed #topbar #mleftbtn{order:0;flex:0 0 auto;margin-right:4px;}
+  body.framed #topbar #homebtn{order:1;flex:1 1 0;justify-content:center;min-width:0;}
+  body.framed #topbar #tavielbtn{order:2;flex:1 1 0;justify-content:center;min-width:0;}
+  body.framed #topbar #mrightbtn{order:3;flex:0 0 auto;margin-left:4px;}
+  body.framed #topbar .brandbtn{overflow:hidden;white-space:nowrap;}
+  body.framed #homebtn .mheb{margin:0 1px!important;font-size:16px;}
+  body.framed #homebtn .yahbible{margin-left:3px;}
+  body.framed #tavielbtn .brand,body.framed #tavielbtn .brand em{font-size:22px!important;}
+  body.framed #tavielbtn .mark{font-size:22px!important;margin-right:2px;}
+  body.framed #mid{position:fixed;left:0;right:0;top:var(--ybtop,48px);bottom:var(--ybbot,58px);
+    overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+  body.framed.chatting #mid{bottom:0;}
+  body.framed .col.left,body.framed .col.right{padding:18px 16px calc(var(--ybbot,58px) + 20px);
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain;box-sizing:border-box;}
+  body.framed .col.left .chgrid,body.framed .col.right .chgrid{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px;}
+  body.framed .col.left .chgrid .chip,body.framed .col.right .chgrid .chip{min-width:34px;min-height:34px;
+    display:inline-flex;align-items:center;justify-content:center;}
+  body.framed #mid .reader{padding-top:2px;}
+  body.framed #mid .reader>*:first-child{margin-top:0!important;}
+}
+</style>
+<script id="yblookjs">
+(function(){
+  var isM=function(){return (document.body&&document.body.classList.contains("framed"))||matchMedia("(max-width:820px)").matches;};
+  function syncInsets(){ if(!document.body||!matchMedia("(max-width:820px)").matches)return;
+    var hb=document.querySelector("#topbar,.masthead,header"),fb=document.querySelector("#mtabbar");
+    if(hb)document.body.style.setProperty("--ybtop",Math.round(hb.getBoundingClientRect().height)+"px");
+    if(fb)document.body.style.setProperty("--ybbot",Math.round(fb.getBoundingClientRect().height)+"px"); }
+  function reorderBrand(){ var hb=document.querySelector("#homebtn"); if(!hb||hb.dataset.ybr)return;
+    var g=hb.querySelectorAll(".mheb"),yb=hb.querySelector(".yahbible");
+    if(g.length>=2&&yb){hb.insertBefore(g[g.length-1],yb);hb.dataset.ybr="1";} }
+  function buildRightMenu(){ var sw=document.querySelector(".col.right #studywrap"); if(!sw)return;
+    var tools=document.querySelector(".col.right #ybtopnav .tcnav.tctools");
+    if(!tools&&!document.querySelector("#mrfoot")){
+      var F=[["studiobtn","Studio Mode"],["cog","Settings"],["profilebtn","Profile"]];
+      if(F.every(function(x){return document.getElementById(x[0]);})){
+        var f=document.createElement("div");f.id="mrfoot";
+        F.forEach(function(x){var n=document.getElementById(x[0]);if(!n)return;
+          var r=document.createElement("div");r.className="mfrow";r.appendChild(n);
+          var s=document.createElement("span");s.textContent=x[1];r.appendChild(s);
+          r.addEventListener("click",function(e){if(e.target!==n)n.click();});f.appendChild(r);});
+        sw.appendChild(f);}}
+    var vp=document.querySelector(".verpick"),news=document.getElementById("tc_news");
+    if(vp&&news&&!news.contains(vp))news.appendChild(vp); }
+  function mobilize(){ if(document.body&&matchMedia("(max-width:820px)").matches)document.body.classList.add("framed");
+    syncInsets();reorderBrand();buildRightMenu(); }
+  addEventListener("resize",mobilize);
+  setInterval(mobilize,1200);
+  addEventListener("DOMContentLoaded",mobilize);
+  mobilize();
+  /* auto-close: chapter chip / single-chapter work -> close left; commandment -> close right */
+  addEventListener("click",function(e){ if(!isM())return; var f=document.querySelector(".frame"); if(!f)return; var t=e.target;
+    if(t.closest&&t.closest(".col.left .chip"))setTimeout(function(){f.classList.remove("mleft");},120);
+    var row=t.closest&&t.closest(".col.left .node > .row");
+    if(row)setTimeout(function(){var n=row.parentElement,g=n&&n.querySelector(":scope > .kids > .chgrid");
+      if(g&&g.querySelectorAll(".chip").length<=1)f.classList.remove("mleft");},320);
+    if(t.closest&&t.closest(".col.right #studycard .tcitem,.col.right #studycard .row,.col.right #studycard a"))
+      setTimeout(function(){f.classList.remove("mright");},90);
+  },true);
+})();
+</script>
+<style id="ybrmlayout-css">
+/* Match the Lovable layout: Studio / Profile / Settings / KJV live in the right
+   menu (pinned at its foot), not the header; a right-menu toggle sits top-right. */
+.col.right#side{display:flex;flex-direction:column;min-height:0}
+#topbar #studiobtn,#topbar #profilebtn,#topbar #cog{display:none!important}
+#ybrmfoot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px solid var(--line)}
+#ybrmtools{display:flex;flex-direction:row;gap:8px}
+.ybrmrow{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 6px;
+  border:1px solid var(--line);border-radius:10px;cursor:pointer;font:600 12.5px Inter;color:var(--ink);background:var(--panel2)}
+.ybrmrow:hover{border-color:var(--gold)}
+#ybrmfoot #tc_news{width:100%}
+#ybrmfoot #tc_news .verpick{margin-left:auto}
+#ybrighttoggle{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:hsl(var(--hue) 24% 20% / .6);
+  color:var(--ink);font-size:18px;cursor:pointer;flex:none;margin-left:6px}
+#ybrighttoggle:hover{border-color:var(--gold)}
+@media(max-width:820px){#ybrighttoggle{display:none}}
+</style>
+<script id="ybrmlayout">
+(function(){
+  var DEFS=[['profilebtn','👤 Profile'],['cog','⚙ Settings'],['studiobtn','📷 Studio Mode']];
+  function studioModal(){
+    var old=document.getElementById('ybstudiomodal'); if(old){old.remove();return;}
+    var ov=document.createElement('div'); ov.id='ybstudiomodal';
+    ov.style.cssText='position:fixed;inset:0;z-index:99998;background:#060410cc;display:flex;align-items:center;justify-content:center;padding:20px';
+    var card=document.createElement('div');
+    card.style.cssText='width:min(560px,92vw);max-height:88vh;overflow:auto;background:#140f28;border:1px solid #c9a86a44;border-radius:18px;padding:26px;box-shadow:0 24px 80px #000b';
+    card.innerHTML='<h2 style="margin:0 0 4px;font:700 22px \'EB Garamond\',Georgia,serif;color:#e8d9ae">Studio Mode</h2>'+
+      '<p style="margin:0 0 18px;opacity:.8;font:14px system-ui">Present and critique the Word — choose a stage.</p>'+
+      '<div id="ybstudiogrid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"></div>'+
+      '<button id="ybstudioclose" style="margin-top:18px;width:100%;padding:10px;border:1px solid #c9a86a55;border-radius:12px;background:#1c1536;color:#e8d9ae;font:600 15px system-ui;cursor:pointer">Close</button>';
+    ov.appendChild(card); document.body.appendChild(ov);
+    var opts=[['yt','🎬','YouTube Critique','Study a YouTube video beside Scripture'],['tiktok','📱','TikTok Critique','A phone-shaped stage for short video'],['ytb','🎞️','YouTube-B','A second YouTube stage']];
+    var grid=card.querySelector('#ybstudiogrid');
+    opts.forEach(function(o){var btn=document.createElement('button');btn.type='button';
+      btn.style.cssText='text-align:left;padding:16px;border:1px solid #c9a86a33;border-radius:14px;background:hsl(262 30% 16%);color:#eee;cursor:pointer;font:inherit';
+      btn.innerHTML='<div style="font-size:26px">'+o[1]+'</div><div style="font:600 15px system-ui;color:#e8d9ae;margin:6px 0 2px">'+o[2]+'</div><div style="font:13px system-ui;opacity:.75">'+o[3]+'</div>';
+      btn.onclick=function(){ov.remove();try{if(typeof openStudio==='function')openStudio(o[0]);}catch(e){}};grid.appendChild(btn);});
+    card.querySelector('#ybstudioclose').onclick=function(){ov.remove();};
+    ov.addEventListener('click',function(e){if(e.target===ov)ov.remove();});
+  }
+  function layout(){
+    var side=document.getElementById('side'); if(!side)return;
+    var foot=document.getElementById('ybrmfoot');
+    if(!foot){foot=document.createElement('div');foot.id='ybrmfoot';side.appendChild(foot);}
+    else if(foot!==side.lastElementChild){side.appendChild(foot);}
+    var tools=document.getElementById('ybrmtools');
+    if(!tools){tools=document.createElement('div');tools.id='ybrmtools';foot.appendChild(tools);}
+    DEFS.forEach(function(d){
+      var btn=document.getElementById(d[0]); if(!btn)return;
+      if(!document.getElementById('ybrow_'+d[0])){
+        var row=document.createElement('div');row.id='ybrow_'+d[0];row.className='ybrmrow';row.textContent=d[1];
+        row.addEventListener('click',function(e){e.preventDefault();if(d[0]==='studiobtn'){studioModal();}else{btn.click();}});
+        tools.appendChild(row);
+      }
+    });
+    /* Consolidate News into the foot (renderTopNav may recreate it up top) and dock
+       the KJV picker INSIDE News so it never flickers between in/under. */
+    var allNews=document.querySelectorAll('#tc_news');
+    var news=null; allNews.forEach(function(n){ if(n.closest('#ybrmfoot'))news=n; });
+    if(!news&&allNews.length)news=allNews[allNews.length-1];
+    allNews.forEach(function(n){ if(n!==news)n.remove(); });
+    if(news&&news.parentNode!==foot)foot.appendChild(news);
+    var vp=document.querySelector('.verpick'); if(vp&&news&&!news.contains(vp))news.appendChild(vp);
+    /* right-menu toggle, top-right of the header (desktop) */
+    var tb=document.getElementById('topbar');
+    if(tb&&!document.getElementById('ybrighttoggle')){
+      var rt=document.createElement('button');rt.id='ybrighttoggle';rt.type='button';rt.title='Menu & verse study';rt.innerHTML='&#9776;';
+      rt.onclick=function(){ if(typeof toggleRightPanel==='function')toggleRightPanel(); };
+      tb.appendChild(rt);
+    }
+  }
+  /* run layout right after the page rebuilds the nav, so News/KJV never glitch */
+  if(typeof window.renderTopNav==='function'&&!window.renderTopNav._ybwrapped){
+    var _orig=window.renderTopNav;
+    window.renderTopNav=function(){var r=_orig.apply(this,arguments);try{layout();}catch(e){}return r;};
+    window.renderTopNav._ybwrapped=true;
+  }
+  layout(); setInterval(layout,700);
+  if(document.readyState!=='loading')layout(); else addEventListener('DOMContentLoaded',layout);
+})();
+</script>
+
+</body></html>"""

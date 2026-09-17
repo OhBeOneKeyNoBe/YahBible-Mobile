@@ -31,6 +31,22 @@ for _dev in (os.path.join(_APPDIR, "watchman"), r"D:\Holorites\torus_upgrades", 
         sys.path.append(_dev)                         # bundled watchman / the D: dev tree = fallback only
 from o_taviel_ui import PAGE  # noqa: E402
 
+# The Lovable web app is the source-of-truth UI. When present, O'Tav'iel serves that
+# exact interface (index.html + shim/*) in NATIVE mode (window.YB_NATIVE) so /api
+# still hits this real Python backend, instead of its own legacy PAGE. Set
+# YAHBIBLE_NATIVE_UI=0 to fall back to the legacy PAGE.
+LOVABLE_UI_DIR = os.environ.get("YAHBIBLE_LOVABLE_DIR", r"D:\creator-connect\public\yahbible-app")
+LOVABLE_UI = os.environ.get("YAHBIBLE_NATIVE_UI", "1") != "0" and \
+    os.path.isfile(os.path.join(LOVABLE_UI_DIR, "index.html"))
+_LOVABLE_CT = {".js": "application/javascript", ".mjs": "application/javascript",
+               ".css": "text/css", ".json": "application/json", ".webmanifest": "application/json",
+               ".wasm": "application/wasm", ".html": "text/html; charset=utf-8",
+               ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+               ".webp": "image/webp", ".svg": "image/svg+xml", ".gif": "image/gif",
+               ".mp4": "video/mp4", ".webm": "video/webm", ".woff2": "font/woff2",
+               ".ico": "image/x-icon", ".tflite": "application/octet-stream",
+               ".binarypb": "application/octet-stream", ".data": "application/octet-stream"}
+
 _MOBILE_PING = {}   # {"ts","name"}: last YahBible-mobile ping, for the two-way sync indicator
 
 # GitHub vault sync: a PRIVATE repo carries profile/settings/progress across devices.
@@ -2339,8 +2355,8 @@ def _parse_ref(q):
     if not q:
         return None
     s = (q or "").lower().strip()
-    s = re.sub(r"(\d)\s*[.:]\s*(\d)", r"\1:\2", s)
-    s = re.sub(r"[^a-z0-9: ]+", " ", s)
+    s = re.sub(r"(\d)\s*[.:]\s*(\d)", r"\1:\2", s)          # "6 .11" / "6.11" / "6 : 11" -> "6:11"
+    s = re.sub(r"[^a-z0-9: ]+", " ", s)                     # any other punctuation -> space
     s = re.sub(r"\s+", " ", s).strip()
     if not s:
         return None
@@ -3198,14 +3214,56 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _serve_lovable(self, relpath):
+        """Serve a file from the Lovable app dir (the source-of-truth UI)."""
+        base = os.path.abspath(LOVABLE_UI_DIR)
+        full = os.path.abspath(os.path.join(base, relpath.lstrip("/")))
+        if not full.startswith(base) or not os.path.isfile(full):
+            return self._send({"error": "not found"}, 404)
+        ext = os.path.splitext(full)[1].lower()
+        ctype = _LOVABLE_CT.get(ext, "application/octet-stream")
+        with open(full, "rb") as f:
+            data = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _lovable_index(self):
+        """The Lovable index.html, put into NATIVE mode: set window.YB_NATIVE before
+        the shim loads so /api goes to this real backend, and disable the web SW."""
+        html = open(os.path.join(LOVABLE_UI_DIR, "index.html"), encoding="utf-8").read()
+        html = html.replace('<script src="shim/boot.js">',
+                            '<script>window.YB_NATIVE=true;</script><script src="shim/boot.js">', 1)
+        html = html.replace("navigator.serviceWorker.register('sw.js')", "void 0")
+        return html.encode("utf-8")
+
     def do_GET(self):
         u = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(u.query).items()}
         p = u.path
         try:
             if p in ("/", "/index.html"):
+                if LOVABLE_UI:
+                    try:
+                        return self._send(self._lovable_index(), ctype="text/html; charset=utf-8")
+                    except Exception:
+                        pass
                 _pg = (PAGE.replace("</head>", "<script>window.__YB_SHIPPED=1;</script></head>", 1) if os.environ.get("YAHBIBLE_SHIPPED") else PAGE); return self._send(_pg.encode("utf-8"), ctype="text/html; charset=utf-8")
+            if LOVABLE_UI and (p.startswith("/shim/") or p.startswith("/vendor/")
+                               or p.startswith("/static_api/") or p in ("/manifest.webmanifest", "/sw.js")):
+                return self._serve_lovable(p)
             if p == "/cosmos.html":   # the Gnostic Map cosmology page (flat world under the Pleroma)
+                # In native mode Lovable is the single source of truth: serve its
+                # cosmos.html (the transparent-background copy) so o_taviel and the
+                # web edition render the identical map.
+                if LOVABLE_UI:
+                    lv = os.path.abspath(os.path.join(LOVABLE_UI_DIR, "cosmos.html"))
+                    if os.path.isfile(lv):
+                        return self._serve_lovable("/cosmos.html")
                 try:
                     with open(_res("cosmos_page.html"), "rb") as f:
                         return self._send(f.read(), ctype="text/html; charset=utf-8")
@@ -3217,6 +3275,10 @@ class H(BaseHTTPRequestHandler):
                 except Exception as e:
                     return self._send(str(e).encode(), 500)
             if p.startswith("/assets/"):
+                if LOVABLE_UI:
+                    lv = os.path.abspath(os.path.join(LOVABLE_UI_DIR, p.lstrip("/")))
+                    if os.path.isfile(lv):
+                        return self._serve_lovable(p)
                 return self._asset(p[len("/assets/"):])
             if p == "/api/menu":
                 return self._send({"versions": versions_available(), "books": books(),
@@ -3441,7 +3503,8 @@ class H(BaseHTTPRequestHandler):
             self.wfile.write(("data: " + json.dumps(obj) + "\n\n").encode("utf-8"))
             self.wfile.flush()
         try:
-            for kind, payload in ask_taviel_council_stream(data.get("q", ""), data.get("history")):
+            for kind, payload in ask_taviel_council_stream(data.get("q", ""), data.get("history"),
+                                                           bool(data.get("think")), data.get("user")):
                 if kind == "delta":
                     w({"t": payload})
                 elif kind == "voice":
@@ -3690,7 +3753,12 @@ def _roots_fallback(query, chakra, note):
 
 
 _CITE_MANDATE = ("\nALWAYS cite the exact verse (Book chapter:verse) beside every scripture"
-                 " truth you state, so the asker can check each one in their own Bible.")
+                 " truth you state, so the asker can check each one in their own Bible."
+                 " Reproduce a verse's WORDS only when you can quote them exactly from the"
+                 " grounding above; if you are unsure of the wording, cite the reference"
+                 " alone (Book chapter:verse) and let the reader open it — the app shows the"
+                 " full verse. NEVER approximate, reconstruct, or paraphrase a verse's wording"
+                 " as if it were a quotation.")
 
 
 def _directness(query):
@@ -3945,7 +4013,7 @@ def council_poll(tid, since=0):
         return {"voices": voices, "done": len(rec["pending"]) == 0, "total": len(rec["voices"])}
 
 
-def ask_taviel_council_stream(query, history=None):
+def ask_taviel_council_stream(query, history=None, think=False, user=None):
     """The RAM voice streams the primary answer NOW; the deeper tiers are launched to trickle in
     over time (below-normal priority, disk-streamed) and are collected via /api/council_poll.
     Yields ('delta',text) for the primary, then ('done',{answer,sources,turn}) carrying the turn
@@ -3974,7 +4042,8 @@ def ask_taviel_council_stream(query, history=None):
     # the RAM voice (throat) speaks NOW, streamed live as the primary answer
     acc = []
     got_done = None
-    for kind, payload in ask_taviel_stream(query, chakra="throat", history=history):
+    for kind, payload in ask_taviel_stream(query, chakra="throat", history=history,
+                                           think=think, user=user):
         if kind == "delta":
             acc.append(payload)
             yield ("delta", payload)
@@ -3989,7 +4058,28 @@ def ask_taviel_council_stream(query, history=None):
     yield ("done", out)
 
 
-def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200):
+def _compose_identity(base, think=False, user=None):
+    """Frame Tav'iel's identity for a PERSONAL conversation (and, when asked, a deeper
+    reasoning pass), keeping Qwen3's trailing /think control token at the very end."""
+    b = (base or "").rstrip()
+    tail = ""
+    if b.endswith("/think"):
+        b = b[:-6].rstrip()
+        tail = " /think"
+    who = (("You are in a warm, personal conversation with %s -- the one before you, whom you know; "
+            "speak WITH them, directly and by name as it fits, as a companion who remembers this talk, "
+            "never as a reply to an anonymous prompt. ") % str(user).strip()) \
+        if (user and str(user).strip()) else \
+        ("You are in a warm, personal conversation with the seeker before you -- speak WITH them, "
+         "directly and personally, building on what they actually say, never as a reply to an "
+         "anonymous prompt. ")
+    deep = ("Take your time and reason this through carefully and thoroughly -- weigh more than one "
+            "angle and more of Scripture than usual, follow the thought where it leads, and give a "
+            "fuller, deeper answer than your usual brevity. ") if think else ""
+    return b + " " + who + deep + tail
+
+
+def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200, think=False, user=None):
     """Streaming twin of ask_taviel: yields ('delta', text) as tokens arrive, then
     ('done', {...}) with the cleaned, paragraph-formatted full answer + sources. On any
     failure or an empty stream, yields a single ('done', {...}) with the sourced roots."""
@@ -4032,9 +4122,12 @@ def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200):
                 _TIER = G.open_tier(chakra, cap_mb=1400, ctx=4096)
                 _TIER_CHAKRA = chakra
             g["grounding"] = (g.get("grounding") or "") + _CITE_MANDATE
+            system = _compose_identity(TA.IDENTITY, think, user)
+            if think:
+                max_tokens = max(max_tokens, 1600)      # room for a deeper answer
             prompt = torus_ctx + _history_preamble(history) + _directness(query) + query
             for delta in G.generate_stream(_TIER, prompt, grounding=g["grounding"],
-                                           max_tokens=max_tokens, system=TA.IDENTITY):
+                                           max_tokens=max_tokens, system=system):
                 acc.append(delta)
                 yield ("delta", delta)
             _arm_idle()
