@@ -2192,33 +2192,259 @@ def _mk_hit(ref, text):
             "verse": int(cv[1]) if len(cv) > 1 else 1, "text": text}
 
 
-_BOOKS_LC = None
+# ---- robust Scripture reference parsing (book + chapter + verse, ANY order /
+#      separator / spelling): "matt 6 11", "6 11 matt", "6:11 matt",
+#      "matthew 6 .11", "1 jn 3.16", "psalm 23", "jhn 3 16", "revalation 21 4" ----
+_REF_ABBR = {
+    "genesis": ["gen", "ge", "gn"], "exodus": ["ex", "exo", "exod", "exd"],
+    "leviticus": ["lev", "le", "lv", "levit"], "numbers": ["num", "nu", "nm", "nb", "numb"],
+    "deuteronomy": ["deut", "dt", "deu", "deute"], "joshua": ["josh", "jos", "jsh"],
+    "judges": ["judg", "jdg", "jgs", "jdgs"], "ruth": ["rth", "rut", "ru"],
+    "1 samuel": ["1sam", "1sa", "1sm", "1s", "firstsamuel", "isamuel", "1samuel"],
+    "2 samuel": ["2sam", "2sa", "2sm", "2s", "secondsamuel", "iisamuel", "2samuel"],
+    "1 kings": ["1kings", "1ki", "1kgs", "1kg", "1k", "firstkings", "1kin"],
+    "2 kings": ["2kings", "2ki", "2kgs", "2kg", "2k", "secondkings", "2kin"],
+    "1 chronicles": ["1chron", "1chr", "1ch", "1chronicles", "firstchronicles"],
+    "2 chronicles": ["2chron", "2chr", "2ch", "2chronicles", "secondchronicles"],
+    "ezra": ["ezr", "ezra"], "nehemiah": ["neh", "ne", "nehem"],
+    "esther": ["esth", "est", "es", "ester"], "job": ["job", "jb"],
+    "psalms": ["ps", "psa", "psalm", "pss", "psm", "pslm", "psalms"],
+    "proverbs": ["prov", "pro", "prv", "proverb"],
+    "ecclesiastes": ["eccl", "ecc", "eccles", "qoh"],
+    "song of solomon": ["song", "sos", "ss", "songofsolomon", "songofsongs", "canticles", "cant"],
+    "isaiah": ["isa", "isai", "isah", "isaia"], "jeremiah": ["jer", "jere", "jr"],
+    "lamentations": ["lam", "lament", "lamen"], "ezekiel": ["ezek", "eze", "ezk", "ezke"],
+    "daniel": ["dan", "dn", "dnl", "danl"], "hosea": ["hos", "hsa", "hose"],
+    "joel": ["joe", "jl", "joel"], "amos": ["amo", "amos"],
+    "obadiah": ["obad", "oba", "obd", "obadia"], "jonah": ["jon", "jnh", "jona"],
+    "micah": ["mic", "mica", "mch"], "nahum": ["nah", "nam", "nahu"],
+    "habakkuk": ["hab", "habk", "haba"], "zephaniah": ["zeph", "zep", "zphan", "zephan"],
+    "haggai": ["hag", "hagg", "hagai"], "zechariah": ["zech", "zec", "zach", "zechar"],
+    "malachi": ["mal", "mala", "malac"],
+    "matthew": ["matt", "mt", "mat", "matth", "mtt", "mathew"], "mark": ["mrk", "mk", "mar"],
+    "luke": ["luk", "lk", "luke"], "john": ["jhn", "jn", "joh", "john"],
+    "acts": ["act", "ac", "acts"], "romans": ["rom", "rm", "roman", "romns"],
+    "1 corinthians": ["1cor", "1co", "1c", "firstcorinthians", "1corinth", "1corinthians"],
+    "2 corinthians": ["2cor", "2co", "2c", "secondcorinthians", "2corinth", "2corinthians"],
+    "galatians": ["gal", "gl", "galat"], "ephesians": ["eph", "ephes", "ephs"],
+    "philippians": ["phil", "php", "philip", "phlp", "philipp"], "colossians": ["col", "cl", "coloss"],
+    "1 thessalonians": ["1thess", "1th", "1thes", "firstthess", "1thessalonians"],
+    "2 thessalonians": ["2thess", "2th", "2thes", "secondthess", "2thessalonians"],
+    "1 timothy": ["1tim", "1ti", "1tm", "firsttimothy", "1timothy"],
+    "2 timothy": ["2tim", "2ti", "2tm", "secondtimothy", "2timothy"],
+    "titus": ["tit", "tts", "titu"], "philemon": ["philem", "phm", "phlm", "phile", "philemn"],
+    "hebrews": ["heb", "hebr", "hebrew"], "james": ["jas", "jam", "jms", "jame"],
+    "1 peter": ["1pet", "1pe", "1pt", "1p", "firstpeter", "1peter"],
+    "2 peter": ["2pet", "2pe", "2pt", "2p", "secondpeter", "2peter"],
+    "1 john": ["1john", "1jn", "1jo", "1j", "firstjohn", "1jhn"],
+    "2 john": ["2john", "2jn", "2jo", "2j", "secondjohn", "2jhn"],
+    "3 john": ["3john", "3jn", "3jo", "3j", "thirdjohn", "3jhn"],
+    "jude": ["jud", "jd", "jude"],
+    "revelation": ["rev", "rv", "revelation", "apocalypse", "apoc", "revel", "revalation"],
+}
+_ALIAS = None
+
+
+def _norm_bk(s):
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+
+def _lev(a, b):
+    m, n = len(a), len(b)
+    if not m:
+        return n
+    if not n:
+        return m
+    d = list(range(n + 1))
+    for i in range(1, m + 1):
+        prev = d[0]
+        d[0] = i
+        for j in range(1, n + 1):
+            tmp = d[j]
+            d[j] = min(d[j] + 1, d[j - 1] + 1, prev + (0 if a[i - 1] == b[j - 1] else 1))
+            prev = tmp
+    return d[n]
+
+
+def _alias_map():
+    global _ALIAS
+    if _ALIAS is not None:
+        return _ALIAS
+    try:
+        names = list(books())
+    except Exception:
+        names = []
+    M = {}
+
+    def add(a, canon):
+        k = _norm_bk(a)
+        if k and k not in M:
+            M[k] = canon
+
+    for n in names:
+        add(n, n)
+
+    def find(want):
+        w = _norm_bk(want)
+        for n in names:
+            if _norm_bk(n) == w:
+                return n
+        for n in names:
+            if _norm_bk(n).startswith(w):
+                return n
+        return None
+
+    for canon_want, aliases in _REF_ABBR.items():
+        canon = find(canon_want)
+        if not canon:
+            continue
+        add(canon_want, canon)
+        for a in aliases:
+            add(a, canon)
+    _ALIAS = (M, names)
+    return _ALIAS
+
+
+def _resolve_book(cand):
+    if not cand:
+        return None
+    M, _names = _alias_map()
+    c = (cand or "").lower().strip()
+    c = re.sub(r"\b(first|1st|i)\b", "1", c)
+    c = re.sub(r"\b(second|2nd|ii)\b", "2", c)
+    c = re.sub(r"\b(third|3rd|iii)\b", "3", c)
+    key = _norm_bk(c)
+    if not key:
+        return None
+    if key in M:
+        return M[key]
+    pre = list({v for k, v in M.items() if len(key) >= 3 and k.startswith(key)})
+    if len(pre) == 1:
+        return pre[0]
+    if len(key) >= 4:
+        best, bd = None, 3
+        for k, v in M.items():
+            if abs(len(k) - len(key)) > 2:
+                continue
+            dd = _lev(key, k)
+            if dd < bd:
+                bd, best = dd, v
+        if best and bd <= (1 if len(key) <= 6 else 2):
+            return best
+    return None
+
+
+def _parse_ref(q):
+    """Parse a free-form reference into {book, chapter, verse, terms, whole} or None."""
+    if not q:
+        return None
+    s = (q or "").lower().strip()
+    s = re.sub(r"(\d)\s*[.:]\s*(\d)", r"\1:\2", s)
+    s = re.sub(r"[^a-z0-9: ]+", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    if not s:
+        return None
+    seq = []
+    for t in s.split(" "):
+        m = re.match(r"^(\d+):(\d+)$", t)
+        if m:
+            seq.append(("cv", int(m.group(1)), int(m.group(2))))
+        elif re.match(r"^\d+$", t):
+            seq.append(("n", int(t), None))
+        elif re.search(r"[a-z]", t):
+            seq.append(("w", re.sub(r"[^a-z0-9]", "", t), None))
+    if not any(x[0] == "w" for x in seq):
+        return None
+    best = None
+    i = 0
+    while i < len(seq) and best is None:
+        if seq[i][0] != "w":
+            i += 1
+            continue
+        run, j = [], i
+        while j < len(seq) and seq[j][0] == "w":
+            run.append(seq[j][1])
+            j += 1
+        take = len(run)
+        while take >= 1 and best is None:
+            cand = " ".join(run[:take])
+            tries = []
+            if i - 1 >= 0 and seq[i - 1][0] == "n" and 1 <= seq[i - 1][1] <= 3:
+                tries.append((str(seq[i - 1][1]) + " " + cand, i - 1))
+            tries.append((cand, -1))
+            for c, ni in tries:
+                b = _resolve_book(c)
+                if b:
+                    best = {"book": b, "ws": i, "we": i + take - 1, "ni": ni}
+                    break
+            take -= 1
+        i += 1
+    if not best:
+        return None
+    chapter_n = verse_n = None
+    cv = next((x for x in seq if x[0] == "cv"), None)
+    if cv:
+        chapter_n, verse_n = cv[1], cv[2]
+    else:
+        nums = [x[1] for idx, x in enumerate(seq) if x[0] == "n" and idx != best["ni"]]
+        if len(nums) >= 1:
+            chapter_n = nums[0]
+        if len(nums) >= 2:
+            verse_n = nums[1]
+    terms = " ".join(x[1] for idx, x in enumerate(seq)
+                     if x[0] == "w" and (idx < best["ws"] or idx > best["we"])).strip()
+    return {"book": best["book"], "chapter": chapter_n, "verse": verse_n, "terms": terms,
+            "whole": chapter_n is None and not terms}
 
 
 def _detect_book(q):
-    """If a Bible book name appears at the START or END of the query, return
-    (book, cleaned_query) so the search narrows to that book. Handles multi-word
-    and numbered books; matches the longest name first."""
-    global _BOOKS_LC
-    if _BOOKS_LC is None:
-        try:
-            _BOOKS_LC = sorted(((b, b.lower()) for b in books()), key=lambda x: -len(x[1]))
-        except Exception:
-            _BOOKS_LC = []
-    ql = q.strip()
-    for b, bl in _BOOKS_LC:
-        pat_start = r"^" + re.escape(bl) + r"\b\s*"
-        pat_end = r"\s*\b" + re.escape(bl) + r"$"
-        if re.match(pat_start, ql, re.I):
-            return b, re.sub(pat_start, "", ql, flags=re.I).strip()
-        if re.search(pat_end, ql, re.I):
-            return b, re.sub(pat_end, "", ql, flags=re.I).strip()
+    """Return (book, cleaned_query) when a book name/abbreviation/misspelling sits at
+    the start or end of the query, so a word search narrows to that book."""
+    ql = (q or "").strip()
+    if not ql:
+        return None, q
+    whole = _resolve_book(ql)
+    if whole:
+        return whole, ""
+    parts = ql.split()
+    for take in range(min(3, len(parts)), 0, -1):
+        head = " ".join(parts[:take])
+        tail = " ".join(parts[len(parts) - take:])
+        hb = _resolve_book(head)
+        if hb:
+            return hb, " ".join(parts[take:]).strip()
+        tb = _resolve_book(tail)
+        if tb:
+            return tb, " ".join(parts[:len(parts) - take]).strip()
     return None, q
 
 
 def search(q, limit=40):
     from watchman import bible
     q = q.strip()
+    # robust reference first: "matt 6 11", "6 11 matt", "6:11 matt", "matthew 6 .11",
+    # "1 jn 3.16", "psalm 23", "jhn 3 16", "revalation 21 4" — any order / spelling.
+    ref = _parse_ref(q)
+    if ref and ref["book"] and (ref["chapter"] is not None or ref["whole"]):
+        ch = ref["chapter"] or 1
+        try:
+            cd = chapter(ref["book"], ch)
+        except Exception:
+            cd = None
+        verses = (cd or {}).get("verses", []) or []
+        if ref["verse"] is not None:
+            verses = ([v for v in verses if int(v["verse"]) == ref["verse"]] +
+                      [v for v in verses if int(v["verse"]) != ref["verse"]])
+        if verses:
+            if ref["verse"] is not None:
+                cite = "King James Version &middot; %s %d:%d" % (ref["book"], ch, ref["verse"])
+            elif ref["whole"]:
+                cite = "%s %d (add a word to search within %s)" % (ref["book"], ch, ref["book"])
+            else:
+                cite = "King James Version &middot; %s %d" % (ref["book"], ch)
+            return {"hits": [{"ref": "%s %d:%d" % (ref["book"], ch, v["verse"]),
+                              "book": ref["book"], "chapter": ch, "verse": v["verse"],
+                              "text": v["text"]} for v in verses][:limit], "cite": cite}
     bookf, q = _detect_book(q)
     hits, seen = [], set()
     if bookf and not q:      # only a book name -> show its first chapter
