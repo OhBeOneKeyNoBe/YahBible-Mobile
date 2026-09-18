@@ -756,7 +756,13 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
 .vword,.card>h3{background:linear-gradient(92deg,#c0246a,#d97a1e,#c9a11a,#1f9e6e,#2e7fd0,#7a5ce0,#c0246a);
   background-size:280% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:holo 8s linear infinite}
 .card>h3 button{-webkit-text-fill-color:initial;color:#fff;background:var(--panel2)}
-.vword.hl,.vword.sel{-webkit-background-clip:border-box;background-clip:border-box;-webkit-text-fill-color:initial;color:var(--vtitle);background:hsl(45 92% 60% / .5);border-radius:3px}
+.vword.hl,.vword.sel{-webkit-background-clip:border-box;background-clip:border-box;-webkit-text-fill-color:#fff!important;color:#fff!important;background:transparent!important;box-shadow:inset 0 0 0 2px hsl(45 92% 55% / .95);border-radius:4px}
+#selverse{margin:2px 0 8px;padding:10px 13px;border:1px solid hsl(45 60% 55% / .32);border-radius:11px;background:hsl(262 30% 12% / .5)}
+#selverse .selverhd{display:flex;align-items:baseline;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+#selverse .selverv{font:800 11px Inter;letter-spacing:.05em;color:var(--gold);text-transform:uppercase}
+#selverse .selverr{font:600 12px Inter;color:var(--dim)}
+#selverse .selvertext{font:16px/1.5 "EB Garamond",Georgia,serif;color:#fff}
+#selverse .selvertext[dir="rtl"]{font-family:"Noto Serif Hebrew","EB Garamond",serif;font-size:19px}
 .ilinline{display:flex;flex-wrap:wrap;gap:7px;margin:5px 0 12px;padding:8px 10px;border:1px solid var(--paperrule);border-radius:9px;background:hsl(45 40% 90% / .55)}
 .ilw{display:inline-flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;padding:2px 5px;border-radius:6px}
 .ilw:hover,.ilw.hl{background:transparent;box-shadow:inset 0 0 0 2px hsl(45 92% 55% / .9);border-radius:6px}  /* interlinear hover = yellow OUTLINE */
@@ -1407,7 +1413,7 @@ html.guest .conclbtn{display:none}  /* conclusions are for signed-in users, not 
   </main>
   <aside class="col right" id="side">
     <div id="notesbox"></div>
-    <div id="studywrap"><div id="ybtopnav"></div><div class="lbl" style="display:flex;align-items:center;justify-content:space-between">Verse Study <button class="holocollapse" id="rightx" title="Close the study panel">&#10005;</button></div>
+    <div id="studywrap"><div id="ybtopnav"></div><div class="lbl" style="display:flex;align-items:center;justify-content:space-between">Verse Study <button class="holocollapse" id="rightx" title="Close the study panel">&#10005;</button></div><div id="selverse" style="display:none"></div>
       <div id="studycard"><div class="empty">Click any word in the text, a Hebrew/Greek token, or a Strong's number, for Dictionary &middot; Strong's &middot; Interlinear &middot; Revelation.</div></div></div>
     <div id="verswrap"></div>
     <div id="sideextra"></div>
@@ -2419,7 +2425,8 @@ function renderVerseVersions(vv){const list=$('#verslist');if(!list)return;
   const q=(($('#verSearch')&&$('#verSearch').value)||'').trim().toLowerCase();
   const added=_addedVers();const ord=displayVersions();const enabled=new Set(ord);
   const all=vv.versions||[];
-  let inComp=all.filter(v=>enabled.has(v.version)||added.has(v.version));
+  const _mainVer=(ord&&ord[0])||'';   // the default/main version is shown at the top, not repeated in the list
+  let inComp=all.filter(v=>(enabled.has(v.version)||added.has(v.version))&&v.version!==_mainVer);
   inComp.sort((a,b)=>{const ia=ord.indexOf(a.version),ib=ord.indexOf(b.version);return (ia<0?999:ia)-(ib<0?999:ib);});
   const showComp=q?inComp.filter(v=>v.version.toLowerCase().includes(q)):inComp;
   let html=showComp.map(v=>{const cnt={};const words=(v.text||'').split(/(\s+)/).map(t=>{
@@ -2641,11 +2648,27 @@ async function renderEyeSettings(){const body=$('#eyesetbody');if(!body)return;
     try{localStorage.setItem('vlcVers',JSON.stringify(STATE.vlcVersions));}catch(e){}
     renderEyeSettings();vlcRefresh();});}
 function syncEyeSettings(){const acc=$('#eyeacc');if(acc&&acc.classList.contains('open'))renderEyeSettings();}
+function showSelVerse(book,ch,verse,vp){
+  const host=$('#selverse');if(!host)return;
+  if(!verse){host.style.display='none';host.innerHTML='';return;}
+  let txt='';
+  if(vp){const c=vp.cloneNode(true);
+    c.querySelectorAll('.vn,.vnum,.vbtn,.vb,.cxr,.notebtn,.conclbtn,.holosnd,.qspk,button').forEach(n=>n.remove());
+    txt=(c.textContent||'').replace(/^\s*\d+[\.\)]?\s*/,'').replace(/\s+/g,' ').trim();}
+  const apoc=!!STATE.apoc;
+  const ver=apoc?(STATE.apocBook||book||'Original'):(displayVersions()[0]||'KJV');
+  const bk=apoc?(STATE.apocBook||book):book;
+  const rtl=apoc&&/[֐-׿]/.test(txt);
+  host.style.display='';
+  host.innerHTML='<div class="selverhd"><span class="selverv">'+esc(ver)+'</span>'+
+    '<span class="selverr">'+esc(bk+' '+ch+':'+verse)+'</span></div>'+
+    '<div class="selvertext"'+(rtl?' dir="rtl"':'')+'>'+esc(txt)+'</div>';
+}
 async function markVerse(el,book,ch,verse){
   document.querySelectorAll('.v.vsel').forEach(x=>x.classList.remove('vsel'));
   document.querySelectorAll('.v .translitnote').forEach(x=>x.remove());
   document.querySelectorAll('.w.oc-orig,.w.oc-translit,.w.oc-supplied').forEach(x=>x.classList.remove('oc-orig','oc-translit','oc-supplied'));
-  const vp=el.closest('.v');if(!vp)return;vp.classList.add('vsel');
+  const vp=el.closest('.v');if(!vp)return;vp.classList.add('vsel');showSelVerse(book,ch,verse,vp);
   // colour-code EVERY word: green=translated original, orange=transliteration, red=supplied
   if(book&&verse&&!STATE.apoc){const keys=await verseStemsFor(book,ch,verse);
     vp.querySelectorAll('.w').forEach(w=>w.classList.add('oc-'+verseClass(w.textContent,keys)));
@@ -2825,7 +2848,7 @@ function apocWordClick(el,verse){
   if(el.classList.contains('sel')){apocDeepWord(el.textContent);return;}
   document.querySelectorAll('.w.sel').forEach(x=>x.classList.remove('sel'));   // deselect the previous
   el.classList.add('sel');                                                     // this word STAYS selected (hover won't clear it)
-  markVerse(el);
+  markVerse(el,STATE.book,STATE.chapter,verse);   // pass the Torah/apoc ref so the selected verse shows at the top
   showWord(wordOf(el.textContent),null,null,verse);}   // FIRST click -> right-panel word study
 /* open the full 2-column deep dive from a word (the right-panel "select again" path) */
 function apocDeepWord(raw){const w=wordOf(raw);
@@ -2845,17 +2868,23 @@ async function showKjvContext(book,ch,verse){
 }
 /* rich verse study for a source verse: every available version (Hebrew original, English, and
    for the Torah the KJV) verse-for-verse, each word clickable (Hebrew -> deep dive). */
-async function showApocVerse(aid,book,ch,verse){if(typeof showRightPanel==='function')showRightPanel();const wrap=$('#verswrap');const ref=esc(book)+' '+verse;
-  wrap.innerHTML=`<div class="lbl">Verse &mdash; ${ref}</div><div class="card"><div class="empty">loading&hellip;</div></div>`;
-  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+async function showApocVerse(aid,book,ch,verse){if(typeof showRightPanel==='function')showRightPanel();
+  const _svw=$('#reader').querySelector('.vwrap[data-v="'+verse+'"]');showSelVerse(book,ch,verse,_svw?_svw.closest('.v'):null);
+  const wrap=$('#verswrap');const ref=esc(book)+' '+verse;
+  /* no loading flash and no scroll-to-bottom: the selected verse shows at the TOP (#selverse) */
   let d;try{d=await api(`/api/apoc_verse?id=${encodeURIComponent(aid)}&book=${encodeURIComponent(book)}&chapter=${ch}&verse=${verse}`);}catch(e){d=null;}
-  const vers=(d&&d.versions)||[];
+  let vers=(d&&d.versions)||[];
+  // the selected verse is already shown at the TOP (#selverse); don't cite it again here --
+  // keep only OTHER versions/translations, and if there are none, show nothing at the bottom.
+  const _norm=s=>((s||'').replace(/[\s ]+/g,' ').replace(/^\s*\d+[\.\)]?\s*/,'').trim());
+  const _selTxt=_norm((($('#selverse .selvertext')||{}).textContent)||'');
+  if(_selTxt)vers=vers.filter(v=>_norm(v.text)!==_selTxt);
+  if(!vers.length){wrap.innerHTML='';return;}
   const wordize=t=>(t||'').split(/(\s+)/).map(x=>WORDTEST.test(x)?`<span class="w" data-l="${/[֐-׿]/.test(x)?'he':'en'}">${esc(x)}</span>`:esc(x)).join('');
-  let h=`<div class="lbl" style="display:flex;align-items:center;gap:8px">Verse &mdash; ${ref} ${noteBtn('averse:'+ref,ref)} ${conclBtn('averse:'+ref,ref)}</div>`;
-  if(!vers.length){h+='<div class="card"><div class="empty">no versions found</div></div>';}
-  else{h+='<div class="card"><h3>Versions ('+vers.length+') &middot; click a word for its study</h3>'+
+  let h=`<div class="lbl" style="display:flex;align-items:center;gap:8px">Other versions &mdash; ${ref} ${noteBtn('averse:'+ref,ref)} ${conclBtn('averse:'+ref,ref)}</div>`;
+  h+='<div class="card"><h3>Versions ('+vers.length+') &middot; click a word for its study</h3>'+
     vers.map(v=>`<div class="verrow"><div class="vname">${esc(v.label)}</div><div class="vtext" dir="auto">${wordize(v.text)}</div></div>`).join('')+
-    '<div class="from">Hebrew words open the letter-by-letter deep dive; English opens the word study.</div></div>';}
+    '<div class="from">Hebrew words open the letter-by-letter deep dive; English opens the word study.</div></div>';
   wrap.innerHTML=h;
   wrap.querySelectorAll('.w').forEach(el=>el.onclick=()=>apocDeepWord(el.textContent));   // select-again -> full 2-column breakdown
   wireNotes(wrap);wireConcl(wrap);
@@ -3568,7 +3597,7 @@ async function sendChat(msg){
   const th=box.lastElementChild.querySelector('.tbody');
   chatToBottom();
   const send=$('#csend');if(send)send.disabled=true;
-  const hist=CHAT.slice(0,-1).slice(-6).map(t=>({role:t.role,text:t.text}));
+  const hist=CHAT.slice(0,-1).slice(-12).map(t=>({role:t.role,text:t.text}));
   // THE COUNCIL streams: the fast RAM voice flows first (deltas), then each deeper tier's
   // stream converges in as a labelled, chakra-coloured voice -- five buckets meeting in one.
   let acc='',ans='',note='',doneObj=null;
@@ -3581,7 +3610,8 @@ async function sendChat(msg){
   try{
     const resp=await fetch('/api/ask_council_stream',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({q:msg,history:hist,think:!!window.YB_THINK,
-          user:(typeof ME!=='undefined'&&ME&&!ME.guest&&ME.user)?ME.user:''})});
+          user:(typeof ME!=='undefined'&&ME&&!ME.guest&&ME.user)?ME.user:'',
+          conv:(typeof CHATID!=='undefined'&&CHATID)?CHATID:''})});
     if(!resp.ok||!resp.body)throw new Error('http '+resp.status);
     const reader=resp.body.getReader();const dec=new TextDecoder();let buf='';
     if(th)th.classList.remove('think');
@@ -4354,9 +4384,10 @@ applySet(); boot(); loadCommandments();
 .col.right #studywrap>#ybtopnav{display:contents;}
 #ybtopnav .tcnav:not(.tctools){display:contents;}
 .col.right #studywrap>.lbl{order:1;}
-.col.right #studywrap #tc_rep{order:2;}
-.col.right #studywrap>#studycard{order:3;}
-#ybtopnav .tcnav.tctools{order:4;margin-top:auto;display:flex;flex-direction:row;gap:8px;}
+.col.right #studywrap>#selverse{order:2;}
+.col.right #studywrap #tc_rep{order:3;}
+.col.right #studywrap>#studycard{order:4;}
+#ybtopnav .tcnav.tctools{order:5;margin-top:auto;display:flex;flex-direction:row;gap:8px;}
 .col.right #mrfoot{order:4;margin-top:auto;}
 .col.right #studywrap #tc_news{order:5;display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
 .col.right #studywrap #tc_news .verpick{margin-left:auto;}
