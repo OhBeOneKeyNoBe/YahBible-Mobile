@@ -2085,6 +2085,25 @@ function studyVerse(book,ch,verse){CUR={word:null,orig:null,book:book,chapter:ch
     tabHtml('<div class="empty">select a word for its dictionary</div>','<div class="empty">loading&hellip;</div>','<div class="empty">select a word</div>');
   wireTabs();activateTab('inter');wireNotes($('#studycard'));wireConcl($('#studycard'));loadInter();loadRev();
   $('#studywrap').scrollIntoView({behavior:'smooth',block:'start'});}
+/* Apocrypha/Torah verse selection: the study card (title + tabs) must track the
+   selected verse just like the OT/NT path -- otherwise it keeps the LAST canonical
+   verse (wrong title, unrelated interlinear). These corpora have no /api/interlinear,
+   so the interlinear tab shows the verse's OWN words, each clickable for its Hebrew
+   letter-by-letter deep dive (Hebrew) or word study (English). */
+function studyApocVerse(book,ch,verse,vtext){CUR={word:null,orig:null,book:book,chapter:ch,verse:verse,strongs:[]};
+  const ref=book+' '+ch+':'+verse;
+  const wz=t=>(t||'').split(/(\s+)/).map(x=>WORDTEST.test(x)?`<span class="w" data-l="${/[֐-׿]/.test(x)?'he':'en'}">${esc(x)}</span>`:esc(x)).join('');
+  const inter=vtext?`<div class="apocsv" dir="auto">${wz(vtext)}</div><div class="from">Tap a word &mdash; Hebrew opens the letter-by-letter deep dive; English opens the word study.</div>`
+                   :'<div class="empty">select a word for its study</div>';
+  $('#studycard').innerHTML=`<div class="studyhead"><span class="word">${esc(ref)}</span>`+
+    `<span style="margin-left:auto">${noteBtn('verse:'+ref,ref)} ${conclBtn('verse:'+ref,ref)}</span></div>`+
+    tabHtml('<div class="empty">select a word for its dictionary</div>',inter,'<div class="empty">universal principles below</div>');
+  wireTabs();activateTab('inter');wireNotes($('#studycard'));wireConcl($('#studycard'));loadRev();
+  $('#studycard').querySelectorAll('.apocsv .w').forEach(el=>el.onclick=()=>{
+    document.querySelectorAll('.w.sel').forEach(x=>x.classList.remove('sel'));el.classList.add('sel');
+    const raw=el.textContent;
+    if(/[֐-׿]/.test(raw))openHebrewStudy(wordOf(raw)||raw.trim(),{glyph:raw.trim(),lang:'he'});
+    else showWord(wordOf(raw),null,null,verse);});}
 async function loadRev(){const pane=$('#p-rev');if(!pane)return;
   const principles='<div class="revhead">Revelations &mdash; universal principles of perception; question everything claimed</div>'+
     YT_PRINCIPLES.map(r=>`<div class="rev"><div class="src">${esc(r.source)}</div><div class="txt">${r.text}</div></div>`).join('');
@@ -2870,6 +2889,7 @@ async function showKjvContext(book,ch,verse){
    for the Torah the KJV) verse-for-verse, each word clickable (Hebrew -> deep dive). */
 async function showApocVerse(aid,book,ch,verse){if(typeof showRightPanel==='function')showRightPanel();
   const _svw=$('#reader').querySelector('.vwrap[data-v="'+verse+'"]');showSelVerse(book,ch,verse,_svw?_svw.closest('.v'):null);
+  studyApocVerse(book,ch,verse,(($('#selverse .selvertext')||{}).textContent)||'');   // study card tracks the Torah/apoc verse (title + words), not the last OT/NT verse
   const wrap=$('#verswrap');const ref=esc(book)+' '+verse;
   /* no loading flash and no scroll-to-bottom: the selected verse shows at the TOP (#selverse) */
   let d;try{d=await api(`/api/apoc_verse?id=${encodeURIComponent(aid)}&book=${encodeURIComponent(book)}&chapter=${ch}&verse=${verse}`);}catch(e){d=null;}
