@@ -3792,6 +3792,22 @@ def ask_taviel(query, chakra=None, max_tokens=1200, history=None):
     query = (query or "").strip()
     if not query:
         return {"ok": False, "error": "empty query"}
+    # THE GAUNTLET: serve a vetted, freshly-framed Christ-first answer directly (offline, fast).
+    try:
+        import taviel_reason as _TRZN
+        _srv = _TRZN.serve(query)
+        if _srv.get("source") == "vetted" and _srv.get("answer"):
+            ans = _srv["answer"]
+            try:
+                import tav_torus as TT
+                if conv:
+                    TT.record_turn(query, ans, [], conv=conv)
+            except Exception:
+                pass
+            return {"ok": True, "answer": ans, "sources": [], "grounded": True,
+                    "gauntlet": _srv.get("round")}
+    except Exception:
+        pass
     chakra = chakra or _ASK_CHAKRA
     global _TIER, _TIER_CHAKRA
     with _TIER_LOCK:                        # one model touch at a time (machine-first)
@@ -4087,6 +4103,26 @@ def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200, think=F
     if not query:
         yield ("done", {"ok": False, "error": "empty query"})
         return
+    # THE GAUNTLET: stream a vetted, freshly-framed Christ-first answer directly (offline, fast).
+    try:
+        import taviel_reason as _TRZN
+        _srv = _TRZN.serve(query)
+        if _srv.get("source") == "vetted" and _srv.get("answer"):
+            ans = _srv["answer"]
+            import re as _re2
+            for chunk in _re2.findall(r"\S+\s*", ans):
+                yield ("delta", chunk)
+            try:
+                import tav_torus as TT
+                if conv:
+                    TT.record_turn(query, ans, [], conv=conv)
+            except Exception:
+                pass
+            yield ("done", {"ok": True, "answer": ans, "sources": [], "grounded": True,
+                            "gauntlet": _srv.get("round")})
+            return
+    except Exception:
+        pass
     chakra = chakra or _ASK_CHAKRA
     global _TIER, _TIER_CHAKRA
     acc = []

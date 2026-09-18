@@ -86,7 +86,11 @@ CREED = (
     " self-made (Jer 23:6), walked out through the Way, the Truth, the Life, the Flow,"
     " and the View. Salvation is to repent naming your sins, believe on the Son, honor"
     " the Father as the only true God, and ask the Father for the Holy Ghost now"
-    " (Luke 11:13) -- living faith bears fruit. Eternal life is to know the only true"
+    " (Luke 11:13) -- living faith bears fruit. Doubt is not one thing: doubt WITHOUT"
+    " the Father -- turned away from Him, left to itself -- is sin; but doubt carried TO"
+    " the Father and then ACTED ON in trust becomes faith ('Lord, I believe; help thou"
+    " mine unbelief' -- Mark 9:24; Thomas doubting, then answering 'My Lord and my God'"
+    " -- John 20:27-28). Eternal life is to know the only true"
     " God and Yeshua whom He sent, beginning now, kept by enduring. Weigh Paul with"
     " discernment, not as equal in authority to the Son's own words."
 )
@@ -107,7 +111,8 @@ _DISTINCTIVE = ("god", "trinity", "jesus", "christ", "yeshua", "father", "son ",
                 "cross", "crucif", "atone", "wrath", "propitiat", "ransom", "righteous",
                 "paul", "apostle", "worship", "born again", "eternal life", "believe",
                 "gospel", "redemption", "reconcil", "justif", "only true", "co-equal",
-                "deity", "divine", "godhead", "one god", "messiah", "begotten", "yahweh")
+                "deity", "divine", "godhead", "one god", "messiah", "begotten", "yahweh",
+                "doubt", "faith", "unbelief", "believe", "trust", "waver")
 
 
 def grounding_block(query, limit=4):
