@@ -10,7 +10,7 @@ Grab it first, then keep reading while it downloads.
 
 | Platform | Get it | Install |
 | --- | --- | --- |
-| **📱 Android** | **[⬇️ Download YahBible v.2 (Android APK, 59 MB) →](https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/YahBible-v2.apk)** | Open the `.apk`, allow "install from this source", tap Install. The full desktop engine + offline AI are baked in; installs over any older build. |
+| **📱 Android** | **[⬇️ Download YahBible v.2.1 (Android APK, 59 MB) →](https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/YahBible-v2.apk)** | Open the `.apk`, allow "install from this source", tap Install. The full desktop engine + offline AI are baked in — now with **the Gauntlet**: Tav'iel answers the 100 hardest questions about Christianity offline, each from the direct words of Christ. Installs over any older build. |
 | **💻 Desktop (Windows)** | **[GitHub Releases →](https://github.com/OhBeOneKeyNoBe/YahBible/releases/latest)** | Run the installer; the full-power edition with the AI guide. |
 | **🍎 iPhone / iPad** | **[Open realizeus.org/yahbible →](https://realizeus.org/yahbible)** | In Safari: **Share → Add to Home Screen**. Installs like an app, reads its packs on-device. |
 | **🌐 Web** | **[realizeus.org/yahbible →](https://realizeus.org/yahbible)** | Nothing to install — just open it. |
