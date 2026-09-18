@@ -763,6 +763,13 @@ select{background:var(--panelsolid);color:var(--ink);border:1px solid var(--line
 #selverse .selverr{font:600 12px Inter;color:var(--dim)}
 #selverse .selvertext{font:16px/1.5 "EB Garamond",Georgia,serif;color:#fff}
 #selverse .selvertext[dir="rtl"]{font-family:"Noto Serif Hebrew","EB Garamond",serif;font-size:19px}
+/* the selected verse rendered INSIDE the study card, between the title and the tabs */
+.selvcard{margin:8px 0 10px;padding:10px 13px;border:1px solid hsl(45 60% 55% / .32);border-radius:11px;background:hsl(262 30% 12% / .5)}
+.selvcard .selverhd{display:flex;align-items:baseline;gap:8px;margin-bottom:5px;flex-wrap:wrap}
+.selvcard .selverv{font:800 11px Inter;letter-spacing:.05em;color:var(--gold);text-transform:uppercase}
+.selvcard .selverr{font:600 12px Inter;color:var(--dim)}
+.selvcard .selvertext{font:16px/1.5 "EB Garamond",Georgia,serif;color:#fff}
+.selvcard .selvertext[dir="rtl"]{font-family:"Noto Serif Hebrew","EB Garamond",serif;font-size:19px}
 .ilinline{display:flex;flex-wrap:wrap;gap:7px;margin:5px 0 12px;padding:8px 10px;border:1px solid var(--paperrule);border-radius:9px;background:hsl(45 40% 90% / .55)}
 .ilw{display:inline-flex;flex-direction:column;align-items:center;gap:1px;cursor:pointer;padding:2px 5px;border-radius:6px}
 .ilw:hover,.ilw.hl{background:transparent;box-shadow:inset 0 0 0 2px hsl(45 92% 55% / .9);border-radius:6px}  /* interlinear hover = yellow OUTLINE */
@@ -1444,7 +1451,7 @@ html.guest .conclbtn{display:none}  /* conclusions are for signed-in users, not 
 </div>
 <script>
 const $=s=>document.querySelector(s), api=(p)=>fetch(p).then(r=>r.json());
-let STATE={book:null,chapter:null,version:'KJV',apoc:null,apocBook:null,loading:false,maxch:1,lastVerse:1,ilmode:false,olc:'off',
+let STATE={book:null,chapter:null,version:'KJV',apoc:null,canon:false,apocBook:null,loading:false,maxch:1,lastVerse:1,ilmode:false,olc:'off',
   vlcmode:false,vlcVersions:(()=>{try{const a=JSON.parse(localStorage.getItem('vlcVers')||'["KJV"]');return Array.isArray(a)?a:['KJV'];}catch(e){return['KJV'];}})()};
 let VERSIONS=['KJV']; let VERSLANG={'KJV':'English'}; let LANGS=['English'];
 
@@ -2038,7 +2045,7 @@ function wireStrong(){document.querySelectorAll('#p-strong .strongbtn,.rev-stron
    Greek) with its Strong's number + gloss, clickable to break down, then the other
    Bible versions beneath -- all in one compact view; hover lights reciprocals. */
 async function loadInter(){const pane=$('#p-inter');if(!pane)return;const persist=$('#p-persist');
-  if(!CUR.book||!CUR.verse||STATE.apoc){pane.innerHTML='<div class="empty">open a Bible chapter and select a word/verse for the interlinear</div>';if(persist)persist.innerHTML='';return;}
+  if(!CUR.book||!CUR.verse||(STATE.apoc&&!STATE.canon)){pane.innerHTML='<div class="empty">open a Bible chapter and select a word/verse for the interlinear</div>';if(persist)persist.innerHTML='';return;}
   pane.innerHTML='<div class="empty">loading interlinear&hellip;</div>';
   let vv={versions:[]},il=CUR.il;
   try{const vres=await api(`/api/verse_versions?book=${encodeURIComponent(CUR.book)}&chapter=${CUR.chapter}&verse=${CUR.verse}`); vv=vres;
@@ -2082,6 +2089,7 @@ function studyVerse(book,ch,verse){CUR={word:null,orig:null,book:book,chapter:ch
   const ref=book+' '+ch+':'+verse;
   $('#studycard').innerHTML=`<div class="studyhead"><span class="word">${esc(ref)}</span>`+
     `<span style="margin-left:auto">${noteBtn('verse:'+ref,ref)} ${conclBtn('verse:'+ref,ref)}</span></div>`+
+    (STATE._selv?`<div class="selvcard">${STATE._selv}</div>`:'')+
     tabHtml('<div class="empty">select a word for its dictionary</div>','<div class="empty">loading&hellip;</div>','<div class="empty">select a word</div>');
   wireTabs();activateTab('inter');wireNotes($('#studycard'));wireConcl($('#studycard'));loadInter();loadRev();
   $('#studywrap').scrollIntoView({behavior:'smooth',block:'start'});}
@@ -2097,6 +2105,7 @@ function studyApocVerse(book,ch,verse,vtext){CUR={word:null,orig:null,book:book,
                    :'<div class="empty">select a word for its study</div>';
   $('#studycard').innerHTML=`<div class="studyhead"><span class="word">${esc(ref)}</span>`+
     `<span style="margin-left:auto">${noteBtn('verse:'+ref,ref)} ${conclBtn('verse:'+ref,ref)}</span></div>`+
+    (STATE._selv?`<div class="selvcard">${STATE._selv}</div>`:'')+
     tabHtml('<div class="empty">select a word for its dictionary</div>',inter,'<div class="empty">universal principles below</div>');
   wireTabs();activateTab('inter');wireNotes($('#studycard'));wireConcl($('#studycard'));loadRev();
   $('#studycard').querySelectorAll('.apocsv .w').forEach(el=>el.onclick=()=>{
@@ -2108,7 +2117,7 @@ async function loadRev(){const pane=$('#p-rev');if(!pane)return;
   const principles='<div class="revhead">Revelations &mdash; universal principles of perception; question everything claimed</div>'+
     YT_PRINCIPLES.map(r=>`<div class="rev"><div class="src">${esc(r.source)}</div><div class="txt">${r.text}</div></div>`).join('');
   pane.innerHTML=principles;
-  if(!CUR.book||STATE.apoc)return;
+  if(!CUR.book||(STATE.apoc&&!STATE.canon))return;
   try{const d=await api(`/api/revelation?book=${encodeURIComponent(CUR.book)}&chapter=${CUR.chapter||1}&verse=${CUR.verse||1}`);
     if(d.insights&&d.insights.length)pane.innerHTML=principles+'<div class="revhead">This chapter</div>'+
       d.insights.map(r=>`<div class="rev"><div class="src">${r.source}</div><div class="txt">${r.text}</div></div>`).join('');
@@ -2201,7 +2210,7 @@ async function showWord(w,book,chapter,verse){
   const b=book||CUR.book||STATE.book, ch=chapter||CUR.chapter||STATE.chapter, vs=verse||CUR.verse;
   const sameVerse=(CUR.book===b&&CUR.chapter===ch&&CUR.verse===vs&&!!$('#stabs')&&!!CUR.il);
   CUR={word:w,orig:null,book:b,chapter:ch,verse:vs,strongs:[],il:sameVerse?CUR.il:null};
-  const needIl=b&&vs&&!STATE.apoc;
+  const needIl=b&&vs&&(!STATE.apoc||STATE.canon);
   if(!sameVerse){   // quick placeholder so it appears instantly
     $('#studycard').innerHTML=`<div id="studytop"><div class="studyhead"><span class="word">${esc(w)}</span> <span class="sub">looking up&hellip;</span></div></div>`+
       tabHtml('<div class="empty">loading&hellip;</div>','<div class="empty">loading&hellip;</div>','<div class="empty">loading&hellip;</div>')+
@@ -2466,7 +2475,7 @@ async function showVerse(book,ch,verse,noScroll){
   if(!noScroll)wrap.scrollIntoView({behavior:'smooth',block:'start'});
   const [vv,il]=await Promise.all([
     api(`/api/verse_versions?book=${encodeURIComponent(book)}&chapter=${ch}&verse=${verse}`),
-    (book&&!STATE.apoc)?api(`/api/interlinear?book=${encodeURIComponent(book)}&chapter=${ch}&verse=${verse}`):Promise.resolve({tokens:[]})]);
+    (book&&(!STATE.apoc||STATE.canon))?api(`/api/interlinear?book=${encodeURIComponent(book)}&chapter=${ch}&verse=${verse}`):Promise.resolve({tokens:[]})]);
   let h=`<div class="lbl" style="display:flex;align-items:center;gap:8px">Verse &mdash; ${vv.ref} ${noteBtn('verse:'+vv.ref, vv.ref)} ${conclBtn('verse:'+vv.ref, vv.ref)}</div>`;
   /* keys are stem#occurrence so the Nth "God" (or Nth "the") maps ONLY to the Nth
      in each other version + the corresponding original token -- reciprocal, not "all". */
@@ -2678,10 +2687,10 @@ function showSelVerse(book,ch,verse,vp){
   const ver=apoc?(STATE.apocBook||book||'Original'):(displayVersions()[0]||'KJV');
   const bk=apoc?(STATE.apocBook||book):book;
   const rtl=apoc&&/[֐-׿]/.test(txt);
-  host.style.display='';
   host.innerHTML='<div class="selverhd"><span class="selverv">'+esc(ver)+'</span>'+
     '<span class="selverr">'+esc(bk+' '+ch+':'+verse)+'</span></div>'+
     '<div class="selvertext"'+(rtl?' dir="rtl"':'')+'>'+esc(txt)+'</div>';
+  STATE._selv=host.innerHTML;host.style.display='none';   // the verse now renders INSIDE the study card (under the title, above the tabs); #selverse is a hidden buffer
 }
 async function markVerse(el,book,ch,verse){
   document.querySelectorAll('.v.vsel').forEach(x=>x.classList.remove('vsel'));
@@ -2741,7 +2750,7 @@ function navBar(book,ch,max){
   const next=ch<max?`<button class="navb" data-go="${ch+1}">${ch+1} &#9654;</button>`:`<span class="navb dis">&#9654;</span>`;
   return `<div class="chapnav">${prev}<span class="navmid">${book} ${ch} / ${max}</span>${next}</div>`;}
 
-async function openChapter(book,ch,verse){if(typeof closeHebStudy==='function')closeHebStudy();$('#mid').classList.remove('mapview');STATE.apoc=null;STATE.book=book;STATE.chapter=ch;
+async function openChapter(book,ch,verse){if(typeof closeHebStudy==='function')closeHebStudy();$('#mid').classList.remove('mapview');STATE.apoc=null;STATE.canon=false;STATE.book=book;STATE.chapter=ch;
   STATE.ilmode=_ilFor(STATE.olc);$('#reader').classList.toggle('hebonly',STATE.olc==='heb');   // apply the eye mode
   const chs=await chapCount(book);STATE.maxch=chs;
   const d=await api(`/api/chapter?book=${encodeURIComponent(book)}&chapter=${ch}&version=${encodeURIComponent(STATE.version)}`);
@@ -2799,6 +2808,7 @@ async function openApocChapter(aid,book,ch,variant){if(typeof closeHebStudy==='f
   const _ck=aid+'|'+book+'|'+ch+'|'+vr+'|'+cmp;
   let d=APOCDATA[_ck];
   if(!d){d=await api(`/api/apoc_chapter?id=${encodeURIComponent(aid)}&book=${encodeURIComponent(book)}&chapter=${ch}&variant=${vr}&compare=${cmp}`);APOCDATA[_ck]=d;}
+  STATE.canon=!!d.canCompare;   // the Torah (Genesis..Deuteronomy) is the OT: give it the FULL OT study menu
   const chs=await apocChapters(aid,book);
   const vmap={};
   let toggle='';
@@ -2889,7 +2899,8 @@ async function showKjvContext(book,ch,verse){
    for the Torah the KJV) verse-for-verse, each word clickable (Hebrew -> deep dive). */
 async function showApocVerse(aid,book,ch,verse){if(typeof showRightPanel==='function')showRightPanel();
   const _svw=$('#reader').querySelector('.vwrap[data-v="'+verse+'"]');showSelVerse(book,ch,verse,_svw?_svw.closest('.v'):null);
-  studyApocVerse(book,ch,verse,(($('#selverse .selvertext')||{}).textContent)||'');   // study card tracks the Torah/apoc verse (title + words), not the last OT/NT verse
+  if(STATE.canon)studyVerse(book,ch,verse);   // the Torah IS the OT -> full interlinear, word study, versions & revelation
+  else studyApocVerse(book,ch,verse,(($('#selverse .selvertext')||{}).textContent)||'');   // other sources: the verse's own clickable words
   const wrap=$('#verswrap');const ref=esc(book)+' '+verse;
   /* no loading flash and no scroll-to-bottom: the selected verse shows at the TOP (#selverse) */
   let d;try{d=await api(`/api/apoc_verse?id=${encodeURIComponent(aid)}&book=${encodeURIComponent(book)}&chapter=${ch}&verse=${verse}`);}catch(e){d=null;}
