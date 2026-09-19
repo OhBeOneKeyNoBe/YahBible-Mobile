@@ -19,8 +19,8 @@ android {
         // the old app — keeping settings & downloads — and the version is visible on-device.
         // 26091701 is higher than every prior lite (…26091427) and engine (26091509) build,
         // so v.2 lands as an update over whichever one is installed.
-        versionCode = 26091802
-        versionName = "2.3"   // Torah gets the full OT study menu; verse inside the study card under its title
+        versionCode = 26091803
+        versionName = "2.4"   // complete interlinear everywhere (canon_fill bundled): titled Psalms, Numbers 16-17, NT doxologies
         ndk { abiFilters += listOf("arm64-v8a") }   // phones; keeps the APK lean
     }
 
