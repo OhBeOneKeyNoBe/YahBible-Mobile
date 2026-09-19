@@ -312,6 +312,20 @@ PIPER_VOICE = ("%s/Holorites_data/daeos/piper/en_US-lessac-medium.onnx" % _YB).r
 YT_RW = (_YB + "/Holorites_data/daeos/elaniel_yt.sqlite").replace("/", os.sep)  # writable nexus (conclusions)
 USERS_RW = (_YB + "/Holorites_data/daeos/taviel_users.sqlite").replace("/", os.sep)  # accounts + per-user notes
 USERS_RO = "file:%s/Holorites_data/daeos/taviel_users.sqlite?mode=ro" % _YB
+# canon_fill: the COMPLETED interlinear for verses the lexicon lacks (KJV<->Masoretic
+# versification divergences -- titled Psalms, Numbers 16:36-17:13, etc. -- plus the NT
+# doxologies). Bundled with the app / pulled from the code dir, so desktop + Android serve
+# the SAME complete interlinear as the web canon_fill pack.
+_cf_cands = []
+try:
+    _cf_cands.append(_res("canon_fill.sqlite"))
+except Exception:
+    pass
+_cf_cands += [os.path.join(_APPDIR, "canon_fill.sqlite"),
+              ("%s/Holorites/YahBible-Web/packs/canon_fill.sqlite" % _YB).replace("/", os.sep),
+              "D:\\Holorites\\YahBible-Web\\packs\\canon_fill.sqlite"]
+_cffile = next((p for p in _cf_cands if p and os.path.exists(p) and os.path.getsize(p) > 0), None)
+CANONFILL = ("file:%s?mode=ro" % _cffile.replace(os.sep, "/")) if _cffile else None
 _WLOCK = threading.Lock()
 _ULOCK = threading.Lock()
 import hashlib as _hl  # noqa: E402
@@ -1402,6 +1416,21 @@ def _glyph_bare(lemma):
     return unicodedata.normalize("NFC", re.split(r"\s*\(", (lemma or "").strip(), 1)[0].strip())
 
 
+def _canonfill_interlinear(book, ch, verse):
+    """Completed interlinear for a verse the lexicon lacks (see CANONFILL)."""
+    if not CANONFILL:
+        return None
+    try:
+        row = _c(CANONFILL).execute("SELECT json FROM interlinear WHERE ref=?",
+                                    ("%s %d:%d" % (book, ch, verse),)).fetchone()
+        if row and row[0]:
+            t = (json.loads(row[0]) or {}).get("tokens") or []
+            return t or None
+    except Exception:
+        return None
+    return None
+
+
 def interlinear(book, ch, verse):
     c = _c(LEX)
     # the KJV verse's own words -- so each token shows the rendering actually used HERE
@@ -1485,6 +1514,10 @@ def interlinear(book, ch, verse):
                      # set of English words the KJV uses for this original -- it drives
                      # word-recognition, so a translated word is not falsely 'supplied'.
                      "kjv": " ".join([w for w in kjv_words if len(w) > 1][:100])})
+    if not toks:                                   # lexicon lacks this verse -> completed pack
+        fb = _canonfill_interlinear(book, ch, verse)
+        if fb:
+            return {"tokens": fb}
     return {"tokens": toks}
 
 
@@ -3071,6 +3104,41 @@ def speak_wav(text):
         return None
 
 
+def speak_eleven(text):
+    """Elan'iel's cloned ElevenLabs voice -> mp3 bytes, cached on disk by text so the same
+    passage is never billed twice. None when not configured (no API key / voice id) or on error."""
+    t = (text or "").strip()
+    if not t or not os.environ.get("ELEVENLABS_API_KEY") or not os.environ.get("ZIONIEL_VOICE_ID"):
+        return None
+    import hashlib
+    key = hashlib.sha256(t[:1500].encode("utf-8")).hexdigest()[:24]
+    cp = None
+    try:
+        cdir = os.path.join(_YB, "Holorites_data", "daeos", "voicecache").replace("/", os.sep)
+        os.makedirs(cdir, exist_ok=True)
+        cp = os.path.join(cdir, key + ".mp3")
+        if os.path.exists(cp) and os.path.getsize(cp) > 0:
+            with open(cp, "rb") as f:
+                return f.read()
+    except Exception:
+        cp = None
+    try:
+        import sys as _sys
+        if r"D:\Holorites" not in _sys.path:
+            _sys.path.insert(0, r"D:\Holorites")
+        import voice as _voice
+        mp3 = _voice.speak(t[:1500])
+        if mp3 and cp:
+            try:
+                with open(cp, "wb") as f:
+                    f.write(mp3)
+            except Exception:
+                pass
+        return mp3
+    except Exception:
+        return None
+
+
 _CMDS = None
 
 
@@ -3305,7 +3373,14 @@ class H(BaseHTTPRequestHandler):
             if p == "/api/news":
                 return self._send(news())
             if p == "/api/speak":
-                wav = speak_wav(q.get("text", ""))
+                txt = q.get("text", "")
+                # his cloned voice first (unless the client asked for the plain offline voice),
+                # then the offline Piper voice as a fallback.
+                if q.get("voice", "") != "piper":
+                    mp3 = speak_eleven(txt)
+                    if mp3:
+                        return self._send(mp3, ctype="audio/mpeg")
+                wav = speak_wav(txt)
                 if wav:
                     return self._send(wav, ctype="audio/wav")
                 return self._send({"ok": False, "error": "tts unavailable"})
@@ -3504,7 +3579,8 @@ class H(BaseHTTPRequestHandler):
             self.wfile.flush()
         try:
             for kind, payload in ask_taviel_council_stream(data.get("q", ""), data.get("history"),
-                                                           bool(data.get("think")), data.get("user")):
+                                                           bool(data.get("think")), data.get("user"),
+                                                           data.get("conv")):
                 if kind == "delta":
                     w({"t": payload})
                 elif kind == "voice":
@@ -3613,7 +3689,8 @@ class H(BaseHTTPRequestHandler):
                     return self._send(_ask_zeroclaw(data.get("q", ""), data.get("chakra") or None,
                                                     history=data.get("history")))
                 return self._send(ask_taviel(data.get("q", ""), data.get("chakra") or None,
-                                             history=data.get("history")))
+                                             max_tokens=int(data.get("max_tokens") or 1200),
+                                             history=data.get("history"), conv=data.get("conv")))
             if u.path == "/api/ask_stream":
                 return self._ask_stream(data)
             if u.path == "/api/ask_council_stream":
@@ -3775,7 +3852,7 @@ def _history_preamble(history):
     if not history:
         return ""
     out = []
-    for h in history[-6:]:
+    for h in history[-12:]:
         role = "Seeker" if (h.get("role") == "you") else "Tav'iel"
         t = (h.get("text") or "").strip().replace("\n", " ")
         if t:
@@ -3783,7 +3860,36 @@ def _history_preamble(history):
     return ("Conversation so far:\n" + "\n".join(out) + "\n\n") if out else ""
 
 
-def ask_taviel(query, chakra=None, max_tokens=1200, history=None):
+_GAUNTLET_BOOTSTRAPPED = False
+
+
+def _bootstrap_gauntlet():
+    """Ensure the Gauntlet files sit beside this module. An installed desktop auto-pulls only
+    o_taviel_server.py from the repo; if the gauntlet's own files aren't here yet, fetch them
+    from Hugging Face so the 100 answers work without waiting for a new exe. A no-op where they
+    are already present (the dev tree, and the phone, which bundles them in the APK)."""
+    global _GAUNTLET_BOOTSTRAPPED
+    if _GAUNTLET_BOOTSTRAPPED:
+        return
+    _GAUNTLET_BOOTSTRAPPED = True
+    here = os.path.dirname(os.path.abspath(__file__))
+    miss = [f for f in ("taviel_apologetics.py", "taviel_reason.py", "gauntlet_kb.json")
+            if not os.path.isfile(os.path.join(here, f))]
+    if miss:
+        try:
+            from huggingface_hub import hf_hub_download
+            import shutil
+            for f in miss:
+                cached = hf_hub_download(repo_id="OhBeOneKeyNoBe/YahBible",
+                                         filename="code/" + f, repo_type="model")
+                shutil.copy2(cached, os.path.join(here, f))
+        except Exception:
+            pass
+    if here not in sys.path:
+        sys.path.insert(0, here)
+
+
+def ask_taviel(query, chakra=None, max_tokens=1200, history=None, conv=None):
     """Engage Tav'iel the grounded AI -- NOT the scripture search. Grounds the
     query in the four truth roots and REASONS through a resident served model
     (idle-unloaded after 5 min). The grounding carries verbatim scripture; the
@@ -3792,8 +3898,11 @@ def ask_taviel(query, chakra=None, max_tokens=1200, history=None):
     query = (query or "").strip()
     if not query:
         return {"ok": False, "error": "empty query"}
-    # THE GAUNTLET: serve a vetted, freshly-framed Christ-first answer directly (offline, fast).
+    # THE GAUNTLET: a vetted, Christ-first answer to a common objection is served directly
+    # -- re-framed freshly each call (varied order/intro/depth, scripture kept exact), fast
+    # and offline, never flipping doctrine. Falls through to the reasoning model otherwise.
     try:
+        _bootstrap_gauntlet()
         import taviel_reason as _TRZN
         _srv = _TRZN.serve(query)
         if _srv.get("source") == "vetted" and _srv.get("answer"):
@@ -3832,7 +3941,7 @@ def ask_taviel(query, chakra=None, max_tokens=1200, history=None):
             torus_ctx = ""
             try:
                 import tav_torus as TT
-                torus_ctx = TT.context_weave(query)
+                torus_ctx = TT.context_weave(query, conv=conv)
             except Exception:
                 pass
             if _TIER is not None and _TIER_CHAKRA != chakra:  # switching tiers: free the old
@@ -3845,9 +3954,13 @@ def ask_taviel(query, chakra=None, max_tokens=1200, history=None):
                 _TIER = G.open_tier(chakra, cap_mb=1400, ctx=4096)  # headroom for doctrine grounding
                 _TIER_CHAKRA = chakra
             g["grounding"] = (g.get("grounding") or "") + _CITE_MANDATE
-            prompt = torus_ctx + _history_preamble(history) + _directness(query) + query
+            # the per-conversation torus already carries the recent turns (bounded); only
+            # fall back to the client-sent history when there is no torus, so the prompt
+            # stays a constant, small size and the model is never overburdened at turn 100.
+            recent_ctx = "" if conv else _history_preamble(history)
+            prompt = torus_ctx + recent_ctx + _directness(query) + query
             r = G.generate(_TIER, prompt, grounding=g["grounding"],
-                           max_tokens=max_tokens, system=TA.IDENTITY)
+                           max_tokens=max_tokens, system=_compose_identity(TA.IDENTITY))
             answer = _clean_answer(_strip_tic((r.get("text") or "").strip()))
             used_fallback = False
             # DEGENERATE RETRY: an empty/tiny reply is almost always grounding
@@ -3888,7 +4001,7 @@ def ask_taviel(query, chakra=None, max_tokens=1200, history=None):
                 pass
             try:                            # the exchange enters the TempTorus (memory)
                 import tav_torus as TT
-                TT.record_turn(query, answer, ans_refs)
+                TT.record_turn(query, answer, ans_refs, conv=conv)
             except Exception:
                 pass
             return {"ok": True, "answer": answer or "Ask me once more, and I will answer plainly.",
@@ -4029,7 +4142,7 @@ def council_poll(tid, since=0):
         return {"voices": voices, "done": len(rec["pending"]) == 0, "total": len(rec["voices"])}
 
 
-def ask_taviel_council_stream(query, history=None, think=False, user=None):
+def ask_taviel_council_stream(query, history=None, think=False, user=None, conv=None):
     """The RAM voice streams the primary answer NOW; the deeper tiers are launched to trickle in
     over time (below-normal priority, disk-streamed) and are collected via /api/council_poll.
     Yields ('delta',text) for the primary, then ('done',{answer,sources,turn}) carrying the turn
@@ -4059,7 +4172,7 @@ def ask_taviel_council_stream(query, history=None, think=False, user=None):
     acc = []
     got_done = None
     for kind, payload in ask_taviel_stream(query, chakra="throat", history=history,
-                                           think=think, user=user):
+                                           think=think, user=user, conv=conv):
         if kind == "delta":
             acc.append(payload)
             yield ("delta", payload)
@@ -4074,9 +4187,24 @@ def ask_taviel_council_stream(query, history=None, think=False, user=None):
     yield ("done", out)
 
 
+_VARY_FACETS = [
+    "Open from a different angle than the obvious one this time.",
+    "Lean on Scriptures you might not reach for first, while staying true.",
+    "Vary your structure and wording; do not recite a fixed template.",
+    "Draw a fresh line of reasoning to the same truth.",
+    "Say it plainly and freshly, as if newly considered.",
+    "Begin somewhere new -- a different word, image, or passage carries the same truth.",
+    "Emphasize a facet you did not stress last time.",
+]
+
+
 def _compose_identity(base, think=False, user=None):
     """Frame Tav'iel's identity for a PERSONAL conversation (and, when asked, a deeper
-    reasoning pass), keeping Qwen3's trailing /think control token at the very end."""
+    reasoning pass), keeping Qwen3's trailing /think control token at the very end.
+    A per-call variation nudge (random facet + a salt) makes the SAME question get a
+    fresh, still-truthful answer each time -- the prompt itself differs every call, so
+    the reply varies even if the sampler seed is not honored."""
+    import random
     b = (base or "").rstrip()
     tail = ""
     if b.endswith("/think"):
@@ -4092,10 +4220,17 @@ def _compose_identity(base, think=False, user=None):
     deep = ("Take your time and reason this through carefully and thoroughly -- weigh more than one "
             "angle and more of Scripture than usual, follow the thought where it leads, and give a "
             "fuller, deeper answer than your usual brevity. ") if think else ""
-    return b + " " + who + deep + tail
+    # per-call variation: the truth is one, but there are many faithful ways to say it.
+    # Two shuffled facets change the prompt every call (so the answer differs even if the
+    # sampler seed is ignored), with no numeric salt that could be echoed into the reply.
+    _f = _VARY_FACETS[:]
+    random.shuffle(_f)
+    vary = (_f[0] + " " + _f[1] + " The truth is one, but never reproduce a previous reply "
+            "word-for-word -- answer this one afresh. ")
+    return b + " " + who + deep + vary + tail
 
 
-def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200, think=False, user=None):
+def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200, think=False, user=None, conv=None):
     """Streaming twin of ask_taviel: yields ('delta', text) as tokens arrive, then
     ('done', {...}) with the cleaned, paragraph-formatted full answer + sources. On any
     failure or an empty stream, yields a single ('done', {...}) with the sourced roots."""
@@ -4103,8 +4238,10 @@ def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200, think=F
     if not query:
         yield ("done", {"ok": False, "error": "empty query"})
         return
-    # THE GAUNTLET: stream a vetted, freshly-framed Christ-first answer directly (offline, fast).
+    # THE GAUNTLET: stream a vetted, freshly-framed Christ-first answer directly -- fast,
+    # offline, varied each call, doctrine exact. Falls through to the model otherwise.
     try:
+        _bootstrap_gauntlet()
         import taviel_reason as _TRZN
         _srv = _TRZN.serve(query)
         if _srv.get("source") == "vetted" and _srv.get("answer"):
@@ -4145,7 +4282,7 @@ def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200, think=F
             torus_ctx = ""
             try:
                 import tav_torus as TT
-                torus_ctx = TT.context_weave(query)
+                torus_ctx = TT.context_weave(query, conv=conv)
             except Exception:
                 pass
             if _TIER is not None and _TIER_CHAKRA != chakra:
@@ -4161,7 +4298,11 @@ def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200, think=F
             system = _compose_identity(TA.IDENTITY, think, user)
             if think:
                 max_tokens = max(max_tokens, 1600)      # room for a deeper answer
-            prompt = torus_ctx + _history_preamble(history) + _directness(query) + query
+            # the per-conversation torus already carries the recent turns (bounded); only
+            # fall back to the client-sent history when there is no torus, so the prompt
+            # stays a constant, small size and the model is never overburdened at turn 100.
+            recent_ctx = "" if conv else _history_preamble(history)
+            prompt = torus_ctx + recent_ctx + _directness(query) + query
             for delta in G.generate_stream(_TIER, prompt, grounding=g["grounding"],
                                            max_tokens=max_tokens, system=system):
                 acc.append(delta)
@@ -4185,7 +4326,7 @@ def ask_taviel_stream(query, chakra=None, history=None, max_tokens=1200, think=F
                 pass
             try:
                 import tav_torus as TT
-                TT.record_turn(query, full, ans_refs)
+                TT.record_turn(query, full, ans_refs, conv=conv)
             except Exception:
                 pass
             yield ("done", {"ok": True, "answer": full, "sources": g.get("sources", []),
