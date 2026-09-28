@@ -393,8 +393,40 @@ def _kb_best(query):
     return best_e, best_s, best_s - runner
 
 
-def gauntlet_entry(query, threshold=2.0):
-    """Return the full structured vetted round best matching this objection (or None)."""
+def nearest_questions(query, k=3):
+    """The k recorded questions closest to this asking -- LEXICALLY, offline.
+
+    No server, no embedder, no GPU. This exists for the machine that has none
+    of them: when no generator can be reached, the always-answer law still
+    has to be kept, and the honest thing to offer is the nearest questions
+    that DO have vetted answers sitting on disk beside the code.
+    """
+    kb = _kb()
+    if not kb:
+        return []
+    qtok = set(_tok(query))
+    scored = []
+    for e in kb:
+        words = set(e.get("words", []))
+        qwords = set(e.get("keys", []))
+        s = sum(_IDF.get(w, 1.0) * (2.0 if w in qwords else 1.0)
+                for w in qtok if w in words)
+        if s > 0 and e.get("question"):
+            scored.append((s, e["question"]))
+    scored.sort(key=lambda x: -x[0])
+    return [q for _s, q in scored[:k]]
+
+
+def gauntlet_entry(query, threshold=4.0):
+    """Return the full structured vetted round best matching this objection (or None).
+
+    The gauntlet is a vetted-OBJECTION KB, not a catechism, so it must only fire on a
+    CONFIDENT match and otherwise defer to the grounded reasoning model. Measured floor:
+    correct matches score >= ~4.9 ("who is Jesus" 4.87, "what is sin" 5.24, real objections
+    10-24), while an ambiguous definitional query like "who is God" / "what is God" scores
+    only ~2.5 on common words and used to squeak past the old 2.0 floor -- serving the
+    unrelated round 2 (why God allows suffering) instead of a direct answer. A 4.0 floor
+    lets those fall through to the reasoning model, which answers the question directly."""
     best, score, _ = _kb_best(query)
     return best if (best and score >= threshold) else None
 
