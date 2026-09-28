@@ -52,6 +52,13 @@ chaquopy {
         pip {
             // taviel_updates (Origin-signed updates) needs it; Chaquopy ships a native wheel.
             install("cryptography")
+            // JEV. The instant router is one embedding and then arithmetic, and
+            // jev_embed_np runs bge-small -- a twelve-layer BERT -- in numpy
+            // alone, agreeing with llama.cpp at cosine 0.9999. So the phone
+            // needs no ARM build of the decision fork, no ONNX runtime and no
+            // LiteRT for this: it needs numpy. Chaquopy publishes 1.26.2 for
+            // cp312/arm64-v8a, which is exactly this build's target.
+            install("numpy")
         }
     }
 }

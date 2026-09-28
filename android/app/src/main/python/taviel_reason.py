@@ -186,6 +186,35 @@ def serve(query, gen=None, system=None, seed=None, profile=None,
             except Exception:
                 pass
 
+    # ---- JEV ON THE PHONE ------------------------------------------------
+    # No decision server, no embedder server, no LLM -- numpy and 41 MB of
+    # assets. The judge is absent by necessity and, measured, is not needed:
+    # retrieval plus the resemblance witness at 0.74 commits 42.0% of 2,429
+    # held-out askings at 1.1% wrong (95% upper bound 1.5%), precision 97.4%,
+    # with 10/10 off-scope questions refused and a scrambled index committing
+    # nothing. That is SAFER than the desktop's judge-free arm (1.9% wrong) at
+    # about five points less coverage -- the price of a 384-dimension embedder
+    # rather than 768.
+    #
+    # It sits BELOW the desktop front door and ABOVE the verbatim lookup,
+    # because it is better than word-matching and worse than the full router,
+    # and the order of these tiers should read the same as their quality.
+    if profile is not False:
+        try:
+            import jev_mobile as JV
+            if JV.available():
+                n, score, _diag = JV.route(query)
+                if n is not None:
+                    import taviel_apologetics as AP
+                    e = next((x for x in AP._kb() if x.get("n") == n), None)
+                    if e:
+                        return {"answer": AP.present(e, seed=seed),
+                                "source": f"instant:vetted r{n} "
+                                          f"p={score:.2f} (on-device)",
+                                "round": n, "seed": seed, "stripped": []}
+        except Exception:
+            pass
+
     try:
         import taviel_apologetics as AP
         e = AP.gauntlet_entry(query)
