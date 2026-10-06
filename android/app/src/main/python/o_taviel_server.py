@@ -545,7 +545,56 @@ def versions_available():
                 v += [r[0] for r in d.execute("SELECT DISTINCT version FROM verses ORDER BY version")]
             except sqlite3.OperationalError:
                 pass
+    # THE NKJV, AS A REFERENCE RATHER THAN A COPY. Every other translation
+    # here is public domain or freely licensed; the New King James Version is
+    # copyright 1982 Thomas Nelson and may not be stored in an application.
+    # A citation beside copied text is not a licence -- attribution and
+    # permission are different things -- so none of its words are kept. What
+    # is offered is the reference: selecting it lists the chapter's verses,
+    # each linking to that verse at a publisher licensed to show it.
+    if NKJV_ID not in v:
+        v.append(NKJV_ID)
     return v
+
+
+NKJV_ID = "NKJV"
+# Bible Gateway is the licensed host with stable per-verse addresses; the
+# publisher's own site has no per-verse reader, so a link there would land the
+# reader on a marketing page instead of the verse they asked for.
+NKJV_BASE = "https://www.biblegateway.com/passage/?version=NKJV&search="
+
+
+def nkjv_url(book, ch, verse=None):
+    from urllib.parse import quote
+    if not book or not ch:
+        return None
+    q = "%s %s" % (book, ch) + (":%s" % verse if verse else "")
+    return NKJV_BASE + quote(q)
+
+
+def nkjv_chapter(book, ch):
+    """The chapter as a REFERENCE: verse numbers and links, no NKJV words.
+
+    Verse numbering comes from the King James text, which is public domain --
+    how many verses a chapter has, and what they are numbered, is not the
+    copyrighted part of a translation. The words are not reproduced, and KJV
+    words are NOT served under an NKJV label either: the two translations
+    genuinely differ, and a mislabelled translation is a worse fault in a
+    Bible app than a missing one.
+    """
+    c = _c(WATCHMAN)
+    rows = c.execute("SELECT verse FROM verses WHERE book=? AND chapter=?"
+                     " ORDER BY verse", (book, ch)).fetchall()
+    return {
+        "cite": "New King James Version &middot; %s %d &mdash; reference only"
+                % (book, ch),
+        "reference": True,
+        "note": "The New King James Version is under copyright (NKJV, "
+                "&copy; 1982 Thomas Nelson), so its words are not stored in "
+                "this app. Each verse below opens it at its publisher.",
+        "verses": [{"verse": r[0], "text": "",
+                    "nkjv": nkjv_url(book, ch, r[0])} for r in rows],
+    }
 
 
 APOC_BASE = [
@@ -573,6 +622,8 @@ def apocrypha_menu():
 
 
 def chapter(book, ch, version="KJV"):
+    if version == NKJV_ID:
+        return nkjv_chapter(book, ch)
     if version and version != "KJV":
         d = _c(VERSIONS_DB)
         if d is not None:
@@ -1016,27 +1067,17 @@ def _ng(g):
     return g.strip()
 
 
-# STEPBible book codes in canonical order (paired to Watchman's book_order below,
-# so EVERY book -- not just KJV's few -- resolves its Hebrew/Greek interlinear).
-STEP_CODES = ["Gen", "Exo", "Lev", "Num", "Deu", "Jos", "Jdg", "Rut", "1Sa", "2Sa",
-              "1Ki", "2Ki", "1Ch", "2Ch", "Ezr", "Neh", "Est", "Job", "Psa", "Pro",
-              "Ecc", "Sng", "Isa", "Jer", "Lam", "Ezk", "Dan", "Hos", "Jol", "Amo",
-              "Oba", "Jon", "Mic", "Nam", "Hab", "Zep", "Hag", "Zec", "Mal", "Mat",
-              "Mrk", "Luk", "Jhn", "Act", "Rom", "1Co", "2Co", "Gal", "Eph", "Php",
-              "Col", "1Th", "2Th", "1Ti", "2Ti", "Tit", "Phm", "Heb", "Jas", "1Pe",
-              "2Pe", "1Jn", "2Jn", "3Jn", "Jud", "Rev"]
-_ABBR = None
+# Phase 328: the reference parser lives in scripture_refs.py now (extracted
+# VERBATIM). The server injects its own books() and delegates -- one behavior,
+# proven byte-identical by the golden-parity battery.
+import scripture_refs as _SR  # noqa: E402  (needs books() defined above)
+
+_SR.set_books_provider(books)
+STEP_CODES = _SR.STEP_CODES
 
 
 def _abbr_map():
-    global _ABBR
-    if _ABBR is None:
-        try:
-            names = books()
-            _ABBR = {n: STEP_CODES[i] for i, n in enumerate(names) if i < len(STEP_CODES)}
-        except Exception:
-            _ABBR = {}
-    return _ABBR
+    return _SR.abbr_map()
 
 
 # Paleo/ancient-Hebrew letter meanings (name + pictographic sense), for the
@@ -1077,7 +1118,6 @@ GRK_SOUND = {"α": "a", "β": "b", "γ": "g", "δ": "d", "ε": "e", "ζ": "z", "
              "θ": "th", "ι": "i", "κ": "k", "λ": "l", "μ": "m", "ν": "n", "ξ": "x",
              "ο": "o", "π": "p", "ρ": "r", "σ": "s", "ς": "s", "τ": "t", "υ": "u",
              "φ": "ph", "χ": "ch", "ψ": "ps", "ω": "o"}
-_CODE2BOOK = None
 
 
 # Hebrew niqqud (vowel points) -> sound, for a VOCALIZED transliteration.
@@ -1214,29 +1254,12 @@ def _greek_for_word(w):
 
 
 def _code2book():
-    global _CODE2BOOK
-    if _CODE2BOOK is None:
-        try:
-            names = books()
-            _CODE2BOOK = {STEP_CODES[i]: n for i, n in enumerate(names) if i < len(STEP_CODES)}
-        except Exception:
-            _CODE2BOOK = {}
-    return _CODE2BOOK
+    return _SR.code2book()
 
 
 def _parse_step_ref(sid):
     """'step:Jhn.3.16#05=G...' -> ('John', 3, 16) or None."""
-    if not sid or not sid.startswith("step:"):
-        return None
-    core = sid[5:].split("#", 1)[0]
-    parts = core.split(".")
-    if len(parts) < 3:
-        return None
-    book = _code2book().get(parts[0], parts[0])
-    try:
-        return book, int(parts[1]), int(parts[2])
-    except ValueError:
-        return None
+    return _SR.parse_step(sid)
 
 
 def hebrew_letters(word):
@@ -2244,206 +2267,29 @@ def _mk_hit(ref, text):
 # ---- robust Scripture reference parsing (book + chapter + verse, ANY order /
 #      separator / spelling): "matt 6 11", "6 11 matt", "6:11 matt",
 #      "matthew 6 .11", "1 jn 3.16", "psalm 23", "jhn 3 16", "revalation 21 4" ----
-_REF_ABBR = {
-    "genesis": ["gen", "ge", "gn"], "exodus": ["ex", "exo", "exod", "exd"],
-    "leviticus": ["lev", "le", "lv", "levit"], "numbers": ["num", "nu", "nm", "nb", "numb"],
-    "deuteronomy": ["deut", "dt", "deu", "deute"], "joshua": ["josh", "jos", "jsh"],
-    "judges": ["judg", "jdg", "jgs", "jdgs"], "ruth": ["rth", "rut", "ru"],
-    "1 samuel": ["1sam", "1sa", "1sm", "1s", "firstsamuel", "isamuel", "1samuel"],
-    "2 samuel": ["2sam", "2sa", "2sm", "2s", "secondsamuel", "iisamuel", "2samuel"],
-    "1 kings": ["1kings", "1ki", "1kgs", "1kg", "1k", "firstkings", "1kin"],
-    "2 kings": ["2kings", "2ki", "2kgs", "2kg", "2k", "secondkings", "2kin"],
-    "1 chronicles": ["1chron", "1chr", "1ch", "1chronicles", "firstchronicles"],
-    "2 chronicles": ["2chron", "2chr", "2ch", "2chronicles", "secondchronicles"],
-    "ezra": ["ezr", "ezra"], "nehemiah": ["neh", "ne", "nehem"],
-    "esther": ["esth", "est", "es", "ester"], "job": ["job", "jb"],
-    "psalms": ["ps", "psa", "psalm", "pss", "psm", "pslm", "psalms"],
-    "proverbs": ["prov", "pro", "prv", "proverb"],
-    "ecclesiastes": ["eccl", "ecc", "eccles", "qoh"],
-    "song of solomon": ["song", "sos", "ss", "songofsolomon", "songofsongs", "canticles", "cant"],
-    "isaiah": ["isa", "isai", "isah", "isaia"], "jeremiah": ["jer", "jere", "jr"],
-    "lamentations": ["lam", "lament", "lamen"], "ezekiel": ["ezek", "eze", "ezk", "ezke"],
-    "daniel": ["dan", "dn", "dnl", "danl"], "hosea": ["hos", "hsa", "hose"],
-    "joel": ["joe", "jl", "joel"], "amos": ["amo", "amos"],
-    "obadiah": ["obad", "oba", "obd", "obadia"], "jonah": ["jon", "jnh", "jona"],
-    "micah": ["mic", "mica", "mch"], "nahum": ["nah", "nam", "nahu"],
-    "habakkuk": ["hab", "habk", "haba"], "zephaniah": ["zeph", "zep", "zphan", "zephan"],
-    "haggai": ["hag", "hagg", "hagai"], "zechariah": ["zech", "zec", "zach", "zechar"],
-    "malachi": ["mal", "mala", "malac"],
-    "matthew": ["matt", "mt", "mat", "matth", "mtt", "mathew"], "mark": ["mrk", "mk", "mar"],
-    "luke": ["luk", "lk", "luke"], "john": ["jhn", "jn", "joh", "john"],
-    "acts": ["act", "ac", "acts"], "romans": ["rom", "rm", "roman", "romns"],
-    "1 corinthians": ["1cor", "1co", "1c", "firstcorinthians", "1corinth", "1corinthians"],
-    "2 corinthians": ["2cor", "2co", "2c", "secondcorinthians", "2corinth", "2corinthians"],
-    "galatians": ["gal", "gl", "galat"], "ephesians": ["eph", "ephes", "ephs"],
-    "philippians": ["phil", "php", "philip", "phlp", "philipp"], "colossians": ["col", "cl", "coloss"],
-    "1 thessalonians": ["1thess", "1th", "1thes", "firstthess", "1thessalonians"],
-    "2 thessalonians": ["2thess", "2th", "2thes", "secondthess", "2thessalonians"],
-    "1 timothy": ["1tim", "1ti", "1tm", "firsttimothy", "1timothy"],
-    "2 timothy": ["2tim", "2ti", "2tm", "secondtimothy", "2timothy"],
-    "titus": ["tit", "tts", "titu"], "philemon": ["philem", "phm", "phlm", "phile", "philemn"],
-    "hebrews": ["heb", "hebr", "hebrew"], "james": ["jas", "jam", "jms", "jame"],
-    "1 peter": ["1pet", "1pe", "1pt", "1p", "firstpeter", "1peter"],
-    "2 peter": ["2pet", "2pe", "2pt", "2p", "secondpeter", "2peter"],
-    "1 john": ["1john", "1jn", "1jo", "1j", "firstjohn", "1jhn"],
-    "2 john": ["2john", "2jn", "2jo", "2j", "secondjohn", "2jhn"],
-    "3 john": ["3john", "3jn", "3jo", "3j", "thirdjohn", "3jhn"],
-    "jude": ["jud", "jd", "jude"],
-    "revelation": ["rev", "rv", "revelation", "apocalypse", "apoc", "revel", "revalation"],
-}
-_ALIAS = None
+# Phase 328: the alias table (_REF_ABBR) moved VERBATIM into scripture_refs.py
+# -- one copy of the truth; the delegates below keep every internal caller.
 
 
 def _norm_bk(s):
-    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+    return _SR._norm_bk(s)
 
 
 def _lev(a, b):
-    m, n = len(a), len(b)
-    if not m:
-        return n
-    if not n:
-        return m
-    d = list(range(n + 1))
-    for i in range(1, m + 1):
-        prev = d[0]
-        d[0] = i
-        for j in range(1, n + 1):
-            tmp = d[j]
-            d[j] = min(d[j] + 1, d[j - 1] + 1, prev + (0 if a[i - 1] == b[j - 1] else 1))
-            prev = tmp
-    return d[n]
+    return _SR._lev(a, b)
 
 
 def _alias_map():
-    global _ALIAS
-    if _ALIAS is not None:
-        return _ALIAS
-    try:
-        names = list(books())
-    except Exception:
-        names = []
-    M = {}
-
-    def add(a, canon):
-        k = _norm_bk(a)
-        if k and k not in M:
-            M[k] = canon
-
-    for n in names:
-        add(n, n)
-
-    def find(want):
-        w = _norm_bk(want)
-        for n in names:
-            if _norm_bk(n) == w:
-                return n
-        for n in names:
-            if _norm_bk(n).startswith(w):
-                return n
-        return None
-
-    for canon_want, aliases in _REF_ABBR.items():
-        canon = find(canon_want)
-        if not canon:
-            continue
-        add(canon_want, canon)
-        for a in aliases:
-            add(a, canon)
-    _ALIAS = (M, names)
-    return _ALIAS
+    return _SR._alias_map()
 
 
 def _resolve_book(cand):
-    if not cand:
-        return None
-    M, _names = _alias_map()
-    c = (cand or "").lower().strip()
-    c = re.sub(r"\b(first|1st|i)\b", "1", c)
-    c = re.sub(r"\b(second|2nd|ii)\b", "2", c)
-    c = re.sub(r"\b(third|3rd|iii)\b", "3", c)
-    key = _norm_bk(c)
-    if not key:
-        return None
-    if key in M:
-        return M[key]
-    pre = list({v for k, v in M.items() if len(key) >= 3 and k.startswith(key)})
-    if len(pre) == 1:
-        return pre[0]
-    if len(key) >= 4:
-        best, bd = None, 3
-        for k, v in M.items():
-            if abs(len(k) - len(key)) > 2:
-                continue
-            dd = _lev(key, k)
-            if dd < bd:
-                bd, best = dd, v
-        if best and bd <= (1 if len(key) <= 6 else 2):
-            return best
-    return None
+    return _SR.resolve_book(cand)
 
 
 def _parse_ref(q):
     """Parse a free-form reference into {book, chapter, verse, terms, whole} or None."""
-    if not q:
-        return None
-    s = (q or "").lower().strip()
-    s = re.sub(r"(\d)\s*[.:]\s*(\d)", r"\1:\2", s)          # "6 .11" / "6.11" / "6 : 11" -> "6:11"
-    s = re.sub(r"[^a-z0-9: ]+", " ", s)                     # any other punctuation -> space
-    s = re.sub(r"\s+", " ", s).strip()
-    if not s:
-        return None
-    seq = []
-    for t in s.split(" "):
-        m = re.match(r"^(\d+):(\d+)$", t)
-        if m:
-            seq.append(("cv", int(m.group(1)), int(m.group(2))))
-        elif re.match(r"^\d+$", t):
-            seq.append(("n", int(t), None))
-        elif re.search(r"[a-z]", t):
-            seq.append(("w", re.sub(r"[^a-z0-9]", "", t), None))
-    if not any(x[0] == "w" for x in seq):
-        return None
-    best = None
-    i = 0
-    while i < len(seq) and best is None:
-        if seq[i][0] != "w":
-            i += 1
-            continue
-        run, j = [], i
-        while j < len(seq) and seq[j][0] == "w":
-            run.append(seq[j][1])
-            j += 1
-        take = len(run)
-        while take >= 1 and best is None:
-            cand = " ".join(run[:take])
-            tries = []
-            if i - 1 >= 0 and seq[i - 1][0] == "n" and 1 <= seq[i - 1][1] <= 3:
-                tries.append((str(seq[i - 1][1]) + " " + cand, i - 1))
-            tries.append((cand, -1))
-            for c, ni in tries:
-                b = _resolve_book(c)
-                if b:
-                    best = {"book": b, "ws": i, "we": i + take - 1, "ni": ni}
-                    break
-            take -= 1
-        i += 1
-    if not best:
-        return None
-    chapter_n = verse_n = None
-    cv = next((x for x in seq if x[0] == "cv"), None)
-    if cv:
-        chapter_n, verse_n = cv[1], cv[2]
-    else:
-        nums = [x[1] for idx, x in enumerate(seq) if x[0] == "n" and idx != best["ni"]]
-        if len(nums) >= 1:
-            chapter_n = nums[0]
-        if len(nums) >= 2:
-            verse_n = nums[1]
-    terms = " ".join(x[1] for idx, x in enumerate(seq)
-                     if x[0] == "w" and (idx < best["ws"] or idx > best["we"])).strip()
-    return {"book": best["book"], "chapter": chapter_n, "verse": verse_n, "terms": terms,
-            "whole": chapter_n is None and not terms}
+    return _SR.parse(q)
 
 
 def _detect_book(q):
@@ -2643,6 +2489,26 @@ def _pwhash(pwd, salt):
     return _hl.pbkdf2_hmac("sha256", (pwd or "").encode("utf-8"), bytes.fromhex(salt), 120000).hex()
 
 
+def _publish_split_key(username, password, email=""):
+    """BlackBox (Otaviel/Aleph'iam): publish the account's two encrypted credential
+    halves to Hugging Face + GitHub so login works with no Supabase and even when this
+    PC is offline. Best-effort and OFF the request path -- a daemon thread that swallows
+    every error (missing tokens, no network), so it can never slow or break sign-in."""
+    def _go():
+        try:
+            import yahbible_auth
+            import auth_sync
+            rec = yahbible_auth.signup(username, password, {"email": email})
+            aliases = [username] + ([email] if email else [])
+            auth_sync.publish_aliases(rec, aliases)
+        except Exception:
+            pass   # honest: if HF/GitHub/tokens are unavailable, local auth still stands
+    try:
+        threading.Thread(target=_go, daemon=True).start()
+    except Exception:
+        pass
+
+
 def signup(username, password, email=""):
     username = (username or "").strip()
     email = (email or "").strip()
@@ -2668,6 +2534,7 @@ def signup(username, password, email=""):
         con.execute("INSERT INTO sessions VALUES(?,?,?)", (tok, username, time.time()))
         con.commit(); con.close()
     _registry_publish()   # mirror the sanitized registry (names + email hashes, never passwords)
+    _publish_split_key(username, password, email)   # BlackBox split-key for offline/cross-device login
     return {"ok": True, "user": username, "guest": False, "token": tok}
 
 
@@ -2681,6 +2548,41 @@ def _norm_handle(s):
         if s.startswith(pre):
             s = s[len(pre):]
     return s.lstrip("@")
+
+
+def _blackbox_login(ident, password):
+    """Cross-device sign-in without a local account: reconstruct from the two public
+    halves (HF + GitHub), then seed the account locally so it works offline afterward.
+    Returns a session dict, or None. Short network timeout so an offline typo isn't slow."""
+    try:
+        import yahbible_auth
+        import auth_sync
+        uh = auth_sync._alias_uhash(ident)
+        hf, gh = auth_sync.fetch_halves(uh, timeout=6)
+        acc = yahbible_auth.login(password, hf, gh)
+        if not acc:
+            return None
+        user = acc["user"]
+        salt = os.urandom(16).hex()
+        em = (acc.get("profile") or {}).get("email", "")
+        with _ULOCK:
+            con = sqlite3.connect(USERS_RW); con.execute("PRAGMA busy_timeout=8000")
+            try:
+                con.execute("ALTER TABLE users ADD COLUMN email TEXT")
+            except Exception:
+                pass
+            if con.execute("SELECT 1 FROM users WHERE lower(username)=?", (user.lower(),)).fetchone():
+                con.execute("UPDATE users SET salt=?, pwd=? WHERE lower(username)=?",
+                            (salt, _pwhash(password, salt), user.lower()))   # re-seed (pw changed elsewhere)
+            else:
+                con.execute("INSERT INTO users(username,salt,pwd,created,is_guest,email) VALUES(?,?,?,?,0,?)",
+                            (user, salt, _pwhash(password, salt), time.time(), em))
+            tok = os.urandom(24).hex()
+            con.execute("INSERT INTO sessions VALUES(?,?,?)", (tok, user, time.time()))
+            con.commit(); con.close()
+        return {"ok": True, "user": user, "guest": False, "token": tok}
+    except Exception:
+        return None
 
 
 def login(username, password):
@@ -2702,6 +2604,9 @@ def login(username, password):
                     row = (r[0], r[1], r[2])
                     break
     if not row or _pwhash(password, row[1]) != row[2]:
+        bb = _blackbox_login(ident, password)   # cross-device: try the published split-key halves
+        if bb:
+            return bb
         return {"ok": False, "error": "wrong name or password"}
     with _ULOCK:
         c2 = sqlite3.connect(USERS_RW); tok = os.urandom(24).hex()
@@ -2714,7 +2619,7 @@ def change_password(username, old_pw, new_pw):
     if len(new_pw or "") < 3:
         return {"ok": False, "error": "new password too short (3+ chars)"}
     con = _c(USERS_RO)
-    row = con.execute("SELECT salt,pwd FROM users WHERE username=? AND is_guest=0",
+    row = con.execute("SELECT salt,pwd,COALESCE(email,'') FROM users WHERE username=? AND is_guest=0",
                       (username,)).fetchone() if con is not None else None
     if not row or _pwhash(old_pw, row[0]) != row[1]:
         return {"ok": False, "error": "current password is wrong"}
@@ -2724,6 +2629,7 @@ def change_password(username, old_pw, new_pw):
         c2.execute("UPDATE users SET salt=?, pwd=? WHERE username=?",
                    (salt, _pwhash(new_pw, salt), username))
         c2.commit(); c2.close()
+    _publish_split_key(username, new_pw, row[2])   # re-wrap the BlackBox halves under the new password
     return {"ok": True}
 
 
@@ -3824,6 +3730,29 @@ def _roots_fallback(query, chakra, note):
     if kb:
         return {"ok": True, "answer": kb[0]["answer"], "sources": ["kb"],
                 "grounded": True, "used_fallback": True, "chakra": chakra, "note": note}
+    # LAST RESORT BEFORE GIVING UP: reason with whatever model is ALREADY
+    # RESIDENT. On a 4 GB card the decision server's 1.5B fills the GPU
+    # (measured: 3,873 MiB of 4,096 in use with Jev up), so tav_llm's
+    # torus-paged model cannot load and every deferred question -- half of
+    # them -- reached this line and apologised. But the decision server serves
+    # /v1/chat/completions from a model sitting in memory right now, so there
+    # is a reasoner available; it was simply never asked.
+    #
+    # serve() WITHOUT instant_only reasons through it, with the grounding and
+    # the mechanical citation checking intact. A smaller model's grounded,
+    # checked answer beats "ask me once more".
+    try:
+        import taviel_reason as _TRZN2
+        # NOTE: no `profile` here -- _roots_fallback does not receive one, and
+        # referencing it raised NameError straight into the except below,
+        # silently restoring the very apology this block exists to replace.
+        _r = _TRZN2.serve(query)
+        if _r.get("answer") and _r.get("source") != "defer":
+            return {"ok": True, "answer": _r["answer"], "sources": [],
+                    "grounded": True, "used_fallback": True, "chakra": chakra,
+                    "note": note, "route": _r.get("source")}
+    except Exception:
+        pass
     return {"ok": True, "answer": "I could not reach the model to reason on that just "
             "now -- ask me once more.", "sources": [], "grounded": False,
             "used_fallback": True, "chakra": chakra, "note": note}
@@ -3873,7 +3802,13 @@ def _bootstrap_gauntlet():
         return
     _GAUNTLET_BOOTSTRAPPED = True
     here = os.path.dirname(os.path.abspath(__file__))
-    miss = [f for f in ("taviel_apologetics.py", "taviel_reason.py", "gauntlet_kb.json")
+    # The front-door modules are listed here as well as in yahbible_main's
+    # CODE_FILES, because this is the safety net for a tree where one of them
+    # is missing -- a partly-present Jev routes worse than an absent one.
+    miss = [f for f in ("taviel_apologetics.py", "taviel_reason.py",
+                        "gauntlet_kb.json", "taviel_frontdoor.py",
+                        "taviel_decide.py", "taviel_person.py",
+                        "taviel_contrast.py", "taviel_verify.py")
             if not os.path.isfile(os.path.join(here, f))]
     if miss:
         try:
@@ -3889,7 +3824,8 @@ def _bootstrap_gauntlet():
         sys.path.insert(0, here)
 
 
-def ask_taviel(query, chakra=None, max_tokens=1200, history=None, conv=None):
+def ask_taviel(query, chakra=None, max_tokens=1200, history=None, conv=None,
+               profile=None):
     """Engage Tav'iel the grounded AI -- NOT the scripture search. Grounds the
     query in the four truth roots and REASONS through a resident served model
     (idle-unloaded after 5 min). The grounding carries verbatim scripture; the
@@ -3904,8 +3840,16 @@ def ask_taviel(query, chakra=None, max_tokens=1200, history=None, conv=None):
     try:
         _bootstrap_gauntlet()
         import taviel_reason as _TRZN
-        _srv = _TRZN.serve(query)
-        if _srv.get("source") == "vetted" and _srv.get("answer"):
+        _srv = _TRZN.serve(query, profile=profile, instant_only=True)
+        _src = _srv.get("source") or ""
+        # ACCEPT EVERY ANSWER THAT COST NO GENERATION, not only "vetted".
+        # serve() now routes through the Jev front door when it is present,
+        # and that door answers five ways without generating a token:
+        # identity, vetted, verse lookup, clarify and decline. The old test
+        # honoured one of the five and threw the other four away, sending
+        # questions the router had already answered instantly down the whole
+        # reasoning pipeline -- paying seconds for an answer already in hand.
+        if _srv.get("answer") and (_src == "vetted" or _src.startswith("instant:")):
             ans = _srv["answer"]
             try:
                 import tav_torus as TT
@@ -3914,7 +3858,8 @@ def ask_taviel(query, chakra=None, max_tokens=1200, history=None, conv=None):
             except Exception:
                 pass
             return {"ok": True, "answer": ans, "sources": [], "grounded": True,
-                    "gauntlet": _srv.get("round")}
+                    "gauntlet": _srv.get("round"), "route": _src,
+                    "timings": _srv.get("timings") or {}}
     except Exception:
         pass
     chakra = chakra or _ASK_CHAKRA
@@ -3953,6 +3898,16 @@ def ask_taviel(query, chakra=None, max_tokens=1200, history=None, conv=None):
             if _TIER is None:
                 _TIER = G.open_tier(chakra, cap_mb=1400, ctx=4096)  # headroom for doctrine grounding
                 _TIER_CHAKRA = chakra
+            # Torus-MoE: stream the EXACT fact from the matching O'Tav'iel expert (e.g. the
+            # Hebrew/Greek lexicographer) and lead the grounding with it -- the measured
+            # fact-recall lift. Fast (routing + one aligned read, no model), guarded.
+            try:
+                from torus_moe import serve as _TME
+                _eg = _TME.expert_grounding(query)
+                if _eg:
+                    g["grounding"] = _eg + "\n\n" + (g.get("grounding") or "")
+            except Exception:
+                pass
             g["grounding"] = (g.get("grounding") or "") + _CITE_MANDATE
             # the per-conversation torus already carries the recent turns (bounded); only
             # fall back to the client-sent history when there is no torus, so the prompt
@@ -4161,6 +4116,14 @@ def ask_taviel_council_stream(query, history=None, think=False, user=None, conv=
     import taviel_agent as TA
     import taviel_roots as TR
     g = TR.TavielRoots().ground(query)
+    # Torus-MoE: lead the grounding with the exact fact from the matching O'Tav'iel expert.
+    try:
+        from torus_moe import serve as _TME
+        _eg = _TME.expert_grounding(query)
+        if _eg:
+            g["grounding"] = _eg + "\n\n" + (g.get("grounding") or "")
+    except Exception:
+        pass
     roster = _council_roster()
     deep = [(n, cap) for (n, cap, is_ram) in roster if not is_ram]
     tid = _council_new_turn([n for n, _ in deep])
