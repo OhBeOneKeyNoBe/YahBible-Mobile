@@ -292,17 +292,17 @@ def _res(fname):
             return c
     return cands[0]
 WATCHMAN = "file:%s/watchman/watchman.db?mode=ro" % _YB
-# Lexicon (interlinear + Strong's + dictionary). Prefer the full 70GB if it sits under the app's
-# base; else the compact distilled basics; else (drive present) the D: dev copy -- so interlinear
-# works whenever the lexicon is reachable, and degrades gracefully (empty) when it is not.
-_lex_full = "%s/Holorites_data/reflected_red.sqlite" % _YB
-_lex_basic = "%s/Holorites_data/daeos/reflected_red_basic.sqlite" % _YB
-_lex_cands = [_lex_full, _lex_basic]
-if not os.environ.get("YAHBIBLE_NO_D"):
-    _lex_cands.append("D:/Holorites_data/reflected_red.sqlite")
+# Lexicon (interlinear + Strong's): YahBible's own Scripture lexicon -- 13,610 Strong's entries
+# and every Hebrew/Greek word token, the same data the web edition reads. The older pack name is
+# still accepted (Android + web packs ship it under that name). Degrades to empty when absent.
+_lex_own = "%s/Holorites_data/daeos/yahbible_lexicon.sqlite" % _YB
+_lex_cands = [_lex_own, "%s/Holorites_data/daeos/reflected_red_basic.sqlite" % _YB]
 _lexfile = next((p for p in _lex_cands
                  if os.path.exists(p.replace("/", os.sep)) and os.path.getsize(p.replace("/", os.sep)) > 0), None)
-LEX = "file:%s?mode=ro" % (_lexfile or (_lex_full + "#absent"))
+LEX = "file:%s?mode=ro" % (_lexfile or (_lex_own + "#absent"))
+# Word study for the whole KJV vocabulary (the web edition's canon_wordstudy pack).
+_ws_file = ("%s/Holorites_data/daeos/canon_wordstudy.sqlite" % _YB).replace("/", os.sep)
+WORDSTUDY = ("file:%s?mode=ro" % _ws_file.replace(os.sep, "/")) if os.path.exists(_ws_file) else None
 ENOCH = "file:%s/Holorites/torus_upgrades/enoch_source.sqlite?mode=ro" % _YB
 YT = "file:%s/Holorites_data/daeos/elaniel_yt.sqlite?mode=ro" % _YB
 VERSIONS_DB = "file:%s/Holorites_data/daeos/taviel_versions.sqlite?mode=ro" % _YB
@@ -322,6 +322,7 @@ try:
 except Exception:
     pass
 _cf_cands += [os.path.join(_APPDIR, "canon_fill.sqlite"),
+              ("%s/Holorites_data/daeos/canon_fill.sqlite" % _YB).replace("/", os.sep),
               ("%s/Holorites/YahBible-Web/packs/canon_fill.sqlite" % _YB).replace("/", os.sep),
               "D:\\Holorites\\YahBible-Web\\packs\\canon_fill.sqlite"]
 _cffile = next((p for p in _cf_cands if p and os.path.exists(p) and os.path.getsize(p) > 0), None)
@@ -949,6 +950,15 @@ def word_lookup_ctx(w, book=None, ch=None, verse=None):
     back to the generic lemma lookup -- so the panel shows the real word, and transliterates ONLY
     when there genuinely is no original to show."""
     wl = (w or "").lower().strip()
+    if not (book and ch and verse) and WORDSTUDY:
+        # a generic word study: the full KJV word-study pack first (same as the web edition)
+        try:
+            row = _c(WORDSTUDY).execute("SELECT json FROM word WHERE w=?", (wl,)).fetchone()
+            d = json.loads(row[0]) if row and row[0] else None
+            if d and d.get("found"):
+                return d
+        except (sqlite3.Error, ValueError):
+            pass
     if book and ch and verse:
         try:
             il = interlinear(book, int(ch), int(verse))
