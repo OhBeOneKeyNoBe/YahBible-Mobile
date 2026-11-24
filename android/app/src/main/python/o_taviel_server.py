@@ -3812,12 +3812,17 @@ def _bootstrap_gauntlet():
             if not os.path.isfile(os.path.join(here, f))]
     if miss:
         try:
-            from huggingface_hub import hf_hub_download
-            import shutil
+            # The repo is private: fetch through the site's read-only gateway, which
+            # holds the Hugging Face key, so no key ships with the app.
+            import urllib.request
+            gateway = os.environ.get(
+                "YAHBIBLE_GATEWAY",
+                "https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/yb/")
             for f in miss:
-                cached = hf_hub_download(repo_id="OhBeOneKeyNoBe/YahBible",
-                                         filename="code/" + f, repo_type="model")
-                shutil.copy2(cached, os.path.join(here, f))
+                with urllib.request.urlopen(gateway + "code/" + f, timeout=60) as r:
+                    body = r.read()
+                with open(os.path.join(here, f), "wb") as out:
+                    out.write(body)
         except Exception:
             pass
     if here not in sys.path:
