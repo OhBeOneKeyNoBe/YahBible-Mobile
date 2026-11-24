@@ -300,6 +300,8 @@ _lex_cands = [_lex_own, "%s/Holorites_data/daeos/reflected_red_basic.sqlite" % _
 _lexfile = next((p for p in _lex_cands
                  if os.path.exists(p.replace("/", os.sep)) and os.path.getsize(p.replace("/", os.sep)) > 0), None)
 LEX = "file:%s?mode=ro" % (_lexfile or (_lex_own + "#absent"))
+_TOK = "tok:"          # lexicon id prefix of a Hebrew/Greek word token ('tok:Jhn.3.16#05')
+_SN = "lex:strong:"    # lexicon id prefix of a Strong's entry ('lex:strong:G25')
 # Word study for the whole KJV vocabulary (the web edition's canon_wordstudy pack).
 _ws_file = ("%s/Holorites_data/daeos/canon_wordstudy.sqlite" % _YB).replace("/", os.sep)
 WORDSTUDY = ("file:%s?mode=ro" % _ws_file.replace(os.sep, "/")) if os.path.exists(_ws_file) else None
@@ -1031,7 +1033,7 @@ def english_def(word):
 def strongs_detail(sid):
     """Full Strong's entry (for the clickable Strong's -> center investigation)."""
     c = _c(LEX)
-    src = "makor:strong:" + sid if not sid.startswith("makor:") else sid
+    src = sid if sid.startswith(_SN) else _SN + sid
     try:
         row = c.execute("SELECT source_id,language,source_record FROM lexical_nodes WHERE"
                         " source_id=?", (src,)).fetchone()
@@ -1268,8 +1270,16 @@ def _code2book():
 
 
 def _parse_step_ref(sid):
-    """'step:Jhn.3.16#05=G...' -> ('John', 3, 16) or None."""
-    return _SR.parse_step(sid)
+    """A lexicon word-token id 'tok:Jhn.3.16#05=G...' -> ('John', 3, 16) or None."""
+    if not sid or not sid.startswith(_TOK):
+        return None
+    parts = sid[len(_TOK):].split("#", 1)[0].split(".")
+    if len(parts) < 3:
+        return None
+    try:
+        return _SR.code2book().get(parts[0], parts[0]), int(parts[1]), int(parts[2])
+    except ValueError:
+        return None
 
 
 def hebrew_letters(word):
@@ -1358,7 +1368,7 @@ def usecases(sid="", strong=""):
     c = _c(LEX)
     if c is None:
         return {"uses": []}
-    sidkey = strong if strong.startswith("makor:strong:") else ("makor:strong:" + strong.lstrip(":"))
+    sidkey = strong if strong.startswith(_SN) else (_SN + strong.lstrip(":"))
     try:
         row = c.execute("SELECT address24 FROM lexical_nodes WHERE source_id=?", (sidkey,)).fetchone()
     except sqlite3.OperationalError:
@@ -1478,8 +1488,8 @@ def interlinear(book, ch, verse):
     except Exception:
         pass
     abbr = _abbr_map().get(book, book[:3])
-    lo = "step:%s.%d.%d#" % (abbr, ch, verse)
-    hi = "step:%s.%d.%d$" % (abbr, ch, verse)
+    lo = "%s%s.%d.%d#" % (_TOK, abbr, ch, verse)
+    hi = "%s%s.%d.%d$" % (_TOK, abbr, ch, verse)
     try:
         rows = c.execute("SELECT address24,source_id,canonical_lemma,language FROM lexical_nodes"
                          " WHERE source_id>=? AND source_id<? ORDER BY source_id LIMIT 60",
@@ -3687,7 +3697,7 @@ def _clean_answer(ans):
     ans = re.sub(r"\bthe\s+Adam'?iel\s+lexicon\b", "the Word", ans, flags=re.I)
     ans = re.sub(r"\bAdam'?iel\s+lexicon\b", "the Word", ans, flags=re.I)
     ans = re.sub(r"\b(?:the\s+)?(?:root\s+grounding|doctrine\s+block|grounding)\b", "the truth", ans, flags=re.I)
-    # any internal colon-id (makor:strong:H5375, wx:fr:patience:noun, step:Mat.1.3)
+    # any internal colon-id (lex:strong:H5375, wx:fr:patience:noun, tok:Mat.1.3)
     # -- letter-led so real refs like "3:16" are untouched
     ans = re.sub(r"[\(\[]?\b[a-z][a-z0-9]*(?::[a-z0-9.#-]+){1,}[\)\]]?", "", ans, flags=re.I)
     ans = re.sub(r'"\s*"', "", ans)              # empty quotes left behind
