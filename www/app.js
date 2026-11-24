@@ -5,14 +5,15 @@ const CMDS = (window.YB_CMDS || []);
 const REPENT = (window.YB_REPENT || null);
 const NEWS = (window.YB_NEWS || { version: "", entries: [] });
 const KJV = (window.YB_KJV || { books: [] });
-/* resolve a scripture reference's book name to a KJV book index */
+/* resolve a scripture reference's book name to a KJV book index — robust to
+   abbreviations, numbered books and misspellings (matt, jhn, 1 jn, revalation…) */
 const BOOKMAP = {};
 KJV.books.forEach((b,i)=>{ BOOKMAP[b.n.toLowerCase()]=i; BOOKMAP[b.a.toLowerCase()]=i; });
 BOOKMAP['psalm']=BOOKMAP['psalms']; BOOKMAP['song of songs']=BOOKMAP['song of solomon'];
 BOOKMAP['canticles']=BOOKMAP['song of solomon']; BOOKMAP['1 cor']=BOOKMAP['1 corinthians'];
 const _bn=s=>String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,'');
 function _blev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;const d=[];for(let j=0;j<=n;j++)d[j]=j;for(let i=1;i<=m;i++){let p=d[0];d[0]=i;for(let j=1;j<=n;j++){const t=d[j];d[j]=Math.min(d[j]+1,d[j-1]+1,p+(a[i-1]===b[j-1]?0:1));p=t;}}return d[n];}
-const _BKA={};
+const _BKA={};                                   // normalized alias -> KJV index
 Object.keys(BOOKMAP).forEach(k=>{const nk=_bn(k);if(nk&&!(nk in _BKA))_BKA[nk]=BOOKMAP[k];});
 (function(){ const AB={"genesis":["gen","ge","gn"],"exodus":["ex","exo","exod","exd"],"leviticus":["lev","le","lv","levit"],"numbers":["num","nu","nm","nb","numb"],"deuteronomy":["deut","dt","deu","deute"],"joshua":["josh","jos","jsh"],"judges":["judg","jdg","jgs","jdgs"],"ruth":["rth","rut","ru"],"1 samuel":["1sam","1sa","1sm","1s","firstsamuel","isamuel","1samuel"],"2 samuel":["2sam","2sa","2sm","2s","secondsamuel","iisamuel","2samuel"],"1 kings":["1kings","1ki","1kgs","1kg","1k","firstkings","1kin"],"2 kings":["2kings","2ki","2kgs","2kg","2k","secondkings","2kin"],"1 chronicles":["1chron","1chr","1ch","1chronicles","firstchronicles"],"2 chronicles":["2chron","2chr","2ch","2chronicles","secondchronicles"],"ezra":["ezr","ezra"],"nehemiah":["neh","ne","nehem"],"esther":["esth","est","es","ester"],"job":["job","jb"],"psalms":["ps","psa","psalm","pss","psm","pslm","psalms"],"proverbs":["prov","pro","prv","proverb"],"ecclesiastes":["eccl","ecc","eccles","qoh"],"song of solomon":["song","sos","ss","songofsolomon","songofsongs","canticles","cant"],"isaiah":["isa","isai","isah","isaia"],"jeremiah":["jer","jere","jr"],"lamentations":["lam","lament","lamen"],"ezekiel":["ezek","eze","ezk","ezke"],"daniel":["dan","dn","dnl","danl"],"hosea":["hos","hsa","hose"],"joel":["joe","jl","joel"],"amos":["amo","amos"],"obadiah":["obad","oba","obd","obadia"],"jonah":["jon","jnh","jona"],"micah":["mic","mica","mch"],"nahum":["nah","nam","nahu"],"habakkuk":["hab","habk","haba"],"zephaniah":["zeph","zep","zphan","zephan"],"haggai":["hag","hagg","hagai"],"zechariah":["zech","zec","zach","zechar"],"malachi":["mal","mala","malac"],"matthew":["matt","mt","mat","matth","mtt","mathew"],"mark":["mrk","mk","mar"],"luke":["luk","lk","luke"],"john":["jhn","jn","joh","john"],"acts":["act","ac","acts"],"romans":["rom","rm","roman","romns"],"1 corinthians":["1cor","1co","1c","firstcorinthians","1corinth","1corinthians"],"2 corinthians":["2cor","2co","2c","secondcorinthians","2corinth","2corinthians"],"galatians":["gal","gl","galat"],"ephesians":["eph","ephes","ephs"],"philippians":["phil","php","philip","phlp","philipp"],"colossians":["col","cl","coloss"],"1 thessalonians":["1thess","1th","1thes","firstthess","1thessalonians"],"2 thessalonians":["2thess","2th","2thes","secondthess","2thessalonians"],"1 timothy":["1tim","1ti","1tm","firsttimothy","1timothy"],"2 timothy":["2tim","2ti","2tm","secondtimothy","2timothy"],"titus":["tit","tts","titu"],"philemon":["philem","phm","phlm","phile","philemn"],"hebrews":["heb","hebr","hebrew"],"james":["jas","jam","jms","jame"],"1 peter":["1pet","1pe","1pt","1p","firstpeter","1peter"],"2 peter":["2pet","2pe","2pt","2p","secondpeter","2peter"],"1 john":["1john","1jn","1jo","1j","firstjohn","1jhn"],"2 john":["2john","2jn","2jo","2j","secondjohn","2jhn"],"3 john":["3john","3jn","3jo","3j","thirdjohn","3jhn"],"jude":["jud","jd","jude"],"revelation":["rev","rv","revelation","apocalypse","apoc","revel","revalation"]};
   const findIdx=w=>{const nw=_bn(w);let i=KJV.books.findIndex(b=>_bn(b.n)===nw);if(i<0)i=KJV.books.findIndex(b=>_bn(b.n).startsWith(nw));return i;};
@@ -525,7 +526,7 @@ function fillChapters(ba){ const wrap=ba.querySelector('.chwrap'); if(!wrap||wra
 function loadGnosticData(){ return new Promise((res,rej)=>{ if(window.GNOSTIC_MAP){res();return;}
   const s=document.createElement('script'); s.src='data/gnostic.js'; s.onload=()=>res();
   s.onerror=()=>{ // older APK without the bundled data: fetch it from the pack host
-    const r=document.createElement('script'); r.src='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/www/data/gnostic.js';
+    const r=document.createElement('script'); r.src='https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/mobile/www/data/gnostic.js';
     r.onload=()=>res(); r.onerror=()=>rej(new Error('no data')); document.head.appendChild(r); };
   document.head.appendChild(s); }); }
 function openGnosticMap(){ closeDrawers(); clearInterval(_qTimer);
@@ -785,8 +786,8 @@ async function showStrongDef(sid, glyph){ const el=$('#vspanel'); if(!el||!sid) 
 }
 function openStudy(){ openDrawer('right'); }
 /* ============ THE FULL DESKTOP ENGINE — Python + AI, fully offline on the phone ============ */
-const ENGINE_MANIFEST='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/packs/desktop/manifest.json';
-const ENGINE_BASE='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/packs/desktop/';
+const ENGINE_MANIFEST='https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/mobile/packs/desktop/manifest.json';
+const ENGINE_BASE='https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/mobile/packs/desktop/';
 const AI_MODELS=[
   {id:'qwen', name:"🕊 Tav'iel Mind — Qwen 1.5B (recommended)", file:'ai/qwen25-1.5b-q8.task', mb:1710,
    url:'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task'},

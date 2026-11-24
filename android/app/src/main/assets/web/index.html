@@ -53,9 +53,9 @@
        web copy from ever masking newer bundled features. -->
   <script>
   (function(){
-    var BUNDLED_VER=20260917020;   // bump every APK build; OTA applies only if remote > this
+    var BUNDLED_VER=20261124010;   // bump every APK build; OTA applies only if remote > this
     window.__bundledVer=BUNDLED_VER;   // shown in Settings so the running build is always verifiable
-    var REMOTE='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/www/';
+    var REMOTE='https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/mobile/www/';
     var SHELL=['app.css','data/commandments.js','data/repentance.js','data/news.js','data/kjv.js','data/verlang.js','packs.js','app.js'];
     function ck(f){return 'yb_ota_'+f;}
     function bundled(){ SHELL.forEach(function(f){

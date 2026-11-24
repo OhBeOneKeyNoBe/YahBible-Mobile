@@ -5,7 +5,7 @@
 "use strict";
 (function(){
   // where the packs live (Hugging Face raw resolve). Overridable via localStorage yb_pack_base.
-  const DEFAULT_BASE = "https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/packs/";
+  const DEFAULT_BASE = "https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/mobile/packs/";
   function base(){ try{ return localStorage.getItem('yb_pack_base') || DEFAULT_BASE; }catch(e){ return DEFAULT_BASE; } }
 
   // ---- IndexedDB (a tiny key/value store) ----

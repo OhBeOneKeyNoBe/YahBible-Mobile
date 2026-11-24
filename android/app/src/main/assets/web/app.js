@@ -526,7 +526,7 @@ function fillChapters(ba){ const wrap=ba.querySelector('.chwrap'); if(!wrap||wra
 function loadGnosticData(){ return new Promise((res,rej)=>{ if(window.GNOSTIC_MAP){res();return;}
   const s=document.createElement('script'); s.src='data/gnostic.js'; s.onload=()=>res();
   s.onerror=()=>{ // older APK without the bundled data: fetch it from the pack host
-    const r=document.createElement('script'); r.src='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/www/data/gnostic.js';
+    const r=document.createElement('script'); r.src='https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/mobile/www/data/gnostic.js';
     r.onload=()=>res(); r.onerror=()=>rej(new Error('no data')); document.head.appendChild(r); };
   document.head.appendChild(s); }); }
 function openGnosticMap(){ closeDrawers(); clearInterval(_qTimer);
@@ -786,8 +786,8 @@ async function showStrongDef(sid, glyph){ const el=$('#vspanel'); if(!el||!sid) 
 }
 function openStudy(){ openDrawer('right'); }
 /* ============ THE FULL DESKTOP ENGINE — Python + AI, fully offline on the phone ============ */
-const ENGINE_MANIFEST='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/packs/desktop/manifest.json';
-const ENGINE_BASE='https://huggingface.co/OhBeOneKeyNoBe/YahBible-Mobile/resolve/main/packs/desktop/';
+const ENGINE_MANIFEST='https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/mobile/packs/desktop/manifest.json';
+const ENGINE_BASE='https://qkfmjdprvtayfhigsahk.supabase.co/functions/v1/hf/mobile/packs/desktop/';
 const AI_MODELS=[
   {id:'qwen', name:"🕊 Tav'iel Mind — Qwen 1.5B (recommended)", file:'ai/qwen25-1.5b-q8.task', mb:1710,
    url:'https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.task'},
